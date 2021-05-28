@@ -1,0 +1,53 @@
+{
+  "name": "try-runtime-bot",
+  "version": "0.0.0",
+  "author": "Parity <admin@parity.io> (https://parity.io)",
+  "license": "Apache-2.0",
+  "licenses": [
+    {
+      "type": "Apache-2.0",
+      "url": "http://opensource.org/licenses/Apache-2.0"
+    }
+  ],
+  "description": "try-runtime-bot",
+  "dependencies": {
+    "@octokit/auth-token": "^2.4.5",
+    "@octokit/webhooks": "^9.6.2",
+    "async-mutex": "^0.3.1",
+    "lodash": "^4.17.21",
+    "probot": "^11.3.0",
+    "tmp": "^0.2.1"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.170",
+    "@types/tmp": "^0.2.0",
+    "@typescript-eslint/eslint-plugin": "^4.25.0",
+    "@typescript-eslint/parser": "^4.25.0",
+    "@zerollup/ts-transform-paths": "^1.7.18",
+    "eslint": "^7.27.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.23.3",
+    "eslint-plugin-prettier": "^3.4.0",
+    "eslint-plugin-simple-import-sort": "^7.0.0",
+    "eslint-plugin-unused-imports": "^1.1.1",
+    "nodemon": "^2.0.7",
+    "prettier": "^2.3.0",
+    "rimraf": "^3.0.2",
+    "ttypescript": "^1.5.12",
+    "typescript": "^4.3.2"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "prettier": "prettier --loglevel silent **/*.{json,html}",
+    "eslint": "eslint --ext js,ts src",
+    "lint": "npm run lint:eslint && npm run lint:prettier",
+    "lint:eslint": "npm run eslint",
+    "lint:prettier": "npm run prettier -- --check",
+    "fix:eslint": "npm run eslint -- --fix",
+    "fix:prettier": "npm run prettier -- --write",
+    "fix": "npm run fix:eslint && npm run fix:prettier",
+    "build": "rimraf ./dist && ttsc --build",
+    "start": "node -r ./env/bot.js ./dist/main.js",
+    "watch": "nodemon --watch src -e js,ts --exec \"npm run build && npm run start\""
+  }
+}

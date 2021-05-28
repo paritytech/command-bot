@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "dist",
+    "sourceMap": false,
+    "declaration": false,
+    "noFallthroughCasesInSwitch": true,
+    "allowJs": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es6",
+    "strict": true,
+    "noImplicitAny": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["node"],
+    "typeRoots": ["./node_modules/@types", "./src"],
+    "plugins": [
+      {
+        "transform": "@zerollup/ts-transform-paths",
+        "tryLoadJs": true
+      }
+    ]
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
