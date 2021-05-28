@@ -14,7 +14,7 @@ module.exports = {
     "import",
     "prettier",
   ],
-  ignorePatterns: [".eslintrc.js", "dist/*", "env/*"],
+  ignorePatterns: [".eslintrc.js", "build/*", "env/*"],
   parserOptions: {
     project: "./tsconfig.json",
     tsconfigRootDir: __dirname,
