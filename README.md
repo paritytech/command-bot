@@ -13,9 +13,8 @@ For instance:
 `/try-runtime queue RUST_LOG=debug live ws://kusama`
 
 This will run the try-runtime Substrate feature for your pull request's branch
-with the provided arguments and post the results as a comment.
-
-It's supposed to support the same arguments as
+with the provided arguments and post the result as a comment. It's supposed to
+support the same arguments as
 [try-runtime](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)
 although not all of them have been tried out as of this writing.
 
@@ -25,12 +24,27 @@ although not all of them have been tried out as of this writing.
 2. Build: `npm run build`
 3. Start: `npm run start`
 
+References:
+
+- [Dockerfile](https://github.com/paritytech/try-runtime-bot/blob/master/Dockerfile)
+- [Scripts on package.json](https://github.com/paritytech/try-runtime-bot/blob/master/package.json)
+
 # Developing
 
 `npm run watch` is recommended because it will restart the server when the
 source code changes. You'll want to copy
-[the example file](./env/bot.example.js) to `./env/bot.js` for this command to
-work.
+[the example file](./env/bot.example.js) to `./env/bot.js` and set the values
+there for this command to work.
+
+---
+
+For the scraping the servers locally, there's no need to compile the Polkadot
+binaries by yourself. Simply run the image:
+
+`docker run -p 9944:9944 parity/polkadot:v0.9.3 --base-path /polkadot --unsafe-rpc-external --unsafe-ws-external --rpc-cors all --chain kusama`
+
+Note the `--chain` argument as it should be set to the specific runtime you're
+targetting.
 
 # Configuration
 
@@ -71,11 +85,11 @@ username as `https://api.github.com/users/${organization}`, for instance
 
 **At least one organization ID has to be provided for the bot to work.**
 
-`NODE_ENV`
+## Optional environment variables
 
-It's recommended to set `NODE_ENV` to `production` so that [Probot logs are
+It's recommended to set `LOG_FORMAT` to `json` so that [Probot logs are
 output with structure](https://probot.github.io/docs/logging/#log-formats)
-which is handing for querying in your logging aggregator.
+which is handy for querying in your logging aggregator.
 
 ## Github Settings
 
