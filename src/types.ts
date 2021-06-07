@@ -1,6 +1,6 @@
-import type { ExecFileException } from "child_process"
-import type { DB } from "./db"
 import { Probot } from "probot"
+
+import type { DB } from "./db"
 
 export type PullRequestParams = {
   owner: string
@@ -40,7 +40,7 @@ export type AppState = {
     installationId: number,
   ) => Promise<{ token: string; url: string }>
   log: (str: string) => void
-  botMention: string
+  botMentionPrefix: string
   nodesAddresses: Record<string, string>
   allowedOrganizations: number[]
 }

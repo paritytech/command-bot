@@ -1,14 +1,14 @@
+import { createAppAuth } from "@octokit/auth-app"
 import assert from "assert"
 import { Probot, run } from "probot"
-import { createAppAuth } from "@octokit/auth-app"
-import { botMention } from "src/constants"
 
-import { DB, getDb, getSortedItems } from "src/db"
+import { botMentionPrefix } from "src/constants"
+import { getDb, getSortedItems } from "src/db"
+
 import { queue } from "./executor"
-import { getPostPullRequestResult, getPullRequestHandleId } from "./utils"
-
-import { getWebhooksHandlers, setupEvent } from "./webhook"
 import { AppState } from "./types"
+import { getPostPullRequestResult, getPullRequestHandleId } from "./utils"
+import { getWebhooksHandlers, setupEvent } from "./webhook"
 
 const setupProbot = async function (state: AppState) {
   const { bot } = state
@@ -115,7 +115,7 @@ const main = async function (bot: Probot) {
     clientSecret,
     clientId,
     log: bot.log,
-    botMention,
+    botMentionPrefix,
     version,
     nodesAddresses: {
       rococo: process.env.ROCOCO_WEBSOCKET_ADDRESS,

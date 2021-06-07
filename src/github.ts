@@ -1,7 +1,7 @@
-import { endpoint } from "@octokit/endpoint"
+import { RequestError } from "@octokit/request-error"
 import { Octokit } from "@octokit/rest"
 import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types"
-import { RequestError } from "@octokit/request-error"
+
 import { millisecondsDelay } from "./utils"
 
 export type ExtendedOctokit = Octokit & {
@@ -109,7 +109,7 @@ export const isOrganizationMember = async function ({
       log(
         `Organization membership API call responded with unexpected status code ${
           error?.status
-        }\n${error?.stack || error?.message}`,
+        }\n${error?.stack ?? error?.message}`,
       )
     }
     return false

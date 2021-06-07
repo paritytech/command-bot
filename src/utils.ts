@@ -1,9 +1,10 @@
-import ld from "lodash"
-import assert from "assert"
-import { CommandOutput, PullRequestParams, PullRequestTask } from "./types"
 import { Octokit } from "@octokit/rest"
+import assert from "assert"
+import ld from "lodash"
+
 import { cancelHandles } from "./executor"
 import { updateComment } from "./github"
+import { CommandOutput, PullRequestParams, PullRequestTask } from "./types"
 
 export const getLines = function (str: string) {
   return str
@@ -16,7 +17,10 @@ export const getLines = function (str: string) {
     })
 }
 
-export const getCommand = function (commandLine: string) {
+export const getCommand = function (
+  commandLine: string,
+  { baseEnv = {} }: { baseEnv?: Record<string, string> },
+) {
   const parts = commandLine.split(" ").filter(function (value) {
     return !!value
   })
@@ -25,7 +29,7 @@ export const getCommand = function (commandLine: string) {
     return value.match(/^[A-Za-z_]+=/)
   })
 
-  const env: Record<string, string> = {}
+  const env: Record<string, string> = baseEnv
   for (const rawValue of envArgs) {
     const matches = rawValue.match(/^([A-Za-z_]+)=(.*)/)
     assert(matches)

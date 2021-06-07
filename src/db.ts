@@ -2,6 +2,7 @@ import type { AbstractIterator, AbstractLevelDOWN } from "abstract-leveldown"
 import { isBefore, isValid, parseISO } from "date-fns"
 import getLevelDb from "level-rocksdb"
 import type { LevelUp } from "levelup"
+
 import { PullRequestTask } from "./types"
 
 export type DbKey = string

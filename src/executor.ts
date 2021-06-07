@@ -1,16 +1,13 @@
 import { Mutex } from "async-mutex"
 import cp from "child_process"
-import { isBefore, isValid, parseISO } from "date-fns"
-import path from "path"
-import { gitDir } from "src/constants"
 
-import { DB, DbKey, getSortedItems } from "src/db"
+import { DB, getSortedItems } from "src/db"
 
 import {
-  PullRequestTask,
-  PrepareBranchParams,
-  CommandOutput,
   AppState,
+  CommandOutput,
+  PrepareBranchParams,
+  PullRequestTask,
 } from "./types"
 import { displayCommand, redactSecrets } from "./utils"
 
