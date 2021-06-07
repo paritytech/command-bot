@@ -20,9 +20,10 @@ although not all of them have been tried out as of this writing.
 
 # Running
 
-1. Install dependencies: `npm install`
-2. Build: `npm run build`
-3. Start: `npm run start`
+1. [Configure your environment](https://github.com/paritytech/try-runtime-bot#configuration)
+2. Install dependencies: `npm install`
+3. Build: `npm run build`
+4. Start: `npm run start`
 
 References:
 
@@ -72,7 +73,7 @@ point to a folder where the database files will be stored.
 `ALLOWED_ORGANIZATIONS`
 
 Comma-delimited Github organization IDs whose members are allowed to run the
-bot's commands. The ID can be gotten from the API by the organization's
+bot's commands. The ID can be fetched from the Github API by the organization's
 username as `https://api.github.com/users/${organization}`, for instance
 `https://api.github.com/users/paritytech` which will respond with:
 
@@ -87,8 +88,8 @@ username as `https://api.github.com/users/${organization}`, for instance
 
 ## Optional environment variables
 
-It's recommended to set `LOG_FORMAT` to `json` so that [Probot logs are
-output with structure](https://probot.github.io/docs/logging/#log-formats)
+On production, it's recommended to set `LOG_FORMAT` to `json` so that
+[Probot logs are output with structure](https://probot.github.io/docs/logging/#log-formats)
 which is handy for querying in your logging aggregator.
 
 ## Github Settings
