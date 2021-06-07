@@ -12,14 +12,22 @@
   "description": "try-runtime-bot",
   "dependencies": {
     "@octokit/auth-token": "^2.4.5",
+    "@octokit/rest": "^18.5.4",
     "@octokit/webhooks": "^9.6.2",
     "async-mutex": "^0.3.1",
+    "date-fns": "^2.22.1",
+    "level-rocksdb": "^4.0.0",
     "lodash": "^4.17.21",
     "probot": "^11.3.0",
     "tmp": "^0.2.1"
   },
   "devDependencies": {
+    "@octokit/auth-app": "^3.4.1",
+    "@types/abstract-leveldown": "^5.0.1",
+    "@types/levelup": "^4.3.1",
     "@types/lodash": "^4.14.170",
+    "@types/rocksdb": "^3.0.0",
+    "@types/shelljs": "^0.8.8",
     "@types/tmp": "^0.2.0",
     "@typescript-eslint/eslint-plugin": "^4.25.0",
     "@typescript-eslint/parser": "^4.25.0",
@@ -33,6 +41,7 @@
     "nodemon": "^2.0.7",
     "prettier": "^2.3.0",
     "rimraf": "^3.0.2",
+    "smee-client": "^1.2.2",
     "ttypescript": "^1.5.12",
     "typescript": "^4.3.2"
   },
@@ -46,8 +55,9 @@
     "fix:eslint": "npm run eslint -- --fix",
     "fix:prettier": "npm run prettier -- --write",
     "fix": "npm run fix:eslint && npm run fix:prettier",
-    "build": "rimraf ./dist && ttsc --build",
-    "start": "node -r ./env/bot.js ./dist/main.js",
-    "watch": "nodemon --watch src -e js,ts --exec \"npm run build && npm run start\""
+    "build": "rimraf ./build && ttsc --build",
+    "start": "node ./build/main.js",
+    "start:env": "node -r ./env/bot.js ./build/main.js",
+    "watch": "nodemon --watch src -e js,ts --exec \"npm run build && npm run start:env\""
   }
 }
