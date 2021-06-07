@@ -1,5 +1,24 @@
 # try-runtime-bot
 
+Note: This bot is not currently live.
+
+# Usage
+
+Comment in a pull request:
+
+`/try-runtime queue [env_vars] live ws://{kusama,westend,rococo,polkadot} [args]`
+
+For instance:
+
+`/try-runtime queue RUST_LOG=debug live ws://kusama`
+
+This will run the try-runtime Substrate feature for your pull request's branch
+with the provided arguments and post the results as a comment.
+
+It's supposed to support the same arguments as
+[try-runtime](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)
+although not all of them have been tried out as of this writing.
+
 # Running
 
 1. Install dependencies: `npm install`
@@ -63,7 +82,7 @@ which is handing for querying in your logging aggregator.
 ### Repository permissions 
 
 - Metadata: Read-only
-- Issues: Read & write
+- Issues: Read-only
 - Pull Requests: Read & write
 
 ### Organization permissions
