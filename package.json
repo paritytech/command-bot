@@ -18,7 +18,7 @@
     "date-fns": "^2.22.1",
     "level-rocksdb": "^4.0.0",
     "lodash": "^4.17.21",
-    "probot": "^11.3.0"
+    "probot": "^12.0.0"
   },
   "devDependencies": {
     "@octokit/auth-app": "^3.4.1",
