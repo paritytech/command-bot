@@ -21,9 +21,9 @@ although not all of them have been tried out as of this writing.
 # Running
 
 1. [Configure your environment](https://github.com/paritytech/try-runtime-bot#configuration)
-2. Install dependencies: `npm install`
-3. Build: `npm run build`
-4. Start: `npm run start`
+2. Install dependencies: `yarn`
+3. Build: `yarn build`
+4. Start: `yarn start`
 
 References:
 
@@ -32,10 +32,9 @@ References:
 
 # Developing
 
-`npm run watch` is recommended because it will restart the server when the
-source code changes. You'll want to copy
-[the example file](./env/bot.example.js) to `./env/bot.js` and set the values
-there for this command to work.
+`yarn watch` is recommended because it will restart the server when the source
+code changes. You'll want to copy [the example file](./env/bot.example.js) to
+`./env/bot.js` and set the values there for this command to work.
 
 ---
 
