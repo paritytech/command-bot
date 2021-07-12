@@ -64,7 +64,7 @@ resources:
   limits:
     cpu: 200m
     memory: 1G
-    ephemeral-storage: 1G
+    #ephemeral-storage: 128M
 
 autoscaling:
   enabled: false
@@ -99,4 +99,6 @@ persistence:
   # existingClaim: claim-name
   annotations: {}
   storageClass: standard
-  size: 20G
+  size: 5G
+  accessModes:
+    - ReadWriteOnce
