@@ -13,10 +13,11 @@ spec:
       {{- include "try-runtime.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      # NOTE: Those annotations are needed so that GKE can update the
+      # containers even when the image tag doesn't change between deployments
+      # (e.g. on pushes)
       annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- include "try-runtime.labels" . | nindent 8 }}
       labels:
         {{- include "try-runtime.selectorLabels" . | nindent 8 }}
     spec:
@@ -36,7 +37,7 @@ spec:
           env:
           {{- range $key, $val := .Values.env }}
             - name: {{ $key }}
-              value: {{ $val }}
+              value: "{{ $val }}"
           {{- end }}
           ports:
             - name: http

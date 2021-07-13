@@ -1,0 +1,84 @@
+#!/bin/bash
+
+IFS='' read -r -d '' common <<'EOF'
+FROM docker.io/node:lts-alpine
+
+RUN apk update
+
+# Git is needed for both pre-commit and also for cloning repositories before
+# running the bot's commands
+RUN apk add --no-cache git && git --version
+EOF
+
+case "$1" in
+  ci)
+IFS='' read -r -d '' ci << EOF
+$common
+
+# CI pipeline utilities
+RUN apk add --no-cache python3 make bash sed
+
+# Needed for pre-commit's installation
+RUN apk add --no-cache --virtual .build-deps \
+  gcc python3-dev libc-dev
+
+# Install pip through Python and update it. This will always result on having
+# the latest version of pip, as opposed to using the alpine pip package which
+# might be outdated; having the latest pip is relevant to leverage the
+# packages' wheels
+RUN python3 -m ensurepip && pip3 install --upgrade pip
+
+RUN pip3 install pre-commit && \
+  echo "Pre-commit version:" && pre-commit --version
+
+RUN apk del .build-deps
+
+EOF
+    echo "$ci"
+    ;;
+
+  app)
+IFS='' read -r -d '' app << EOF
+$common
+
+# Those values are expected to be set from CI.
+ARG REPO_VOLUME
+ENV REPO_VOLUME=\$REPO_VOLUME
+RUN if [ ! "\$REPO_VOLUME" ]; then exit 1; fi
+
+# Rust is needed for running the bot's commands
+RUN apk add --update --no-cache \
+  --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main \
+  cargo rust
+
+# Needed for building RocksDB
+RUN apk add --no-cache \
+  --virtual .build-deps \
+  linux-headers python3 make gcc libc-dev g++
+
+ENV NODE_ENV=PRODUCTION
+ENV LOG_FORMAT=json
+ENV LOG_LEVEL_IN_STRING=true
+
+RUN yarn --version
+
+RUN cd "\$REPO_VOLUME" && \
+  yarn --ignore-optional --frozen-lockfile && \
+  yarn build && \
+  mkdir /bot && \
+  mv build node_modules /bot
+
+RUN apk del .build-deps
+
+WORKDIR /bot
+
+CMD node ./build/main.js
+EOF
+    echo "$app"
+    ;;
+
+  *)
+    >&2 echo "Invalid argument '$1' for image name"
+    exit 1
+    ;;
+esac

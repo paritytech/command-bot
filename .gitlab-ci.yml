@@ -1,0 +1,194 @@
+variables:
+  REPO_VOLUME: /repo
+  IMAGE_REPOSITORY: docker.io/paritytech/try-runtime-bot
+  CI_IMAGE: ${IMAGE_REPOSITORY}:ci
+  KUBE_NAMESPACE: try-runtime
+  DEPLOYMENT_TAG: ${CI_ENVIRONMENT_NAME}${CI_COMMIT_TAG}
+  DB_PATH: /data/
+
+default:
+  image: $CI_IMAGE
+  tags:
+    -  kubernetes-parity-build
+
+.on-pr-and-master: &on-pr-and-master
+  rules:
+    - if: $BUILD
+      when: never
+    - if: "$CI_MERGE_REQUEST_ID =~ /^./ || $CI_COMMIT_BRANCH == 'master'"
+
+.on-master: &on-master
+  rules:
+    - if: $BUILD
+      when: never
+    - if: "$CI_COMMIT_BRANCH == 'master'"
+
+stages:
+  - install_deps
+  - lint
+  - after_lint
+  - containerize
+  - deploy
+
+install-deps:
+  <<: *on-pr-and-master
+  stage: install_deps
+  script:
+    - npm ci
+  artifacts:
+    name:       "${CI_JOB_ID}_${CI_COMMIT_REF_NAME}"
+    when:       on_success
+    expire_in:  1 hour
+    paths:
+      - ./node_modules
+
+lint:
+  <<: *on-pr-and-master
+  stage: lint
+  script:
+    - npm run lint
+
+pre_commit:
+  <<: *on-pr-and-master
+  stage: lint
+  script:
+    - pre-commit run --color=always --all
+
+build_bot:
+  <<: *on-pr-and-master
+  stage: after_lint
+  script:
+    - npm run build:bot
+
+#### App deployment
+
+.kubernetes: &kubernetes
+  image: paritytech/kubetools:helm3
+
+.build-app-image: &build-app-image
+  image: quay.io/buildah/stable
+  script:
+    - echo "$Docker_Hub_Pass_Parity" |
+      buildah login --username "$Docker_Hub_User_Parity" --password-stdin docker.io
+    - ./scripts/generateDockerfile app |
+      buildah bud
+      --format=docker
+      --build-arg "REPO_VOLUME=$REPO_VOLUME"
+      -v "$PWD:$REPO_VOLUME"
+      --tag "$IMAGE_REPOSITORY:$DEPLOYMENT_TAG"
+      -
+    - buildah push --format=v2s2 "$IMAGE_REPOSITORY:$DEPLOYMENT_TAG"
+  after_script:
+    - buildah logout --all
+
+.deploy-k8s: &deploy-k8s
+  <<: *kubernetes
+  interruptible: true
+  script:
+    # Change the app version during build so that Kubernetes is able to update
+    # the deployment even if the images' tags did not change
+    # This version tag is guaranteed to be unique because $CI_PIPELINE_ID is
+    # also guaranteed to be unique
+    - export KUBERNETES_VERSION_TAG="$CI_PIPELINE_ID"
+    - |-
+      sed -i "s/version:.*/version: $KUBERNETES_VERSION_TAG/" helm/Chart.yaml
+    - |-
+      sed -i "s/appVersion:.*/appVersion: $KUBERNETES_VERSION_TAG/" helm/Chart.yaml
+    - helm upgrade --install "$KUBE_NAMESPACE" ./helm
+      --values helm/values.yaml
+      --namespace "$KUBE_NAMESPACE"
+      --set image.repository="$IMAGE_REPOSITORY"
+      --set image.tag="$DEPLOYMENT_TAG"
+      --set env.APP_ID="$APP_ID"
+      --set env.CLIENT_ID="$CLIENT_ID"
+      --set env.CLIENT_SECRET="$CLIENT_SECRET"
+      --set env.WEBHOOK_SECRET="$WEBHOOK_SECRET"
+      --set env.PRIVATE_KEY_BASE64="$PRIVATE_KEY_BASE64"
+      --set env.ALLOWED_ORGANIZATIONS="$ALLOWED_ORGANIZATIONS"
+      --set env.DB_PATH="$DB_PATH"
+      --set env.ROCOCO_WEBSOCKET_ADDRESS="$ROCOCO_WEBSOCKET_ADDRESS"
+      --set env.POLKADOT_WEBSOCKET_ADDRESS="$POLKADOT_WEBSOCKET_ADDRESS"
+      --set env.KUSAMA_WEBSOCKET_ADDRESS="$KUSAMA_WEBSOCKET_ADDRESS"
+      --set env.WESTEND_WEBSOCKET_ADDRESS="$WESTEND_WEBSOCKET_ADDRESS"
+      --set persistence.mountPath="$DB_PATH"
+      --set env.LOG_LEVEL="error"
+
+.uninstall-deployment: &uninstall-deployment
+  <<: *kubernetes
+  stage: deploy
+  interruptible: true
+  script:
+    - helm uninstall "$KUBE_NAMESPACE" --namespace "$KUBE_NAMESPACE"
+
+#### > Production deployment
+
+#### >> Manual
+
+.production-env: &production-env
+  environment:
+    name: parity-chains
+
+build-production-image-manual:
+  <<: *build-app-image
+  <<: *production-env
+  stage: containerize
+  rules:
+    - if: "$BUILD == 'production'"
+
+deploy-production-manual:
+  <<: *deploy-k8s
+  <<: *production-env
+  stage: deploy
+  rules:
+    - if: '$BUILD == "production" || $DEPLOY == "production"'
+
+uninstall-production:
+  <<: *uninstall-deployment
+  <<: *production-env
+  rules:
+    - if: "$UNINSTALL == 'production'"
+
+#### >> Automatic
+
+.tagged-production-build: &tagged-production-build
+  <<: *production-env
+  only:
+    - /^v-[0-9]+\.[0-9]+.*$/
+
+build-production-image:
+  <<: *build-app-image
+  <<: *tagged-production-build
+  stage: containerize
+
+deploy-production:
+  <<: *deploy-k8s
+  <<: *tagged-production-build
+  stage: deploy
+
+#### CI images
+
+.build-ci-image: &build-ci-image
+  image: quay.io/buildah/stable
+  script:
+    - echo "$Docker_Hub_Pass_Parity" |
+      buildah login --username "$Docker_Hub_User_Parity" --password-stdin docker.io
+    - ./scripts/generateDockerfile ci |
+      buildah bud
+      --format=docker
+      --tag "$IMAGE_REPOSITORY:$CI_IMAGE" -
+    - buildah push --format=v2s2 "$IMAGE_REPOSITORY:$CI_IMAGE"
+  after_script:
+    - buildah logout --all
+
+build-ci-image-manual:
+  <<: *build-ci-image
+  stage: containerize
+  rules:
+    - if: "$BUILD == 'ci'"
+
+build-ci-image:
+  <<: *on-master
+  <<: *build-ci-image
+  stage: containerize
+  allow_failure: true
+

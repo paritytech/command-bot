@@ -32,6 +32,7 @@ Create chart name and version as used by the chart label.
 
 {{/*
 Common labels
+Make sure to include AppVersion because annotations rely on this value
 */}}
 {{- define "try-runtime.labels" -}}
 helm.sh/chart: {{ include "try-runtime.chart" . }}
