@@ -6,8 +6,8 @@ export class Logger {
     item: string | Error,
     context?: string,
   ) {
-    switch (process.env.NODE_ENV) {
-      case "prod": {
+    switch (process.env.APP_LOG_FORMAT) {
+      case "json": {
         const base = { level, name: this.options.name, context }
 
         // This structure is aligned with Probot's pino format for JSON logging
