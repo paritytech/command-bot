@@ -111,7 +111,7 @@ build_bot:
       --set env.KUSAMA_WEBSOCKET_ADDRESS="$KUSAMA_WEBSOCKET_ADDRESS"
       --set env.WESTEND_WEBSOCKET_ADDRESS="$WESTEND_WEBSOCKET_ADDRESS"
       --set persistence.mountPath="$DB_PATH"
-      --set env.LOG_LEVEL="$PROBOT_LOG_LEVEL"
+      --set env.LOG_LEVEL="debug"
       --set env.LOG_LEVEL_IN_STRING="true"
       --set env.APP_LOG_FORMAT="json"
 
