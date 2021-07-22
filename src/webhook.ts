@@ -1,8 +1,10 @@
+import { Octokit } from "@octokit/rest"
+import { EmitterWebhookEvent as WebhookEvent } from "@octokit/webhooks"
+import { EmitterWebhookEventName as WebhookEvents } from "@octokit/webhooks/dist-types/types"
 import { Mutex } from "async-mutex"
 import path from "path"
 import { Probot } from "probot"
 
-import { EventTypesPayload } from "../node_modules/probot/node_modules/@octokit/webhooks"
 import { gitDir } from "./constants"
 import { cancelHandles, queue } from "./executor"
 import {
@@ -21,21 +23,25 @@ import {
   getPullRequestHandleId,
 } from "./utils"
 
-type WebhookHandler<E extends keyof EventTypesPayload> = (
+type WebhookHandler<E extends WebhookEvents> = (
   event: {
     octokit: ExtendedOctokit
-  } & EventTypesPayload[E],
+  } & WebhookEvent<E>,
 ) => Promise<PullRequestError | void> | PullRequestError | void
 
-export const setupEvent = function <E extends keyof EventTypesPayload>(
+export const setupEvent = function <E extends WebhookEvents>(
   bot: Probot,
   event: E,
   handler: WebhookHandler<E>,
   logger: Logger,
 ) {
   bot.on(event, async function (data) {
-    const { octokit: probotOctokit } = data
-    const octokit = getOctokit(probotOctokit)
+    const installationId: number | undefined = (data as any).installation?.id
+    const octokit = getOctokit(
+      await (bot.auth as (installationId?: number) => Promise<Octokit>)(
+        installationId,
+      ),
+    )
 
     try {
       const result = await handler({ ...data, octokit })

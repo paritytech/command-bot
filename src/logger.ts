@@ -6,7 +6,7 @@ export class Logger {
     item: string | Error,
     context?: string,
   ) {
-    switch (process.env.APP_LOG_FORMAT) {
+    switch (process.env.LOG_FORMAT) {
       case "json": {
         const base = { level, name: this.options.name, context }
 

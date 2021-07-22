@@ -1,4 +1,5 @@
 import { createAppAuth } from "@octokit/auth-app"
+import { Octokit } from "@octokit/rest"
 import assert from "assert"
 import { Probot, run } from "probot"
 
@@ -67,7 +68,9 @@ const requeueUnterminated = async function ({
   for (const { taskData, id } of unterminatedItems) {
     await db.del(id)
 
-    const octokit = await bot.auth(taskData.installationId)
+    const octokit = await (
+      bot.auth as (installationId?: number) => Promise<Octokit>
+    )(taskData.installationId)
     const handleId = getPullRequestHandleId(taskData)
 
     logger.info(`Requeuing ${JSON.stringify(taskData)}`)

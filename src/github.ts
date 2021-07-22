@@ -17,9 +17,14 @@ export type ExtendedOctokit = Octokit & {
       }>
     }
   }
+  extendedByTryRuntimeBot: boolean
 }
 
-export const getOctokit = function (octokit: Octokit) {
+export const getOctokit = function (octokit: Octokit): ExtendedOctokit {
+  if ((octokit as ExtendedOctokit).extendedByTryRuntimeBot) {
+    return octokit as ExtendedOctokit
+  }
+
   Object.assign(octokit.orgs, {
     userMembershipByOrganizationId: octokit.request.defaults({
       method: "GET",
@@ -57,7 +62,9 @@ export const getOctokit = function (octokit: Octokit) {
     return result
   })
 
-  return octokit as ExtendedOctokit
+  const extendedOctokit = octokit as ExtendedOctokit
+  extendedOctokit.extendedByTryRuntimeBot = true
+  return extendedOctokit
 }
 
 export const createComment = async function (
