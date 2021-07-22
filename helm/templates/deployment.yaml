@@ -43,9 +43,16 @@ spec:
             - name: http
               containerPort: 3000
               protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            failureThreshold: 0
+            periodSeconds: 128
+            initialDelaySeconds: 128
           readinessProbe:
             httpGet:
-              path: /probot
+              path: /
               port: 3000
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
