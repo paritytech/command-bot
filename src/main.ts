@@ -11,6 +11,39 @@ import { AppState } from "./types"
 import { getPostPullRequestResult, getPullRequestHandleId } from "./utils"
 import { getWebhooksHandlers, setupEvent } from "./webhook"
 
+const allowedOrganizations = (process.env.ALLOWED_ORGANIZATIONS ?? "")
+  .split(",")
+  .filter(function (value) {
+    return value.length !== 0
+  })
+  .map(function (value) {
+    const parsedValue = parseInt(value)
+    assert(parsedValue)
+    return parsedValue
+  })
+assert(allowedOrganizations.length)
+
+assert(process.env.DB_PATH)
+const db = getDb(process.env.DB_PATH)
+
+assert(process.env.APP_ID)
+const appId = parseInt(process.env.APP_ID)
+assert(appId)
+
+assert(process.env.PRIVATE_KEY_BASE64)
+process.env.PRIVATE_KEY = Buffer.from(
+  process.env.PRIVATE_KEY_BASE64,
+  "base64",
+).toString()
+assert(process.env.PRIVATE_KEY)
+const privateKey = process.env.PRIVATE_KEY
+
+assert(process.env.CLIENT_ID)
+const clientId = process.env.CLIENT_ID
+
+assert(process.env.CLIENT_SECRET)
+const clientSecret = process.env.CLIENT_SECRET
+
 const setupProbot = async function (state: AppState) {
   const { bot, logger } = state
 
@@ -52,41 +85,9 @@ const requeueUnterminated = async function ({
 const main = async function (bot: Probot) {
   const version = new Date().toISOString()
 
-  const allowedOrganizations = (process.env.ALLOWED_ORGANIZATIONS ?? "")
-    .split(",")
-    .filter(function (value) {
-      return value.length !== 0
-    })
-    .map(function (value) {
-      const parsedValue = parseInt(value)
-      assert(parsedValue)
-      return parsedValue
-    })
-  assert(allowedOrganizations.length)
-
-  assert(process.env.DB_PATH)
-  const db = getDb(process.env.DB_PATH)
-
-  assert(process.env.APP_ID)
-  const appId = parseInt(process.env.APP_ID)
-  assert(appId)
-
-  assert(process.env.PRIVATE_KEY_BASE64)
-  process.env.PRIVATE_KEY = Buffer.from(
-    process.env.PRIVATE_KEY_BASE64,
-    "base64",
-  ).toString()
-  assert(process.env.PRIVATE_KEY)
-
-  assert(process.env.CLIENT_ID)
-  const clientId = process.env.CLIENT_ID
-
-  assert(process.env.CLIENT_SECRET)
-  const clientSecret = process.env.CLIENT_SECRET
-
   const authInstallation = createAppAuth({
     appId,
-    privateKey: process.env.PRIVATE_KEY,
+    privateKey,
     clientId,
     clientSecret,
   })
@@ -109,6 +110,8 @@ const main = async function (bot: Probot) {
   assert(process.env.POLKADOT_WEBSOCKET_ADDRESS)
   assert(process.env.KUSAMA_WEBSOCKET_ADDRESS)
 
+  const logger = new Logger({ name: "app" })
+
   const appState: AppState = {
     bot,
     db,
@@ -126,11 +129,13 @@ const main = async function (bot: Probot) {
       kusama: process.env.KUSAMA_WEBSOCKET_ADDRESS,
     },
     allowedOrganizations,
-    logger: new Logger({ name: "app" }),
+    logger,
   }
 
-  //await requeueUnterminated(appState)
+  await requeueUnterminated(appState)
   setupProbot(appState)
+
+  logger.info("Probot has started!")
 }
 
 run(main)
