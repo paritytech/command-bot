@@ -32,13 +32,16 @@ Create chart name and version as used by the chart label.
 
 {{/*
 Common labels
-Make sure to include AppVersion because annotations rely on this value
+Make sure to include appVersion because annotations rely on this value
 */}}
 {{- define "try-runtime.labels" -}}
 helm.sh/chart: {{ include "try-runtime.chart" . }}
 {{ include "try-runtime.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- if .Chart.appVersion }}
+app.kubernetes.io/app-version: {{ .Chart.appVersion | quote }}
+{{- end }}
+{{- if .Chart.version }}
+app.kubernetes.io/chart-version: {{ .Chart.version | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
