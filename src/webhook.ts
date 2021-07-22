@@ -118,6 +118,8 @@ export const getWebhooksHandlers = function ({
         const { issue, comment, repository, installation } = payload
         const requester = comment.user?.login
 
+        logger.info(`Got payload ${JSON.stringify(payload)}`)
+
         if (
           !requester ||
           // eslint-disable-next-line no-prototype-builtins
