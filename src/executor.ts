@@ -3,6 +3,7 @@ import cp from "child_process"
 
 import { DB, getSortedItems } from "src/db"
 
+import { Logger } from "./logger"
 import {
   AppState,
   CommandOutput,
@@ -28,10 +29,10 @@ export type ShellExecutor = (
 ) => Promise<CommandOutput>
 
 export const getShellExecutor = function ({
-  log,
+  logger,
   onChild,
 }: {
-  log: (str: string) => void
+  logger: Logger
   onChild?: (child: cp.ChildProcess) => void
 }): ShellExecutor {
   return function (
@@ -46,7 +47,7 @@ export const getShellExecutor = function ({
           args,
           secretsToHide: secretsToHide ?? [],
         })
-        log(`Executing ${commandDisplayed}`)
+        logger.info(`Executing ${commandDisplayed}`)
 
         const child = cp.execFile(
           execPath,
@@ -85,7 +86,7 @@ export const getShellExecutor = function ({
             )
 
             if (sanitizedStdout) {
-              log(`Output of ${commandDisplayed}:\n${sanitizedStdout}`)
+              logger.info(`Output of ${commandDisplayed}:\n${sanitizedStdout}`)
             }
 
             resolve(sanitizedStdout)
@@ -218,13 +219,13 @@ ${JSON.stringify(value, null, 2)}
 
 const mutex = new Mutex()
 export const queue = async function ({
-  log,
+  logger,
   db,
   taskData,
   onResult,
   getFetchEndpoint,
   handleId,
-}: Pick<AppState, "db" | "log" | "getFetchEndpoint"> & {
+}: Pick<AppState, "db" | "logger" | "getFetchEndpoint"> & {
   taskData: PullRequestTask
   onResult: (result: CommandOutput) => Promise<void>
   handleId: string
@@ -246,16 +247,16 @@ export const queue = async function ({
 
     try {
       if (child) {
-        log(`Killing child with PID ${child.pid} (${commandDisplay})`)
+        logger.info(`Killing child with PID ${child.pid} (${commandDisplay})`)
         child.kill()
       }
     } catch (err) {
-      log(err)
+      logger.error(err, `Failed to kill child with PID ${child?.pid}`)
     }
 
     await db.del(taskId)
 
-    log(
+    logger.info(
       `Queue after termination: ${JSON.stringify(
         await getSortedItems(db, {
           match: { version: taskData.version },
@@ -281,7 +282,7 @@ export const queue = async function ({
   mutex
     .runExclusive(async function () {
       try {
-        log(
+        logger.info(
           `Starting run of ${commandDisplay}\nCurrent queue: ${JSON.stringify(
             await getSortedItems(db, {
               match: { version: taskData.version },
@@ -294,7 +295,7 @@ export const queue = async function ({
         }
 
         const run = getShellExecutor({
-          log,
+          logger,
           onChild: function (newChild) {
             child = newChild
           },

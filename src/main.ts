@@ -6,22 +6,24 @@ import { botMentionPrefix } from "src/constants"
 import { getDb, getSortedItems } from "src/db"
 
 import { queue } from "./executor"
+import { Logger } from "./logger"
 import { AppState } from "./types"
 import { getPostPullRequestResult, getPullRequestHandleId } from "./utils"
 import { getWebhooksHandlers, setupEvent } from "./webhook"
 
 const setupProbot = async function (state: AppState) {
-  const { bot } = state
+  const { bot, logger } = state
 
   const { onIssueCommentCreated } = getWebhooksHandlers(state)
-  setupEvent(bot, "issue_comment.created", onIssueCommentCreated)
+  setupEvent(bot, "issue_comment.created", onIssueCommentCreated, logger)
 }
 
 const requeueUnterminated = async function ({
-  bot,
   getFetchEndpoint,
   db,
   version,
+  logger,
+  bot,
 }: AppState) {
   // Items which are not from this version still remaining in the database are
   // deemed unterminated.
@@ -35,12 +37,12 @@ const requeueUnterminated = async function ({
     const octokit = await bot.auth(taskData.installationId)
     const handleId = getPullRequestHandleId(taskData)
 
-    bot.log(`Requeuing ${JSON.stringify(taskData)}`)
+    logger.info(`Requeuing ${JSON.stringify(taskData)}`)
     await queue({
       handleId,
       getFetchEndpoint,
       db,
-      log: bot.log,
+      logger,
       taskData,
       onResult: getPostPullRequestResult({ taskData, octokit, handleId }),
     })
@@ -107,7 +109,7 @@ const main = async function (bot: Probot) {
   assert(process.env.POLKADOT_WEBSOCKET_ADDRESS)
   assert(process.env.KUSAMA_WEBSOCKET_ADDRESS)
 
-  const appState = {
+  const appState: AppState = {
     bot,
     db,
     appId,
@@ -124,6 +126,7 @@ const main = async function (bot: Probot) {
       kusama: process.env.KUSAMA_WEBSOCKET_ADDRESS,
     },
     allowedOrganizations,
+    logger: new Logger({ name: "try-runtime" }),
   }
 
   await requeueUnterminated(appState)

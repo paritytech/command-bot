@@ -12,6 +12,7 @@ import {
   isOrganizationMember,
   updateComment,
 } from "./github"
+import { Logger } from "./logger"
 import { AppState, PullRequestError, PullRequestTask } from "./types"
 import {
   getCommand,
@@ -30,6 +31,7 @@ export const setupEvent = function <E extends keyof EventTypesPayload>(
   bot: Probot,
   event: E,
   handler: WebhookHandler<E>,
+  logger: Logger,
 ) {
   bot.on(event, async function (data) {
     const { octokit: probotOctokit } = data
@@ -60,7 +62,7 @@ export const setupEvent = function <E extends keyof EventTypesPayload>(
         }
       }
     } catch (err) {
-      bot.log(`Exception caught in webhook handler\n${err.stack}`)
+      logger.error(err, "Exception caught in webhook handler")
     }
   })
 }
@@ -72,7 +74,7 @@ const mutex = new Mutex()
 export const getWebhooksHandlers = function ({
   botMentionPrefix,
   db,
-  log,
+  logger,
   nodesAddresses,
   getFetchEndpoint,
   version,
@@ -81,7 +83,7 @@ export const getWebhooksHandlers = function ({
   AppState,
   | "botMentionPrefix"
   | "db"
-  | "log"
+  | "logger"
   | "nodesAddresses"
   | "getFetchEndpoint"
   | "version"
@@ -97,7 +99,7 @@ export const getWebhooksHandlers = function ({
           organizationId,
           username,
           octokit,
-          log,
+          logger,
         })
       ) {
         return true
@@ -291,7 +293,7 @@ export const getWebhooksHandlers = function ({
                   handleId,
                 }),
                 db,
-                log,
+                logger,
                 taskData,
               })
 

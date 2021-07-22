@@ -1,6 +1,7 @@
 import { Probot } from "probot"
 
 import type { DB } from "./db"
+import { Logger } from "./logger"
 
 export type PullRequestParams = {
   owner: string
@@ -43,6 +44,7 @@ export type AppState = {
   botMentionPrefix: string
   nodesAddresses: Record<string, string>
   allowedOrganizations: number[]
+  logger: Logger
 }
 
 export class PullRequestError {

@@ -2,6 +2,7 @@ import { RequestError } from "@octokit/request-error"
 import { Octokit } from "@octokit/rest"
 import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types"
 
+import { Logger } from "./logger"
 import { millisecondsDelay } from "./utils"
 
 export type ExtendedOctokit = Octokit & {
@@ -87,12 +88,12 @@ export const isOrganizationMember = async function ({
   organizationId,
   username,
   octokit,
-  log,
+  logger,
 }: {
   organizationId: number
   username: string
   octokit: ExtendedOctokit
-  log: (str: string) => void
+  logger: Logger
 }) {
   try {
     const response = await octokit.orgs.userMembershipByOrganizationId({
@@ -106,10 +107,9 @@ export const isOrganizationMember = async function ({
     // 404 is one of the expected responses for this endpoint so this scenario
     // doesn't need to be flagged as an error
     if (error?.status !== 404) {
-      log(
-        `Organization membership API call responded with unexpected status code ${
-          error?.status
-        }\n${error?.stack ?? error?.message}`,
+      logger.error(
+        error,
+        "Organization membership API call responded with unexpected status code",
       )
     }
     return false
