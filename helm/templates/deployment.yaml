@@ -43,10 +43,6 @@ spec:
             - name: http
               containerPort: 3000
               protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /probot
-              port: 3000
           readinessProbe:
             httpGet:
               path: /probot
