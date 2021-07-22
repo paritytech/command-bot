@@ -113,7 +113,7 @@ build_bot:
       --set persistence.mountPath="$DB_PATH"
       --set env.LOG_LEVEL="$PROBOT_LOG_LEVEL"
       --set env.LOG_LEVEL_IN_STRING="true"
-      --set env.NODE_ENV="production"
+      --set env.NODE_ENV="prod"
 
 .uninstall-deployment: &uninstall-deployment
   <<: *kubernetes

@@ -7,7 +7,7 @@ export class Logger {
     context?: string,
   ) {
     switch (process.env.NODE_ENV) {
-      case "production": {
+      case "prod": {
         const base = { level, name: this.options.name, context }
 
         // This structure is aligned with Probot's pino format for JSON logging
