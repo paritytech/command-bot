@@ -93,7 +93,7 @@ which is handy for querying in your logging aggregator.
 
 ## Github Settings
 
-### Repository permissions 
+### Repository permissions
 
 - Metadata: Read-only
 - Issues: Read-only

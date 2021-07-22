@@ -84,4 +84,3 @@ spec:
         {{- else }}
           emptyDir: {}
         {{- end -}}
-

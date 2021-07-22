@@ -34,7 +34,7 @@ install-deps:
   <<: *on-pr-and-master
   stage: install_deps
   script:
-    - npm ci
+    - yarn ci
   artifacts:
     name:       "${CI_JOB_ID}_${CI_COMMIT_REF_NAME}"
     when:       on_success
@@ -46,7 +46,7 @@ lint:
   <<: *on-pr-and-master
   stage: lint
   script:
-    - npm run lint
+    - yarn lint
 
 pre_commit:
   <<: *on-pr-and-master
@@ -58,7 +58,7 @@ build_bot:
   <<: *on-pr-and-master
   stage: after_lint
   script:
-    - npm run build:bot
+    - yarn build:bot
 
 #### App deployment
 
@@ -193,4 +193,3 @@ build-ci-image:
   <<: *build-ci-image
   stage: containerize
   allow_failure: true
-
