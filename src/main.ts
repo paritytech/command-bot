@@ -126,7 +126,7 @@ const main = async function (bot: Probot) {
       kusama: process.env.KUSAMA_WEBSOCKET_ADDRESS,
     },
     allowedOrganizations,
-    logger: new Logger({ name: "try-runtime" }),
+    logger: new Logger({ name: "app" }),
   }
 
   await requeueUnterminated(appState)

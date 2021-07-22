@@ -56,10 +56,6 @@ RUN apk add --no-cache \
   --virtual .build-deps \
   linux-headers python3 make gcc libc-dev g++
 
-ENV NODE_ENV=PRODUCTION
-ENV LOG_FORMAT=json
-ENV LOG_LEVEL_IN_STRING=true
-
 RUN yarn --version
 
 RUN cd "\$REPO_VOLUME" && \
