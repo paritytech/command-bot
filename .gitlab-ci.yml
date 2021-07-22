@@ -4,7 +4,7 @@ variables:
   CI_IMAGE: ${IMAGE_REPOSITORY}:ci
   KUBE_NAMESPACE: try-runtime
   DEPLOYMENT_TAG: ${CI_ENVIRONMENT_NAME}${CI_COMMIT_TAG}
-  DB_PATH: /data/
+  DB_PATH: /data
 
 default:
   image: $CI_IMAGE
@@ -111,9 +111,9 @@ build_bot:
       --set env.KUSAMA_WEBSOCKET_ADDRESS="$KUSAMA_WEBSOCKET_ADDRESS"
       --set env.WESTEND_WEBSOCKET_ADDRESS="$WESTEND_WEBSOCKET_ADDRESS"
       --set persistence.mountPath="$DB_PATH"
+      --set env.LOG_FORMAT="json"
       --set env.LOG_LEVEL="debug"
       --set env.LOG_LEVEL_IN_STRING="true"
-      --set env.APP_LOG_FORMAT="json"
 
 .uninstall-deployment: &uninstall-deployment
   <<: *kubernetes
