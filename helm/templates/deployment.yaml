@@ -45,14 +45,14 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /
+              path: /ping
               port: 3000
             failureThreshold: 0
             periodSeconds: 128
             initialDelaySeconds: 128
           readinessProbe:
             httpGet:
-              path: /
+              path: /ping
               port: 3000
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
