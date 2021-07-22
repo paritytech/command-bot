@@ -45,11 +45,11 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /
+              path: /probot
               port: 3000
           readinessProbe:
             httpGet:
-              path: /
+              path: /probot
               port: 3000
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
