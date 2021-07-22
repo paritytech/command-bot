@@ -129,7 +129,7 @@ const main = async function (bot: Probot) {
     logger: new Logger({ name: "app" }),
   }
 
-  await requeueUnterminated(appState)
+  //await requeueUnterminated(appState)
   setupProbot(appState)
 }
 
