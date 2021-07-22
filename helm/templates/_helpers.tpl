@@ -37,11 +37,11 @@ Make sure to include appVersion because annotations rely on this value
 {{- define "try-runtime.labels" -}}
 helm.sh/chart: {{ include "try-runtime.chart" . }}
 {{ include "try-runtime.selectorLabels" . }}
-{{- if .Chart.appVersion }}
-app.kubernetes.io/app-version: {{ .Chart.appVersion | quote }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/app-version: {{ .Chart.AppVersion | quote }}
 {{- end }}
-{{- if .Chart.version }}
-app.kubernetes.io/chart-version: {{ .Chart.version | quote }}
+{{- if .Chart.Version }}
+app.kubernetes.io/chart-version: {{ .Chart.Version | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
