@@ -45,6 +45,17 @@ const clientId = process.env.CLIENT_ID
 assert(process.env.CLIENT_SECRET)
 const clientSecret = process.env.CLIENT_SECRET
 
+assert(process.env.ROCOCO_WEBSOCKET_ADDRESS)
+assert(process.env.WESTEND_WEBSOCKET_ADDRESS)
+assert(process.env.POLKADOT_WEBSOCKET_ADDRESS)
+assert(process.env.KUSAMA_WEBSOCKET_ADDRESS)
+const nodesAddresses = {
+  rococo: process.env.ROCOCO_WEBSOCKET_ADDRESS,
+  westend: process.env.WESTEND_WEBSOCKET_ADDRESS,
+  polkadot: process.env.POLKADOT_WEBSOCKET_ADDRESS,
+  kusama: process.env.KUSAMA_WEBSOCKET_ADDRESS,
+}
+
 const setupProbot = async function (state: AppState) {
   const { bot, logger } = state
 
@@ -108,13 +119,7 @@ const main = async function (bot: Probot) {
     return { url, token }
   }
 
-  assert(process.env.ROCOCO_WEBSOCKET_ADDRESS)
-  assert(process.env.WESTEND_WEBSOCKET_ADDRESS)
-  assert(process.env.POLKADOT_WEBSOCKET_ADDRESS)
-  assert(process.env.KUSAMA_WEBSOCKET_ADDRESS)
-
   const logger = new Logger({ name: "app" })
-
   const appState: AppState = {
     bot,
     db,
@@ -125,12 +130,7 @@ const main = async function (bot: Probot) {
     log: bot.log,
     botMentionPrefix,
     version,
-    nodesAddresses: {
-      rococo: process.env.ROCOCO_WEBSOCKET_ADDRESS,
-      westend: process.env.WESTEND_WEBSOCKET_ADDRESS,
-      polkadot: process.env.POLKADOT_WEBSOCKET_ADDRESS,
-      kusama: process.env.KUSAMA_WEBSOCKET_ADDRESS,
-    },
+    nodesAddresses,
     allowedOrganizations,
     logger,
   }
