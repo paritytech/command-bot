@@ -1,13 +1,26 @@
 #!/bin/bash
 
-IFS='' read -r -d '' common <<'EOF'
-FROM docker.io/node:lts-alpine
+RUSTUP_HOME=/usr/local/rustup
+CARGO_HOME=/usr/local/cargo
+PRE_COMMIT_BUILD_DEPS="gcc python3-dev libc-dev python3-pip"
+RUST_BUILD_DEPS="curl ca-certificates"
+ROCKSDB_BUILD_DEPS="build-essential python3"
+# https://github.com/paritytech/substrate/search?q=x86_64-unknown-linux-gnu
+SUBSTRATE_HOST=x86_64-unknown-linux-gnu
+APT_INSTALL="apt install --assume-yes --quiet --no-install-recommends"
 
-RUN apk update
+IFS='' read -r -d '' common <<EOF
+FROM docker.io/node:lts-buster-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN yarn --version
+
+RUN apt update
 
 # Git is needed for both pre-commit and also for cloning repositories before
 # running the bot's commands
-RUN apk add --no-cache git && git --version
+RUN $APT_INSTALL git && git --version
 EOF
 
 case "$1" in
@@ -16,23 +29,14 @@ IFS='' read -r -d '' ci << EOF
 $common
 
 # CI pipeline utilities
-RUN apk add --no-cache python3 make bash sed
+RUN $APT_INSTALL python3 make bash sed
 
 # Needed for pre-commit's installation
-RUN apk add --no-cache --virtual .build-deps \
-  gcc python3-dev libc-dev
+RUN $APT_INSTALL $PRE_COMMIT_BUILD_DEPS && apt-mark auto $PRE_COMMIT_BUILD_DEPS
 
-# Install pip through Python and update it. This will always result on having
-# the latest version of pip, as opposed to using the alpine pip package which
-# might be outdated; having the latest pip is relevant to leverage the
-# packages' wheels
-RUN python3 -m ensurepip && pip3 install --upgrade pip
+RUN pip3 install pre-commit && pre-commit --version
 
-RUN pip3 install pre-commit && \
-  echo "Pre-commit version:" && pre-commit --version
-
-RUN apk del .build-deps
-
+RUN apt-get autoremove -y
 EOF
     echo "$ci"
     ;;
@@ -42,33 +46,43 @@ IFS='' read -r -d '' app << EOF
 $common
 
 # Those values are expected to be set from CI.
-ARG REPO_VOLUME
-ENV REPO_VOLUME=\$REPO_VOLUME
-RUN if [ ! "\$REPO_VOLUME" ]; then exit 1; fi
+ARG REPO
+ENV REPO=\$REPO
+RUN if [ ! "\$REPO" ]; then exit 1; fi
 
 # Rust is needed for running the bot's commands
-RUN apk add --update --no-cache \
-  --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main \
-  cargo rust
+RUN $APT_INSTALL $RUST_BUILD_DEPS && apt-mark auto $RUST_BUILD_DEPS
+ENV RUSTUP_HOME=$RUSTUP_HOME \
+  CARGO_HOME=$CARGO_HOME \
+  PATH=$CARGO_HOME/bin:\$PATH
+RUN curl https://sh.rustup.rs -sSf | sh -s -- \
+    -y \
+    --no-modify-path \
+    --default-host $SUBSTRATE_HOST \
+    --default-toolchain nightly \
+    --profile minimal && \
+  . $CARGO_HOME/env && \
+  cargo --version && rustup --version && \
+	rustup toolchain install nightly-$SUBSTRATE_HOST && \
+	rustup target add wasm32-unknown-unknown --toolchain nightly
 
-# Needed for building RocksDB
-RUN apk add --no-cache \
-  --virtual .build-deps \
-  linux-headers python3 make gcc libc-dev g++
+# Needed for building RocksDB bindings for Node.js
+RUN $APT_INSTALL $ROCKSDB_BUILD_DEPS && apt-mark auto $ROCKSDB_BUILD_DEPS
 
-RUN yarn --version
-
-RUN cd "\$REPO_VOLUME" && \
+RUN cd "\$REPO" && \
   yarn --ignore-optional --frozen-lockfile && \
   yarn build && \
   mkdir /bot && \
   mv build node_modules /bot
 
-RUN apk del .build-deps
+RUN apt-get autoremove -y
+
+# gcc & libc are runtime dependencies due to the 'cc' linker for Rust
+RUN $APT_INSTALL gcc libc-dev && cc --version
 
 WORKDIR /bot
 
-CMD node ./build/main.js
+CMD . $CARGO_HOME/env && node ./build/main.js
 EOF
     echo "$app"
     ;;

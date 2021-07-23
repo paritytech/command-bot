@@ -222,6 +222,7 @@ export const getWebhooksHandlers = function ({
               }
 
               const args = [
+                "+nightly",
                 "run",
                 // --quiet should be kept so that the command's output buffer
                 // doesn't blow up with a bunch of compilation stuff; bear in

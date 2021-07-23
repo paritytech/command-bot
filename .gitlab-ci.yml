@@ -1,5 +1,5 @@
 variables:
-  REPO_VOLUME: /repo
+  REPO: /repo
   IMAGE_REPOSITORY: docker.io/paritytech/try-runtime-bot
   CI_IMAGE: ${IMAGE_REPOSITORY}:ci
   KUBE_NAMESPACE: try-runtime
@@ -73,8 +73,8 @@ build_bot:
     - ./scripts/generateDockerfile app |
       buildah bud
       --format=docker
-      --build-arg "REPO_VOLUME=$REPO_VOLUME"
-      -v "$PWD:$REPO_VOLUME"
+      --build-arg "REPO=$REPO"
+      -v "$PWD:$REPO"
       --tag "$IMAGE_REPOSITORY:$DEPLOYMENT_TAG"
       -
     - buildah push --format=v2s2 "$IMAGE_REPOSITORY:$DEPLOYMENT_TAG"
@@ -177,8 +177,8 @@ deploy-production:
     - ./scripts/generateDockerfile ci |
       buildah bud
       --format=docker
-      --tag "$IMAGE_REPOSITORY:$CI_IMAGE" -
-    - buildah push --format=v2s2 "$IMAGE_REPOSITORY:$CI_IMAGE"
+      --tag "$CI_IMAGE" -
+    - buildah push --format=v2s2 "$CI_IMAGE"
   after_script:
     - buildah logout --all
 
