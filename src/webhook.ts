@@ -204,7 +204,7 @@ export const getWebhooksHandlers = function ({
 
                     if (!node) {
                       return getError(
-                        `Must specify one address in the form \`ws://name\` (found \`${arg}\`). ${nodeOptionsDisplay}`,
+                        `Must specify one address in the form \`ws://name\` (found "${arg}"). ${nodeOptionsDisplay}`,
                       )
                     }
 
@@ -215,7 +215,7 @@ export const getWebhooksHandlers = function ({
                       )
                     }
 
-                    otherArgs[i] = `${prefix}${nodeAddress}`
+                    otherArgs[i] = nodeAddress
                     continue toNextArg
                   }
                 }
