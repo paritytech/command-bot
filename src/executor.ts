@@ -251,7 +251,7 @@ export const queue = async function ({
         child.kill()
       }
     } catch (err) {
-      logger.error(err, `Failed to kill child with PID ${child?.pid}`)
+      logger.fatal(err, `Failed to kill child with PID ${child?.pid}`)
     }
 
     await db.del(taskId)

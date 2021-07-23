@@ -69,7 +69,7 @@ export const setupEvent = function <E extends WebhookEvents>(
         }
       }
     } catch (err) {
-      logger.error(err, "Exception caught in webhook handler")
+      logger.fatal(err, "Exception caught in webhook handler")
     }
   })
 }

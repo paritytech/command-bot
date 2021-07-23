@@ -114,7 +114,7 @@ export const isOrganizationMember = async function ({
     // 404 is one of the expected responses for this endpoint so this scenario
     // doesn't need to be flagged as an error
     if (error?.status !== 404) {
-      logger.error(
+      logger.fatal(
         error,
         "Organization membership API call responded with unexpected status code",
       )

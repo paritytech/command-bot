@@ -2,7 +2,7 @@ export class Logger {
   constructor(public options: { name: string }) {}
 
   private logToConsole(
-    level: "error" | "info",
+    level: "fatal" | "info",
     item: string | Error,
     context?: string,
   ) {
@@ -29,14 +29,14 @@ export class Logger {
       }
       default: {
         if (item instanceof Error) {
-          const tag = `ERROR (${this.options.name}):`
+          const tag = `${level.toUpperCase()} (${this.options.name}):`
           if (context) {
             console.error(tag, context, item)
           } else {
             console.error(tag, item)
           }
         } else {
-          console.log(`INFO (${this.options.name}):`, item)
+          console.log(`${level.toUpperCase()} (${this.options.name}):`, item)
         }
         break
       }
@@ -47,7 +47,7 @@ export class Logger {
     return this.logToConsole("info", msg)
   }
 
-  error(err: Error, context?: string) {
-    return this.logToConsole("error", err, context)
+  fatal(err: Error, context?: string) {
+    return this.logToConsole("fatal", err, context)
   }
 }
