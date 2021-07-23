@@ -156,7 +156,7 @@ export const prepareBranch = async function* (
   const prRemote = "pr"
   yield repoCmd("git", ["remote", "remove", prRemote], {
     testAllowedErrorMessage: function (err) {
-      return err.startsWith("error: No such remote:")
+      return err.includes("No such remote:")
     },
   })
 
