@@ -1,7 +1,7 @@
 import { Mutex } from "async-mutex"
 import cp from "child_process"
 
-import { DB, getSortedItems } from "src/db"
+import { DB, getSortedTasks } from "src/db"
 
 import { Logger } from "./logger"
 import {
@@ -188,7 +188,7 @@ export const getQueueMessage = async function (
   commandDisplay: string,
   version: string,
 ) {
-  const items = await getSortedItems(db, {
+  const items = await getSortedTasks(db, {
     match: { version },
   })
 
@@ -258,7 +258,7 @@ export const queue = async function ({
 
     logger.info(
       `Queue after termination: ${JSON.stringify(
-        await getSortedItems(db, {
+        await getSortedTasks(db, {
           match: { version: taskData.version },
         }),
       )}`,
@@ -284,7 +284,7 @@ export const queue = async function ({
       try {
         logger.info(
           `Starting run of ${commandDisplay}\nCurrent queue: ${JSON.stringify(
-            await getSortedItems(db, {
+            await getSortedTasks(db, {
               match: { version: taskData.version },
             }),
           )}`,

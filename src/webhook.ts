@@ -36,7 +36,8 @@ export const setupEvent = function <E extends WebhookEvents>(
   logger: Logger,
 ) {
   bot.on(event, async function (data) {
-    const installationId: number | undefined = (data as any).installation?.id
+    const installationId: number | undefined = (data.payload as any)
+      .installation?.id
     const octokit = getOctokit(
       await (bot.auth as (installationId?: number) => Promise<Octokit>)(
         installationId,
@@ -123,8 +124,6 @@ export const getWebhooksHandlers = function ({
       return mutex.runExclusive(async function () {
         const { issue, comment, repository, installation } = payload
         const requester = comment.user?.login
-
-        logger.info(`Got payload ${JSON.stringify(payload)}`)
 
         if (
           !requester ||

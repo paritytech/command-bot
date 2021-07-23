@@ -17,7 +17,7 @@ export const getDb = getLevelDb as (
   path: string,
 ) => LevelUp<LevelDB, LevelIterator>
 
-export const getSortedItems = async function (
+export const getSortedTasks = async function (
   db: DB,
   {
     match: { version, isInverseMatch },

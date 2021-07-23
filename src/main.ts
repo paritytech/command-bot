@@ -6,7 +6,7 @@ import path from "path"
 import { Probot, run } from "probot"
 
 import { botMentionPrefix } from "src/constants"
-import { getDb, getSortedItems } from "src/db"
+import { getDb, getSortedTasks } from "src/db"
 
 import { queue } from "./executor"
 import { Logger } from "./logger"
@@ -48,7 +48,7 @@ const requeueUnterminated = async function ({
 }: AppState) {
   // Items which are not from this version still remaining in the database are
   // deemed unterminated.
-  const unterminatedItems = await getSortedItems(db, {
+  const unterminatedItems = await getSortedTasks(db, {
     match: { version, isInverseMatch: true },
   })
 
