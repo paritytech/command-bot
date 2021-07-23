@@ -25,6 +25,7 @@ export type ShellExecutor = (
     options?: cp.ExecFileOptions
     testAllowedErrorMessage?: (stderr: string) => boolean
     secretsToHide?: string[]
+    shouldTrackProgress?: boolean
   },
 ) => Promise<CommandOutput>
 
@@ -38,7 +39,13 @@ export const getShellExecutor = function ({
   return function (
     execPath,
     args,
-    { allowedErrorCodes, options, testAllowedErrorMessage, secretsToHide } = {},
+    {
+      allowedErrorCodes,
+      options,
+      testAllowedErrorMessage,
+      secretsToHide,
+      shouldTrackProgress,
+    } = {},
   ) {
     return new Promise(function (resolve) {
       try {
@@ -59,7 +66,9 @@ export const getShellExecutor = function ({
         child.stdout.on("data", function (data: { toString: () => string }) {
           const str = redactSecrets(data.toString(), secretsToHide)
           stdout += str
-          logger.info(str.trim(), `Progress for ${commandDisplayed}`)
+          if (shouldTrackProgress) {
+            logger.info(str.trim(), `Progress for ${commandDisplayed}`)
+          }
         })
 
         let stderr = ""
@@ -315,6 +324,7 @@ export const queue = async function ({
             env: { ...process.env, ...taskData.env },
             cwd: prepareBranchParams.repoPath,
           },
+          shouldTrackProgress: true,
         })
 
         return isAlive
