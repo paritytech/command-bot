@@ -49,53 +49,39 @@ export const getShellExecutor = function ({
         })
         logger.info(`Executing ${commandDisplayed}`)
 
-        const child = cp.execFile(
-          execPath,
-          args,
-          options,
-          function (error, stdout, stderr) {
-            const sanitizedStderr = redactSecrets(
-              stderr.toString().trim(),
-              secretsToHide,
-            )
-            const isErrorMessageAllowed = testAllowedErrorMessage
-              ? testAllowedErrorMessage(sanitizedStderr)
-              : false
-
-            if (!isErrorMessageAllowed) {
-              if (error) {
-                const code = error.code as number | undefined
-                if (code && !allowedErrorCodes?.includes(code)) {
-                  return resolve(
-                    new Error(
-                      redactSecrets(
-                        error.stack ?? error.message,
-                        secretsToHide,
-                      ),
-                    ),
-                  )
-                }
-              } else if (sanitizedStderr) {
-                return resolve(new Error(sanitizedStderr))
-              }
-            }
-
-            const sanitizedStdout = redactSecrets(
-              stdout.toString().trim(),
-              secretsToHide,
-            )
-
-            if (sanitizedStdout) {
-              logger.info(`Output of ${commandDisplayed}:\n${sanitizedStdout}`)
-            }
-
-            resolve(sanitizedStdout)
-          },
-        )
+        const child = cp.spawn(execPath, args, options)
 
         if (onChild) {
           onChild(child)
         }
+
+        let stdout = ""
+        child.stdout.on("data", function (data: { toString: () => string }) {
+          const str = redactSecrets(data.toString(), secretsToHide)
+          stdout += str
+          logger.info(str.trim(), `Progress for ${commandDisplayed}`)
+        })
+
+        let stderr = ""
+        child.stderr.on("data", function (data: { toString: () => string }) {
+          stderr += data.toString()
+        })
+
+        child.on("close", function (code) {
+          stdout = stdout.trim()
+          stderr = redactSecrets(stderr, secretsToHide).trim()
+          if (
+            code &&
+            (allowedErrorCodes === undefined ||
+              !allowedErrorCodes.includes(code)) &&
+            (testAllowedErrorMessage === undefined ||
+              !testAllowedErrorMessage(stderr))
+          ) {
+            resolve(new Error(stderr))
+          } else {
+            resolve(stdout)
+          }
+        })
       } catch (error) {
         resolve(error)
       }
@@ -307,18 +293,17 @@ export const queue = async function ({
             return getFetchEndpoint(taskData.installationId)
           },
         })
-        let o: IteratorResult<CommandOutput>
         while (isAlive) {
-          o = await prepare.next()
+          const next = await prepare.next()
 
-          if (o.done) {
+          if (next.done) {
             break
           }
 
           child = undefined
 
-          if (typeof o.value !== "string") {
-            return o.value
+          if (typeof next.value !== "string") {
+            return next.value
           }
         }
         if (!isAlive) {

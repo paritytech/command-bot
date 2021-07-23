@@ -28,23 +28,20 @@ export class Logger {
         break
       }
       default: {
-        if (item instanceof Error) {
-          const tag = `${level.toUpperCase()} (${this.options.name}):`
-          if (context) {
-            console.error(tag, context, item)
-          } else {
-            console.error(tag, item)
-          }
+        const tag = `${level.toUpperCase()} (${this.options.name}):`
+        const fn = item instanceof Error ? console.error : console.log
+        if (context) {
+          fn(tag, context, item)
         } else {
-          console.log(`${level.toUpperCase()} (${this.options.name}):`, item)
+          fn(tag, item)
         }
         break
       }
     }
   }
 
-  info(msg: string) {
-    return this.logToConsole("info", msg)
+  info(msg: string, context?: string) {
+    return this.logToConsole("info", msg, context)
   }
 
   fatal(err: Error, context?: string) {
