@@ -1,8 +1,8 @@
 # try-runtime-bot
 
-Note: This bot is not currently live.
+# Commands
 
-# Usage
+## Queue
 
 Comment in a pull request:
 
@@ -12,13 +12,35 @@ For instance:
 
 `/try-runtime queue RUST_LOG=debug live ws://kusama`
 
-This will run the try-runtime Substrate feature for your pull request's branch
+That will run the try-runtime Substrate feature for your pull request's branch
 with the provided arguments and post the result as a comment. It's supposed to
 support the same arguments as
 [try-runtime](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)
 although not all of them have been tried out as of this writing.
 
-# Running
+Note: you **need to** refer to the nodes by their name e.g. `ws://polkadot`
+instead of using arbitrary addresses directly.
+
+## Cancel
+
+In the pull request where you previously ran `/try-runtime queue`, comment:
+
+`/try-runtime cancel`
+
+# Deploying
+
+## Build and deploy
+
+Either push a tag with the pattern `/^v[0-9]+\.[0-9]+.*$/` or
+[trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
+with `BUILD` set to `production`.
+
+## Only deploy
+
+[Trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
+with `DEPLOY` set to `production`.
+
+# Running manually
 
 1. [Configure your environment](https://github.com/paritytech/try-runtime-bot#configuration)
 2. Install dependencies: `yarn`
@@ -36,10 +58,8 @@ References:
 code changes. You'll want to copy [the example file](./env/bot.example.js) to
 `./env/bot.js` and set the values there for this command to work.
 
----
-
-For the scraping the servers locally, there's no need to compile the Polkadot
-binaries by yourself. Simply run the image:
+Here's a Docker command you can use to set up a node for running `/try-runtime`
+locally:
 
 `docker run -p 9944:9944 parity/polkadot:v0.9.3 --base-path /polkadot --unsafe-rpc-external --unsafe-ws-external --rpc-cors all --chain kusama`
 
