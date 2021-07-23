@@ -80,10 +80,10 @@ const main = async function (bot: Probot) {
   assert(process.env.POLKADOT_WEBSOCKET_ADDRESS)
   assert(process.env.KUSAMA_WEBSOCKET_ADDRESS)
   const nodesAddresses = {
-    rococo: process.env.ROCOCO_WEBSOCKET_ADDRESS,
-    westend: process.env.WESTEND_WEBSOCKET_ADDRESS,
-    polkadot: process.env.POLKADOT_WEBSOCKET_ADDRESS,
     kusama: process.env.KUSAMA_WEBSOCKET_ADDRESS,
+    rococo: process.env.ROCOCO_WEBSOCKET_ADDRESS,
+    polkadot: process.env.POLKADOT_WEBSOCKET_ADDRESS,
+    westend: process.env.WESTEND_WEBSOCKET_ADDRESS,
   }
 
   const allowedOrganizations = (process.env.ALLOWED_ORGANIZATIONS ?? "")

@@ -105,6 +105,11 @@ username as `https://api.github.com/users/${organization}`, for instance
 
 **At least one organization ID has to be provided for the bot to work.**
 
+`{KUSAMA,ROCOCO,POLKADOT,WESTEND}_WEBSOCKET_ADDRESS`
+
+Set the websocket address for each runtime variant e.g.
+`POLKADOT_WEBSOCKET_ADDRESS=wss://127.0.0.1:9944`
+
 ## Optional environment variables
 
 On production, it's recommended to set `LOG_FORMAT` to `json` so that
