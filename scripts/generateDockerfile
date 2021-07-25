@@ -59,12 +59,12 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- \
     -y \
     --no-modify-path \
     --default-host $SUBSTRATE_HOST \
-    --default-toolchain nightly \
     --profile minimal && \
   . $CARGO_HOME/env && \
   cargo --version && rustup --version && \
-	rustup toolchain install nightly-$SUBSTRATE_HOST && \
-	rustup target add wasm32-unknown-unknown --toolchain nightly
+  rustup toolchain install stable-$SUBSTRATE_HOST && \
+  rustup toolchain install nightly-$SUBSTRATE_HOST && \
+  rustup target add wasm32-unknown-unknown --toolchain nightly
 
 # Needed for building RocksDB bindings for Node.js
 RUN $APT_INSTALL $ROCKSDB_BUILD_DEPS && apt-mark auto $ROCKSDB_BUILD_DEPS

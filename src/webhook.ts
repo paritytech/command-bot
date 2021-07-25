@@ -222,7 +222,6 @@ export const getWebhooksHandlers = function ({
               }
 
               const args = [
-                "+nightly",
                 "run",
                 "--release",
                 "--features=try-runtime",
