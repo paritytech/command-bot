@@ -73,6 +73,8 @@ const requeueUnterminated = async function ({
 }
 
 const main = async function (bot: Probot) {
+  const logger = new Logger({ name: "app" })
+
   const version = new Date().toISOString()
 
   assert(process.env.ROCOCO_WEBSOCKET_ADDRESS)
@@ -104,6 +106,14 @@ const main = async function (bot: Probot) {
     fs.unlinkSync(lockPath)
   }
   const db = getDb(process.env.DB_PATH)
+  if (process.env.CLEAR_DB_ON_START === "true") {
+    logger.info("Clearing the database before starting")
+    for (const { id } of await getSortedTasks(db, {
+      match: { version, isInverseMatch: true },
+    })) {
+      await db.del(id)
+    }
+  }
 
   const authInstallation = createAppAuth({
     appId,
@@ -125,7 +135,6 @@ const main = async function (bot: Probot) {
     return { url, token }
   }
 
-  const logger = new Logger({ name: "app" })
   const appState: AppState = {
     bot,
     db,

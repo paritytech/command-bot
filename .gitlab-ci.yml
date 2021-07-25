@@ -5,6 +5,7 @@ variables:
   KUBE_NAMESPACE: try-runtime
   DEPLOYMENT_TAG: ${CI_ENVIRONMENT_NAME}${CI_COMMIT_TAG}
   DB_PATH: /data
+  CLEAR_DB_ON_START: "false"
 
 default:
   image: $CI_IMAGE
@@ -114,6 +115,7 @@ build_bot:
       --set env.LOG_FORMAT="json"
       --set env.LOG_LEVEL="$PROBOT_LOG_LEVEL"
       --set env.LOG_LEVEL_IN_STRING="true"
+      --set env.CLEAR_DB_ON_START="$CLEAR_DB_ON_START"
 
 .uninstall-deployment: &uninstall-deployment
   <<: *kubernetes
