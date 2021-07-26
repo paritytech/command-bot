@@ -67,18 +67,22 @@ export const getShellExecutor = function ({
           const str = redactSecrets(data.toString(), secretsToHide)
           stdout += str
           if (shouldTrackProgress) {
-            logger.info(str.trim(), `Progress for ${commandDisplayed}`)
+            logger.info(str.trim(), `stdout for ${commandDisplayed}`)
           }
         })
 
         let stderr = ""
         child.stderr.on("data", function (data: { toString: () => string }) {
-          stderr += data.toString()
+          const str = redactSecrets(data.toString(), secretsToHide)
+          stderr += str
+          if (shouldTrackProgress) {
+            logger.info(str.trim(), `stderr for ${commandDisplayed}`)
+          }
         })
 
         child.on("close", function (code) {
           stdout = stdout.trim()
-          stderr = redactSecrets(stderr, secretsToHide).trim()
+          stderr = stderr.trim()
           if (
             code &&
             (allowedErrorCodes === undefined ||
