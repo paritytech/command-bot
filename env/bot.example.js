@@ -40,7 +40,7 @@ process.env.WESTEND_WEBSOCKET_ADDRESS =
   process.env.WESTEND_WEBSOCKET_ADDRESS || "ws://0.0.0.0:9944"
 
 /*
-  The 'db' directory is ignored on version control.
+  The 'data' directory is ignored on version control.
 */
 process.env.DB_PATH = process.env.DB_PATH || path.join(__dirname, "..", "db")
 

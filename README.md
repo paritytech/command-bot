@@ -6,15 +6,16 @@
 
 Comment in a pull request:
 
-`/try-runtime queue [env_vars] live ws://{kusama,westend,rococo,polkadot} [args]`
+`/try-runtime queue [env_vars] [args] ws://{kusama,westend,rococo,polkadot}`
 
-For instance:
+For instance (note that the following arguments might be outdated; this is
+merely an example):
 
-`/try-runtime queue RUST_LOG=debug live ws://kusama`
+`/try-runtime queue RUST_LOG=debug --block-at "0x0" on-runtime-upgrade ws://kusama`
 
-That will run the try-runtime Substrate feature for your pull request's branch
-with the provided arguments and post the result as a comment. It's supposed to
-support the same arguments as
+Then the try-runtime Substrate CLI command will be ran for your pull request's
+branch with the provided arguments and post the result as a comment. It's
+supposed to support the same arguments as
 [try-runtime](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)
 although not all of them have been tried out as of this writing.
 
