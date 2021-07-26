@@ -223,6 +223,12 @@ export const getWebhooksHandlers = function ({
 
               const args = [
                 "run",
+                // --quiet should be kept so that the command's output buffer
+                // doesn't blow up with a bunch of compilation stuff; bear in
+                // mind the output is posted on Github issues which have limited
+                // output size
+                // https://github.community/t/maximum-length-for-the-comment-body-in-issues-and-pr/148867/2
+                "--quiet",
                 "--release",
                 "--features=try-runtime",
                 "try-runtime",
