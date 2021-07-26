@@ -57,29 +57,40 @@ export const getShellExecutor = function ({
         logger.info(`Executing ${commandDisplayed}`)
 
         const child = cp.spawn(execPath, args, options)
-
         if (onChild) {
           onChild(child)
         }
 
         let stdout = ""
-        child.stdout.on("data", function (data: { toString: () => string }) {
-          const str = redactSecrets(data.toString(), secretsToHide)
-          stdout += str
-          if (shouldTrackProgress) {
-            logger.info(str.trim(), `stdout for ${commandDisplayed}`)
-          }
-        })
-
         let stderr = ""
-        child.stderr.on("data", function (data: { toString: () => string }) {
-          const str = redactSecrets(data.toString(), secretsToHide)
-          stderr += str
-          if (shouldTrackProgress) {
-            logger.info(str.trim(), `stderr for ${commandDisplayed}`)
-          }
-        })
+        const getStreamHandler = function (channel: "stdout" | "stderr") {
+          return function (data: { toString: () => string }) {
+            const str = redactSecrets(data.toString(), secretsToHide)
+            const strTrim = str.trim()
 
+            if (shouldTrackProgress && strTrim) {
+              logger.info(strTrim, channel)
+            }
+
+            switch (channel) {
+              case "stdout": {
+                stdout += str
+                break
+              }
+              case "stderr": {
+                stderr += str
+                break
+              }
+              default: {
+                const exhaustivenessCheck: never = channel
+                throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
+              }
+            }
+          }
+        }
+
+        child.stdout.on("data", getStreamHandler("stdout"))
+        child.stderr.on("data", getStreamHandler("stderr"))
         child.on("close", function (code) {
           stdout = stdout.trim()
           stderr = stderr.trim()
