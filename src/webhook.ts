@@ -93,10 +93,8 @@ export const getWebhooksHandlers = function (
 ) {
   const {
     botMentionPrefix,
-    db,
     logger,
     nodesAddresses,
-    getFetchEndpoint,
     version,
     allowedOrganizations,
     repositoryCloneDirectory,
@@ -295,17 +293,14 @@ export const getWebhooksHandlers = function (
               }
 
               const message = await queue({
-                getFetchEndpoint,
                 handleId,
+                taskData,
                 onResult: getPostPullRequestResult({
                   taskData,
                   octokit,
                   handleId,
                 }),
-                db,
-                logger,
-                taskData,
-                deployment,
+                state,
               })
 
               await updateComment(octokit, {

@@ -53,13 +53,9 @@ const setupProbot = async function (state: AppState) {
   setupEvent(bot, "issue_comment.created", onIssueCommentCreated, logger)
 }
 
-const requeueUnterminated = async function ({
-  getFetchEndpoint,
-  db,
-  version,
-  logger,
-  bot,
-}: AppState) {
+const requeueUnterminated = async function (state: AppState) {
+  const { db, version, logger, bot } = state
+
   // Items which are not from this version still remaining in the database are
   // deemed unterminated.
   const unterminatedItems = await getSortedTasks(db, {
@@ -77,11 +73,9 @@ const requeueUnterminated = async function ({
     logger.info(`Requeuing ${JSON.stringify(taskData)}`)
     await queue({
       handleId,
-      getFetchEndpoint,
-      db,
-      logger,
       taskData,
       onResult: getPostPullRequestResult({ taskData, octokit, handleId }),
+      state,
     })
   }
 }
