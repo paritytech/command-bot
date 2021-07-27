@@ -231,22 +231,21 @@ ${JSON.stringify(value, null, 2)}
 
 const mutex = new Mutex()
 export const queue = async function ({
-  logger,
-  db,
   taskData,
   onResult,
-  getFetchEndpoint,
   handleId,
-  deployment,
-}: Pick<AppState, "db" | "logger" | "getFetchEndpoint" | "deployment"> & {
+  state,
+}: {
   taskData: PullRequestTask
   onResult: (result: CommandOutput) => Promise<void>
   handleId: string
+  state: Pick<AppState, "db" | "logger" | "getFetchEndpoint" | "deployment">
 }) {
   let child: cp.ChildProcess | undefined = undefined
   let isAlive = true
   const { execPath, args, prepareBranchParams, commentId, requester } = taskData
   const commandDisplay = displayCommand({ execPath, args, secretsToHide: [] })
+  const { deployment, logger, db, getFetchEndpoint } = state
 
   let suffixMessage =
     deployment === undefined

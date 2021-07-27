@@ -46,7 +46,7 @@ export type AppState = {
   allowedOrganizations: number[]
   logger: Logger
   repositoryCloneDirectory: string
-  deployment?: { environment: string; container: string }
+  deployment: { environment: string; container: string } | undefined
 }
 
 export class PullRequestError {

@@ -77,26 +77,31 @@ export const setupEvent = function <E extends WebhookEvents>(
 // not get the bot stuck until the command finishes, however, since queueing
 // should be asynchronous
 const mutex = new Mutex()
-export const getWebhooksHandlers = function ({
-  botMentionPrefix,
-  db,
-  logger,
-  nodesAddresses,
-  getFetchEndpoint,
-  version,
-  allowedOrganizations,
-  repositoryCloneDirectory,
-}: Pick<
-  AppState,
-  | "botMentionPrefix"
-  | "db"
-  | "logger"
-  | "nodesAddresses"
-  | "getFetchEndpoint"
-  | "version"
-  | "allowedOrganizations"
-  | "repositoryCloneDirectory"
->) {
+export const getWebhooksHandlers = function (
+  state: Pick<
+    AppState,
+    | "botMentionPrefix"
+    | "db"
+    | "logger"
+    | "nodesAddresses"
+    | "getFetchEndpoint"
+    | "version"
+    | "allowedOrganizations"
+    | "repositoryCloneDirectory"
+    | "deployment"
+  >,
+) {
+  const {
+    botMentionPrefix,
+    db,
+    logger,
+    nodesAddresses,
+    getFetchEndpoint,
+    version,
+    allowedOrganizations,
+    repositoryCloneDirectory,
+  } = state
+
   const isRequesterAllowed = async function (
     octokit: ExtendedOctokit,
     username: string,
@@ -300,6 +305,7 @@ export const getWebhooksHandlers = function ({
                 db,
                 logger,
                 taskData,
+                deployment,
               })
 
               await updateComment(octokit, {
