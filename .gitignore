@@ -3,4 +3,4 @@ env/bot.js
 *.pem
 build/
 git/
-db/
+data/

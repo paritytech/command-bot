@@ -1,5 +1,6 @@
 import { Octokit } from "@octokit/rest"
 import assert from "assert"
+import fs from "fs"
 import ld from "lodash"
 
 import { cancelHandles } from "./executor"
@@ -107,4 +108,11 @@ export const millisecondsDelay = function (milliseconds: number) {
   return new Promise(function (resolve) {
     setTimeout(resolve, milliseconds)
   })
+}
+
+export const ensureDir = function (dir: string) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
+  }
+  return dir
 }

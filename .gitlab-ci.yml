@@ -4,7 +4,7 @@ variables:
   CI_IMAGE: ${IMAGE_REPOSITORY}:ci
   KUBE_NAMESPACE: try-runtime
   DEPLOYMENT_TAG: ${CI_ENVIRONMENT_NAME}${CI_COMMIT_TAG}
-  DB_PATH: /data
+  DATA_PATH: /data
   CLEAR_DB_ON_START: "false"
 
 default:
@@ -106,12 +106,12 @@ build_bot:
       --set env.WEBHOOK_SECRET="$WEBHOOK_SECRET"
       --set env.PRIVATE_KEY_BASE64="$PRIVATE_KEY_BASE64"
       --set env.ALLOWED_ORGANIZATIONS="$ALLOWED_ORGANIZATIONS"
-      --set env.DB_PATH="$DB_PATH"
+      --set env.DATA_PATH="$DATA_PATH"
       --set env.ROCOCO_WEBSOCKET_ADDRESS="$ROCOCO_WEBSOCKET_ADDRESS"
       --set env.POLKADOT_WEBSOCKET_ADDRESS="$POLKADOT_WEBSOCKET_ADDRESS"
       --set env.KUSAMA_WEBSOCKET_ADDRESS="$KUSAMA_WEBSOCKET_ADDRESS"
       --set env.WESTEND_WEBSOCKET_ADDRESS="$WESTEND_WEBSOCKET_ADDRESS"
-      --set persistence.mountPath="$DB_PATH"
+      --set persistence.mountPath="$DATA_PATH"
       --set env.LOG_FORMAT="json"
       --set env.LOG_LEVEL="$PROBOT_LOG_LEVEL"
       --set env.LOG_LEVEL_IN_STRING="true"

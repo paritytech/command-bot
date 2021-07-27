@@ -42,7 +42,7 @@ process.env.WESTEND_WEBSOCKET_ADDRESS =
 /*
   The 'data' directory is ignored on version control.
 */
-process.env.DB_PATH = process.env.DB_PATH || path.join(__dirname, "..", "db")
+process.env.DATA_PATH = process.env.DATA_PATH || path.join(__dirname, "..", "data")
 
 //process.env.ALLOWED_ORGANIZATIONS = //process.env.ALLOWED_ORGANIZATIONS || "14176906"
 

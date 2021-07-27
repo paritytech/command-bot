@@ -45,6 +45,7 @@ export type AppState = {
   nodesAddresses: Record<string, string>
   allowedOrganizations: number[]
   logger: Logger
+  repositoryCloneDirectory: string
 }
 
 export class PullRequestError {

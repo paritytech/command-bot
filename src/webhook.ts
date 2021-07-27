@@ -5,7 +5,6 @@ import { Mutex } from "async-mutex"
 import path from "path"
 import { Probot } from "probot"
 
-import { gitDir } from "./constants"
 import { cancelHandles, queue } from "./executor"
 import {
   createComment,
@@ -86,6 +85,7 @@ export const getWebhooksHandlers = function ({
   getFetchEndpoint,
   version,
   allowedOrganizations,
+  repositoryCloneDirectory,
 }: Pick<
   AppState,
   | "botMentionPrefix"
@@ -95,6 +95,7 @@ export const getWebhooksHandlers = function ({
   | "getFetchEndpoint"
   | "version"
   | "allowedOrganizations"
+  | "repositoryCloneDirectory"
 >) {
   const isRequesterAllowed = async function (
     octokit: ExtendedOctokit,
@@ -223,13 +224,11 @@ export const getWebhooksHandlers = function ({
 
               const args = [
                 "run",
-                // --quiet should be kept so that the command's output buffer
-                // doesn't blow up with a bunch of compilation stuff; bear in
-                // mind the output is posted on Github issues which have limited
-                // output size
-                // https://github.community/t/maximum-length-for-the-comment-body-in-issues-and-pr/148867/2
+                // "--quiet" should be kept so that the output doesn't get
+                // polluted with a bunch of compilation stuff; bear in mind the
+                // output is posted on Github issues which have limited
+                // character count
                 "--quiet",
-                "--release",
                 "--features=try-runtime",
                 "try-runtime",
                 ...otherArgs,
@@ -271,7 +270,7 @@ export const getWebhooksHandlers = function ({
 
               commentId = commentCreationResponse.id
 
-              const repoPath = path.join(gitDir, repo)
+              const repoPath = path.join(repositoryCloneDirectory, repo)
 
               const taskData: PullRequestTask = {
                 ...prParams,

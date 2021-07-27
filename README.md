@@ -85,10 +85,10 @@ From the Github App settings:
       content from the `.pem` file and encode it as Base64 **without newlines**
       (on Linux this can be done with `base64 -w 0 file.pem`).
 
-`DB_PATH`
+`DATA_PATH`
 
-Data is stored as a key-value on-disk database with RocksDB. `DB_PATH` should
-point to a folder where the database files will be stored.
+`DATA_PATH` should point to a folder where the program's persistent data, such
+as the database,  will be stored.
 
 `ALLOWED_ORGANIZATIONS`
 

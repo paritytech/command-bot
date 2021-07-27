@@ -11,7 +11,11 @@ import { getDb, getSortedTasks } from "src/db"
 import { queue } from "./executor"
 import { Logger } from "./logger"
 import { AppState } from "./types"
-import { getPostPullRequestResult, getPullRequestHandleId } from "./utils"
+import {
+  ensureDir,
+  getPostPullRequestResult,
+  getPullRequestHandleId,
+} from "./utils"
 import { getWebhooksHandlers, setupEvent } from "./webhook"
 
 assert(process.env.APP_ID)
@@ -100,12 +104,18 @@ const main = async function (bot: Probot) {
     })
   assert(allowedOrganizations.length)
 
-  assert(process.env.DB_PATH)
-  const lockPath = path.join(process.env.DB_PATH, "LOCK")
+  assert(process.env.DATA_PATH)
+
+  const repositoryCloneDirectory = ensureDir(
+    path.join(process.env.DATA_PATH, "repositories"),
+  )
+
+  const dbPath = ensureDir(path.join(process.env.DATA_PATH, "db"))
+  const lockPath = path.join(dbPath, "LOCK")
   if (fs.existsSync(lockPath)) {
     fs.unlinkSync(lockPath)
   }
-  const db = getDb(process.env.DB_PATH)
+  const db = getDb(dbPath)
   if (process.env.CLEAR_DB_ON_START === "true") {
     logger.info("Clearing the database before starting")
     for (const { id } of await getSortedTasks(db, {
@@ -148,6 +158,7 @@ const main = async function (bot: Probot) {
     nodesAddresses,
     allowedOrganizations,
     logger,
+    repositoryCloneDirectory,
   }
 
   await requeueUnterminated(appState)
