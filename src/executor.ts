@@ -1,5 +1,7 @@
 import { Mutex } from "async-mutex"
 import cp from "child_process"
+import fs from "fs"
+import path from "path"
 
 import { DB, getSortedTasks } from "src/db"
 
@@ -235,7 +237,8 @@ export const queue = async function ({
   onResult,
   getFetchEndpoint,
   handleId,
-}: Pick<AppState, "db" | "logger" | "getFetchEndpoint"> & {
+  deployment,
+}: Pick<AppState, "db" | "logger" | "getFetchEndpoint" | "deployment"> & {
   taskData: PullRequestTask
   onResult: (result: CommandOutput) => Promise<void>
   handleId: string
@@ -244,6 +247,20 @@ export const queue = async function ({
   let isAlive = true
   const { execPath, args, prepareBranchParams, commentId, requester } = taskData
   const commandDisplay = displayCommand({ execPath, args, secretsToHide: [] })
+
+  let suffixMessage =
+    deployment === undefined
+      ? ""
+      : `The logs for this command should be available on Grafana for the data source \`loki.${deployment.environment}\` and query \`{container=~"${deployment.container}"}\``
+  if (!fs.existsSync(prepareBranchParams.repoPath)) {
+    suffixMessage +=
+      "\nNote: project will be cloned for the first time, so all dependencies will be compiled from scratch; this might take a long time"
+  } else if (
+    !fs.existsSync(path.join(prepareBranchParams.repoPath, "target"))
+  ) {
+    suffixMessage +=
+      '\nNote: "target" directory does not exist, so all dependencies will be compiled from scratch; this might take a long time'
+  }
 
   // Assuming the system clock is properly configured, this ID is guaranteed to
   // be unique due to the webhooks mutex's guarantees, because only one webhook
@@ -365,5 +382,5 @@ ${result}
 
   cancelHandles.set(handleId, { cancel: terminate, commentId, requester })
 
-  return message
+  return `${message}\n${suffixMessage}`
 }

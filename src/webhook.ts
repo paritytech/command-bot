@@ -197,15 +197,14 @@ export const getWebhooksHandlers = function ({
 
               const addressPrefix = ["wss://", "ws://"]
               toNextArg: for (const i in otherArgs) {
-                const arg = otherArgs[i]
-
                 for (const prefix of addressPrefix) {
+                  const arg = otherArgs[i]
                   if (arg.startsWith(prefix)) {
                     const node = arg.slice(prefix.length)
 
                     if (!node) {
                       return getError(
-                        `Must specify one address in the form \`ws://name\` (found "${arg}"). ${nodeOptionsDisplay}`,
+                        `Must specify one address in the form \`${prefix}name\` (found "${arg}"). ${nodeOptionsDisplay}`,
                       )
                     }
 

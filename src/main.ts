@@ -36,6 +36,16 @@ const clientId = process.env.CLIENT_ID
 assert(process.env.CLIENT_SECRET)
 const clientSecret = process.env.CLIENT_SECRET
 
+let deployment: AppState["deployment"] = undefined
+if (process.env.IS_DEPLOYMENT === "true") {
+  assert(process.env.DEPLOYMENT_ENVIRONMENT)
+  assert(process.env.DEPLOYMENT_CONTAINER)
+  deployment = {
+    environment: process.env.DEPLOYMENT_ENVIRONMENT,
+    container: process.env.DEPLOYMENT_CONTAINER,
+  }
+}
+
 const setupProbot = async function (state: AppState) {
   const { bot, logger } = state
 
@@ -159,6 +169,7 @@ const main = async function (bot: Probot) {
     allowedOrganizations,
     logger,
     repositoryCloneDirectory,
+    deployment,
   }
 
   await requeueUnterminated(appState)

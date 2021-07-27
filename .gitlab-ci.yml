@@ -116,6 +116,9 @@ build_bot:
       --set env.LOG_LEVEL="$PROBOT_LOG_LEVEL"
       --set env.LOG_LEVEL_IN_STRING="true"
       --set env.CLEAR_DB_ON_START="$CLEAR_DB_ON_START"
+      --set env.IS_DEPLOYMENT="true"
+      --set env.DEPLOYMENT_ENVIRONMENT="$CI_ENVIRONMENT_NAME"
+      --set env.DEPLOYMENT_CONTAINER="try-runtime"
 
 .uninstall-deployment: &uninstall-deployment
   <<: *kubernetes
