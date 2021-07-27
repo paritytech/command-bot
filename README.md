@@ -11,7 +11,7 @@ Comment in a pull request:
 For instance (note that the following arguments might be outdated; this is
 merely an example):
 
-`/try-runtime queue RUST_LOG=debug --block-at "0x0" on-runtime-upgrade ws://kusama`
+`/try-runtime queue RUST_LOG=debug --block-at "0x0" --url ws://kusama on-runtime-upgrade live`
 
 Then the try-runtime Substrate CLI command will be ran for your pull request's
 branch with the provided arguments and post the result as a comment. It's
