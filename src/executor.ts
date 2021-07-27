@@ -271,17 +271,24 @@ export const queue = async function ({
   const terminate = async function () {
     isAlive = false
 
-    try {
-      if (child) {
-        logger.info(`Killing child with PID ${child.pid} (${commandDisplay})`)
-        child.kill()
-      }
-    } catch (err) {
-      logger.fatal(err, `Failed to kill child with PID ${child?.pid}`)
+    if (child === undefined) {
+      return
     }
 
-    await db.del(taskId)
+    try {
+      child.kill()
+    } catch (err) {
+      logger.fatal(
+        err,
+        `Failed to kill child with PID ${child.pid} (${commandDisplay})`,
+      )
+      return
+    }
 
+    logger.info(`Killed child with PID ${child.pid} (${commandDisplay})`)
+    child = undefined
+
+    await db.del(taskId)
     logger.info(
       `Queue after termination: ${JSON.stringify(
         await getSortedTasks(db, {
