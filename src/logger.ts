@@ -44,7 +44,7 @@ export class Logger {
     return this.logToConsole("info", msg, context)
   }
 
-  fatal(err: Error, context?: string) {
+  fatal(err: Error | string, context?: string) {
     return this.logToConsole("fatal", err, context)
   }
 }

@@ -96,9 +96,18 @@ export const getShellExecutor = function ({
         child.on("close", function (code) {
           stdout = stdout.trim()
           stderr = stderr.trim()
+          const isError = !!code || (!!stderr && !stdout)
+          // https://github.com/rust-lang/rust/issues/51309
           if (
-            code &&
-            (allowedErrorCodes === undefined ||
+            stderr.includes("SIGKILL") &&
+            stderr.includes("error: build failed")
+          ) {
+            logger.fatal("Compilation process was killed while executing")
+          }
+          if (
+            isError &&
+            (!code ||
+              allowedErrorCodes === undefined ||
               !allowedErrorCodes.includes(code)) &&
             (testAllowedErrorMessage === undefined ||
               !testAllowedErrorMessage(stderr))
