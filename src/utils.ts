@@ -118,3 +118,10 @@ export const ensureDir = function (dir: string) {
   }
   return dir
 }
+
+export const removeDir = function (dir: string) {
+  if (fs.existsSync(dir)) {
+    fs.rmdirSync(dir, { recursive: true })
+  }
+  return dir
+}

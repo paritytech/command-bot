@@ -15,6 +15,7 @@ import {
   ensureDir,
   getPostPullRequestResult,
   getPullRequestHandleId,
+  removeDir,
 } from "./utils"
 import { getWebhooksHandlers, setupEvent } from "./webhook"
 
@@ -110,9 +111,15 @@ const main = async function (bot: Probot) {
 
   assert(process.env.DATA_PATH)
 
-  const repositoryCloneDirectory = ensureDir(
-    path.join(process.env.DATA_PATH, "repositories"),
+  const repositoryCloneDirectoryPath = path.join(
+    process.env.DATA_PATH,
+    "repositories",
   )
+  if (process.env.CLEAR_REPOSITORIES_ON_START === "true") {
+    logger.info("Clearing the repositories before starting")
+    removeDir(repositoryCloneDirectoryPath)
+  }
+  const repositoryCloneDirectory = ensureDir(repositoryCloneDirectoryPath)
 
   const dbPath = ensureDir(path.join(process.env.DATA_PATH, "db"))
   const lockPath = path.join(dbPath, "LOCK")
