@@ -84,7 +84,9 @@ export const getPostPullRequestResult = function ({
 
     const { owner, repo, commentId, requester, pull_number } = taskData
     const resultDisplay =
-      typeof result === "string" ? result : result.stack ?? result.message
+      typeof result === "string"
+        ? result
+        : `${result.toString()}\n${result.stack}`
 
     await updateComment(octokit, {
       owner,
