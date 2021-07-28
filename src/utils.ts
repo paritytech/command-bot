@@ -5,7 +5,12 @@ import ld from "lodash"
 
 import { cancelHandles } from "./executor"
 import { updateComment } from "./github"
-import { CommandOutput, PullRequestParams, PullRequestTask } from "./types"
+import {
+  AppState,
+  CommandOutput,
+  PullRequestParams,
+  PullRequestTask,
+} from "./types"
 
 export const getLines = function (str: string) {
   return str
@@ -74,27 +79,38 @@ export const getPostPullRequestResult = function ({
   taskData,
   octokit,
   handleId,
+  logger,
 }: {
   taskData: PullRequestTask
   octokit: Octokit
   handleId: string
+  logger: AppState["logger"]
 }) {
   return async function (result: CommandOutput) {
-    cancelHandles.delete(handleId)
+    try {
+      logger.info({ result, taskData }, "Posting pull request result")
 
-    const { owner, repo, commentId, requester, pull_number } = taskData
-    const resultDisplay =
-      typeof result === "string"
-        ? result
-        : `${result.toString()}\n${result.stack}`
+      cancelHandles.delete(handleId)
 
-    await updateComment(octokit, {
-      owner,
-      repo,
-      issue_number: pull_number,
-      comment_id: commentId,
-      body: `@${requester} ${resultDisplay}`,
-    })
+      const { owner, repo, commentId, requester, pull_number } = taskData
+      const resultDisplay =
+        typeof result === "string"
+          ? result
+          : `${result.toString()}\n${result.stack}`
+
+      await updateComment(octokit, {
+        owner,
+        repo,
+        issue_number: pull_number,
+        comment_id: commentId,
+        body: `@${requester} ${resultDisplay}`,
+      })
+    } catch (error) {
+      logger.fatal(
+        { error, result, taskData },
+        "Caught error while trying to post pull request result",
+      )
+    }
   }
 }
 

@@ -1,11 +1,7 @@
 export class Logger {
   constructor(public options: { name: string }) {}
 
-  private logToConsole(
-    level: "fatal" | "info",
-    item: string | Error,
-    context?: string,
-  ) {
+  private logToConsole(level: "fatal" | "info", item: any, context?: string) {
     switch (process.env.LOG_FORMAT) {
       case "json": {
         const base = { level, name: this.options.name, context }
@@ -40,11 +36,11 @@ export class Logger {
     }
   }
 
-  info(msg: string, context?: string) {
+  info(msg: any, context?: string) {
     return this.logToConsole("info", msg, context)
   }
 
-  fatal(err: Error | string, context?: string) {
+  fatal(err: any, context?: string) {
     return this.logToConsole("fatal", err, context)
   }
 }

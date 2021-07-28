@@ -75,7 +75,12 @@ const requeueUnterminated = async function (state: AppState) {
     await queue({
       handleId,
       taskData,
-      onResult: getPostPullRequestResult({ taskData, octokit, handleId }),
+      onResult: getPostPullRequestResult({
+        taskData,
+        octokit,
+        handleId,
+        logger: state.logger,
+      }),
       state,
     })
   }

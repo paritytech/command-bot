@@ -299,6 +299,7 @@ export const getWebhooksHandlers = function (
                   taskData,
                   octokit,
                   handleId,
+                  logger: state.logger,
                 }),
                 state,
               })
