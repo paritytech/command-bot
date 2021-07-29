@@ -257,7 +257,7 @@ export const getWebhooksHandlers = function (
               }
 
               const commentBody =
-                `Starting try-runtime for branch: "${branch}". Comment will be updated.`.trim()
+                `Preparing try-runtime command for branch: "${branch}". Comment will be updated.`.trim()
               const commentCreationResponse = await createComment(octokit, {
                 ...commentParams,
                 body: commentBody,

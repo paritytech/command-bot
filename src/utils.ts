@@ -4,7 +4,7 @@ import fs from "fs"
 import ld from "lodash"
 
 import { cancelHandles } from "./executor"
-import { updateComment } from "./github"
+import { createComment } from "./github"
 import {
   AppState,
   CommandOutput,
@@ -92,17 +92,16 @@ export const getPostPullRequestResult = function ({
 
       cancelHandles.delete(handleId)
 
-      const { owner, repo, commentId, requester, pull_number } = taskData
+      const { owner, repo, requester, pull_number } = taskData
       const resultDisplay =
         typeof result === "string"
           ? result
           : `${result.toString()}\n${result.stack}`
 
-      await updateComment(octokit, {
+      await createComment(octokit, {
         owner,
         repo,
         issue_number: pull_number,
-        comment_id: commentId,
         body: `@${requester} ${resultDisplay}`,
       })
     } catch (error) {
