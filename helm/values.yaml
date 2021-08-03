@@ -54,18 +54,6 @@ ingress:
       hosts:
         - try-runtime.parity.io
 
-# As of this writing (2021-07-29) the Substrate runtime compilation *needs* at
-# least 4.5G of RAM, otherwise it gets killed due to OOM. Outside of that, the
-# bot should not take more than 100mb normally.
-# 5G is thus arrived at by (4.5 + 0.1 = 4.6) and rounds up to 5G.
-resources:
-  requests:
-    cpu: 1000m
-    memory: 5G
-  limits:
-    cpu: 1000m
-    memory: 5G
-
 # We only want one instance at all times so that the execution queue can be
 # sanely tracked across multiple MRs.
 autoscaling:
@@ -75,9 +63,21 @@ autoscaling:
 
 nodeSelector: {}
 
-tolerations: []
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: cloud.google.com/gke-nodepool
+          operator: In
+          values:
+          - try-runtime-pool
 
-affinity: {}
+tolerations:
+- key: "app"
+  operator: "Equal"
+  value: "try-runtime"
+  effect: "NoExecute"
 
 env: {}
 

@@ -54,8 +54,6 @@ spec:
             httpGet:
               path: /ping
               port: 3000
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             {{- if .Values.persistence.enabled }}
             - name: data
