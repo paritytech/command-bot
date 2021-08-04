@@ -170,7 +170,7 @@ export const getWebhooksHandlers = function (
           }
 
           const { execPath: botMention, ...command } = getCommand(commandLine, {
-            baseEnv: { RUST_LOG: "remote-ext=debug" },
+            baseEnv: { RUST_LOG: "remote-ext=info" },
           })
           if (botMention !== botMentionPrefix) {
             return
