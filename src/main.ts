@@ -116,6 +116,15 @@ const main = async function (bot: Probot) {
 
   assert(process.env.DATA_PATH)
 
+  // For the deployment this should always happen because TMPDIR targets a
+  // location on the persistent volume (ephemeral storage on Kubernetes cluster
+  // is too low for building Substrate)
+  if (process.env.CLEAR_TMPDIR_ON_START) {
+    assert(process.env.TMPDIR)
+    removeDir(process.env.TMPDIR)
+    ensureDir(process.env.TMPDIR)
+  }
+
   const repositoryCloneDirectoryPath = path.join(
     process.env.DATA_PATH,
     "repositories",
@@ -150,10 +159,7 @@ const main = async function (bot: Probot) {
 
   const getFetchEndpoint = async function (installationId: number) {
     const token = (
-      await authInstallation({
-        type: "installation",
-        installationId,
-      })
+      await authInstallation({ type: "installation", installationId })
     ).token
 
     const url = `https://x-access-token:${token}@github.com`

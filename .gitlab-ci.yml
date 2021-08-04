@@ -7,6 +7,7 @@ variables:
   DATA_PATH: /data
   CLEAR_DB_ON_START: "false"
   CLEAR_REPOSITORIES_ON_START: "false"
+  CLEAR_TMPDIR_ON_START: "true"
 
 default:
   image: $CI_IMAGE
@@ -121,6 +122,8 @@ build_bot:
       --set env.DEPLOYMENT_CONTAINER="try-runtime"
       --set env.CLEAR_DB_ON_START="$CLEAR_DB_ON_START"
       --set env.CLEAR_REPOSITORIES_ON_START="$CLEAR_REPOSITORIES_ON_START"
+      --set env.TMPDIR="$DATA_PATH/tmp"
+      --set env.CLEAR_TMPDIR_ON_START="$CLEAR_TMPDIR_ON_START"
 
 .uninstall-deployment: &uninstall-deployment
   <<: *kubernetes
