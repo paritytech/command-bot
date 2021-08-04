@@ -207,9 +207,7 @@ export const getQueueMessage = async function (
   commandDisplay: string,
   version: string,
 ) {
-  const items = await getSortedTasks(db, {
-    match: { version },
-  })
+  const items = await getSortedTasks(db, { match: { version } })
 
   if (items.length) {
     return `
@@ -298,9 +296,7 @@ export const queue = async function ({
     await db.del(taskId)
     logger.info(
       `Queue after termination: ${JSON.stringify(
-        await getSortedTasks(db, {
-          match: { version: taskData.version },
-        }),
+        await getSortedTasks(db, { match: { version: taskData.version } }),
       )}`,
     )
   }
@@ -324,9 +320,7 @@ export const queue = async function ({
       try {
         logger.info(
           `Starting run of ${commandDisplay}\nCurrent queue: ${JSON.stringify(
-            await getSortedTasks(db, {
-              match: { version: taskData.version },
-            }),
+            await getSortedTasks(db, { match: { version: taskData.version } }),
           )}`,
         )
 
@@ -380,7 +374,7 @@ Results are ready for ${commandDisplay}
 <summary>Output</summary>
 
 \`\`\`
-${result}
+${result instanceof Error ? result.toString() : result}
 \`\`\`
 
 </details>
