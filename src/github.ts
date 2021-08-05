@@ -41,8 +41,8 @@ export const getOctokit = function (octokit: Octokit): ExtendedOctokit {
     for (let tryCount = 1; tryCount < 4; tryCount++) {
       try {
         result = await request(options)
-      } catch (err) {
-        result = err
+      } catch (error) {
+        result = error
       }
 
       if (

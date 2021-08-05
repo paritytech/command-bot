@@ -7,10 +7,10 @@ import { DB, getSortedTasks } from "src/db"
 
 import { Logger } from "./logger"
 import {
-  AppState,
   CommandOutput,
   PrepareBranchParams,
   PullRequestTask,
+  State,
 } from "./types"
 import {
   displayCommand,
@@ -300,7 +300,7 @@ export const queue = async function ({
   taskData: PullRequestTask
   onResult: (result: CommandOutput) => Promise<void>
   handleId: string
-  state: Pick<AppState, "db" | "logger" | "getFetchEndpoint" | "deployment">
+  state: Pick<State, "db" | "logger" | "getFetchEndpoint" | "deployment">
 }) {
   let child: cp.ChildProcess | undefined = undefined
   let isAlive = true
@@ -341,9 +341,9 @@ export const queue = async function ({
 
     try {
       child.kill()
-    } catch (err) {
+    } catch (error) {
       logger.fatal(
-        err,
+        error,
         `Failed to kill child with PID ${child.pid} (${commandDisplay})`,
       )
       return
@@ -425,8 +425,8 @@ export const queue = async function ({
           shouldTrackProgress: true,
         })
         return isAlive ? result : cancelledMessage
-      } catch (err) {
-        return err
+      } catch (error) {
+        return error
       }
     })
     .then(afterExecution)

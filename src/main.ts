@@ -12,7 +12,7 @@ import { getDb, getSortedTasks } from "src/db"
 
 import { queue } from "./executor"
 import { Logger } from "./logger"
-import { AppState } from "./types"
+import { State } from "./types"
 import {
   ensureDir,
   getPostPullRequestResult,
@@ -39,7 +39,7 @@ const clientId = process.env.CLIENT_ID
 assert(process.env.CLIENT_SECRET)
 const clientSecret = process.env.CLIENT_SECRET
 
-let deployment: AppState["deployment"] = undefined
+let deployment: State["deployment"] = undefined
 if (process.env.IS_DEPLOYMENT === "true") {
   assert(process.env.DEPLOYMENT_ENVIRONMENT)
   assert(process.env.DEPLOYMENT_CONTAINER)
@@ -49,14 +49,14 @@ if (process.env.IS_DEPLOYMENT === "true") {
   }
 }
 
-const setupProbot = async function (state: AppState) {
+const setupProbot = async function (state: State) {
   const { bot, logger } = state
 
   const { onIssueCommentCreated } = getWebhooksHandlers(state)
   setupEvent(bot, "issue_comment.created", onIssueCommentCreated, logger)
 }
 
-const requeueUnterminated = async function (state: AppState) {
+const requeueUnterminated = async function (state: State) {
   const { db, version, logger, bot } = state
 
   // Items which are not from this version still remaining in the database are
@@ -68,12 +68,12 @@ const requeueUnterminated = async function (state: AppState) {
   for (const { taskData, id } of unterminatedItems) {
     await db.del(id)
 
+    logger.info(`Requeuing ${JSON.stringify(taskData)}`)
+
     const octokit = await (
       bot.auth as (installationId?: number) => Promise<Octokit>
     )(taskData.installationId)
     const handleId = getPullRequestHandleId(taskData)
-
-    logger.info(`Requeuing ${JSON.stringify(taskData)}`)
     await queue({
       handleId,
       taskData,
@@ -102,9 +102,8 @@ const main = async function (bot: Probot) {
     pingServer.listen(pingPort)
   }
 
-  const logger = new Logger({ name: "app" })
-
   const version = new Date().toISOString()
+  const logger = new Logger({ name: "app" })
 
   assert(process.env.ROCOCO_WEBSOCKET_ADDRESS)
   assert(process.env.WESTEND_WEBSOCKET_ADDRESS)
@@ -171,7 +170,6 @@ const main = async function (bot: Probot) {
     clientId,
     clientSecret,
   })
-
   const getFetchEndpoint = async function (installationId: number) {
     const token = (
       await authInstallation({ type: "installation", installationId })
@@ -182,7 +180,7 @@ const main = async function (bot: Probot) {
     return { url, token }
   }
 
-  const appState: AppState = {
+  const state: State = {
     bot,
     db,
     appId,
@@ -199,9 +197,9 @@ const main = async function (bot: Probot) {
     deployment,
   }
 
-  await requeueUnterminated(appState)
+  await requeueUnterminated(state)
 
-  setupProbot(appState)
+  setupProbot(state)
   logger.info("Probot has started!")
 }
 

@@ -14,7 +14,7 @@ import {
   updateComment,
 } from "./github"
 import { Logger } from "./logger"
-import { AppState, PullRequestError, PullRequestTask } from "./types"
+import { PullRequestError, PullRequestTask, State } from "./types"
 import {
   displayCommand,
   getCommand,
@@ -46,13 +46,11 @@ export const setupEvent = function <E extends WebhookEvents>(
 
     try {
       const result = await handler({ ...data, octokit })
-
       if (result instanceof PullRequestError) {
         const {
           params: { pull_number, ...params },
           comment: { body, commentId, requester },
         } = result
-
         const sharedCommentParams = {
           ...params,
           issue_number: pull_number,
@@ -68,8 +66,8 @@ export const setupEvent = function <E extends WebhookEvents>(
           await createComment(octokit, sharedCommentParams)
         }
       }
-    } catch (err) {
-      logger.fatal(err, "Exception caught in webhook handler")
+    } catch (error) {
+      logger.fatal(error, "Exception caught in webhook handler")
     }
   })
 }
@@ -80,7 +78,7 @@ export const setupEvent = function <E extends WebhookEvents>(
 const mutex = new Mutex()
 export const getWebhooksHandlers = function (
   state: Pick<
-    AppState,
+    State,
     | "botMentionPrefix"
     | "db"
     | "logger"
@@ -248,6 +246,7 @@ export const getWebhooksHandlers = function (
                   `Failed to get branch owner from the Github API`,
                 )
               }
+
               const branch = prResponse.data.head?.ref
               if (!branch) {
                 return getError(`Failed to get branch name from the Github API`)
@@ -266,16 +265,7 @@ export const getWebhooksHandlers = function (
                   }\n(${JSON.stringify(commentCreationResponse.data)})`,
                 )
               }
-
               commentId = commentCreationResponse.id
-
-              const repoPath = path.join(repositoryCloneDirectory, repo)
-
-              const commandDisplay = displayCommand({
-                execPath,
-                args,
-                secretsToHide: [],
-              })
 
               const taskData: PullRequestTask = {
                 ...prParams,
@@ -290,10 +280,14 @@ export const getWebhooksHandlers = function (
                   repo,
                   contributor,
                   branch,
-                  repoPath,
+                  repoPath: path.join(repositoryCloneDirectory, repo),
                 },
                 version,
-                commandDisplay,
+                commandDisplay: displayCommand({
+                  execPath,
+                  args,
+                  secretsToHide: [],
+                }),
               }
 
               const message = await queue({
@@ -307,7 +301,6 @@ export const getWebhooksHandlers = function (
                 }),
                 state,
               })
-
               await updateComment(octokit, {
                 ...commentParams,
                 comment_id: commentId,
@@ -323,21 +316,22 @@ export const getWebhooksHandlers = function (
               }
 
               const { cancel, commentId } = cancelItem
-              await cancel()
               cancelHandles.delete(handleId)
 
+              await cancel()
               await updateComment(octokit, {
                 ...commentParams,
                 comment_id: commentId,
                 body: `@${requester} command was cancelled`.trim(),
               })
+
               break
             }
             default: {
               return getError(`Unknown sub-command ${subCommand}`)
             }
           }
-        } catch (err) {
+        } catch (error) {
           const cancelHandle = cancelHandles.get(handleId)
 
           if (cancelHandle) {
@@ -346,7 +340,11 @@ export const getWebhooksHandlers = function (
             cancelHandles.delete(handleId)
           }
 
-          return getError(`Exception caught in webhook handler\n${err.stack}`)
+          return getError(
+            `Exception caught in webhook handler\n${error.toString()}: ${
+              error.stack
+            }`,
+          )
         }
       })
     }

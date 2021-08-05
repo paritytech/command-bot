@@ -31,7 +31,7 @@ export type PullRequestTask = PullRequestParams & {
 
 export type CommandOutput = Error | string
 
-export type AppState = {
+export type State = {
   version: string
   bot: Probot
   db: DB

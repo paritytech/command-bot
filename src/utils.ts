@@ -7,10 +7,10 @@ import { githubCommentCharacterLimit } from "./constants"
 import { cancelHandles } from "./executor"
 import { createComment } from "./github"
 import {
-  AppState,
   CommandOutput,
   PullRequestParams,
   PullRequestTask,
+  State,
 } from "./types"
 
 export const getLines = function (str: string) {
@@ -81,7 +81,7 @@ export const getPostPullRequestResult = function ({
   taskData: PullRequestTask
   octokit: Octokit
   handleId: string
-  state: Pick<AppState, "deployment" | "logger">
+  state: Pick<State, "deployment" | "logger">
 }) {
   return async function (result: CommandOutput) {
     try {
@@ -116,7 +116,6 @@ export const getPostPullRequestResult = function ({
           deployment,
         )}`
         const truncationIndicator = "[truncated]..."
-
         resultDisplay = `${truncationIndicator}${resultDisplay.slice(
           0,
           githubCommentCharacterLimit -
@@ -173,7 +172,7 @@ export const removeDir = function (dir: string) {
 }
 
 export const getDeploymentLogsMessage = function (
-  deployment: AppState["deployment"],
+  deployment: State["deployment"],
 ) {
   if (deployment === undefined) {
     return ""

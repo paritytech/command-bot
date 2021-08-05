@@ -91,9 +91,10 @@ build_bot:
   script:
     # Change the app version during build so that Kubernetes is able to update
     # the deployment even if the images' tags did not change
-    # This version tag is guaranteed to be unique because $CI_PIPELINE_ID is
-    # also guaranteed to be unique
+    # $CI_PIPELINE_ID is guaranteed to be unique
     - export KUBERNETES_VERSION_TAG="$CI_PIPELINE_ID"
+    # Those values are embedded in the annotations and that's how the change is
+    # noticed
     - |-
       sed -i "s/version:.*/version: $KUBERNETES_VERSION_TAG/" helm/Chart.yaml
     - |-
