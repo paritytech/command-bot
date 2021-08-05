@@ -90,7 +90,7 @@ const requeueUnterminated = async function (state: AppState) {
 
 const main = async function (bot: Probot) {
   if (process.env.PING_PORT) {
-    // Signal to that we have started listening until Probot kicks in
+    // Signal that we have started listening until Probot kicks in
     const pingPort = parseInt(process.env.PING_PORT)
     const pingServer = stoppable(
       http.createServer(function (_, res) {
@@ -135,7 +135,6 @@ const main = async function (bot: Probot) {
   // location on the persistent volume (ephemeral storage on Kubernetes cluster
   // is too low for building Substrate)
   if (process.env.CLEAR_TMPDIR_ON_START) {
-    console.log(fs.readdirSync(process.env.DATA_PATH))
     assert(process.env.TMPDIR)
     removeDir(process.env.TMPDIR)
     ensureDir(process.env.TMPDIR)

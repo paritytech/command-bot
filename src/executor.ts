@@ -97,6 +97,7 @@ export const getShellExecutor = function ({
 
         child.stdout.on("data", getStreamHandler("stdout"))
         child.stderr.on("data", getStreamHandler("stderr"))
+
         child.on("close", function (code) {
           stdout = stdout.trim()
           stderr = stderr.trim()
@@ -116,7 +117,7 @@ export const getShellExecutor = function ({
           ) {
             resolve(new Error(stderr))
           } else {
-            resolve(stdout)
+            resolve(stdout || stderr)
           }
         })
       } catch (error) {
