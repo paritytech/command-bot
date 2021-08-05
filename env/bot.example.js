@@ -9,11 +9,11 @@ const path = require("path")
   The following variables can acquired from https://github.com/settings/apps/[app-name].
 */
 process.env.WEBHOOK_SECRET =
-  process.env.WEBHOOK_SECRET || "87aaaef9ca4b24d0828ed88f8c738ba86g448877"
+  process.env.WEBHOOK_SECRET || "87aaeef4ca4b2cc0828ed88f8c738ba86g448877"
 process.env.APP_ID = process.env.APP_ID || 114992
-process.env.CLIENT_ID = process.env.CLIENT_ID || "Iv1.36b4ff1b0716cc4e"
+process.env.CLIENT_ID = process.env.CLIENT_ID || "Iv3.36aaff1b0716cc4e"
 process.env.CLIENT_SECRET =
-  process.env.CLIENT_SECRET || "33c62a84d21bbfb11494c2eb34e2df73bb628b19"
+  process.env.CLIENT_SECRET || "33c62a84d21bbff11494c2ef34e2ff73bb628b19"
 
 /*
   This private key's file can be generated and downloaded from https://github.com/settings/apps/[app-name].
@@ -44,7 +44,7 @@ process.env.WESTEND_WEBSOCKET_ADDRESS =
 */
 process.env.DATA_PATH = process.env.DATA_PATH || path.join(__dirname, "..", "data")
 
-//process.env.ALLOWED_ORGANIZATIONS = //process.env.ALLOWED_ORGANIZATIONS || "14176906"
+//process.env.ALLOWED_ORGANIZATIONS = process.env.ALLOWED_ORGANIZATIONS || "14176906"
 
 /*
   NOT REQUIRED
@@ -52,7 +52,7 @@ process.env.DATA_PATH = process.env.DATA_PATH || path.join(__dirname, "..", "dat
   instead of creating comments on the API. Useful while you're trying something
   out in order to avoid spamming pull requests with useless comments.
 */
-//process.env.POST_COMMENT = //process.env.POST_COMMENT || "false"
+//process.env.POST_COMMENT = process.env.POST_COMMENT || "false"
 
 /*
   NOT REQUIRED
