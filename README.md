@@ -122,13 +122,20 @@ which is handy for querying in your logging aggregator.
 ### Repository permissions
 
 - Metadata: Read-only
+  - Automatically assigned
 - Issues: Read-only
+  - For interacting with the comments API
 - Pull Requests: Read & write
+  - For posting comments on pull requests
+- Contents: Read-only
+  - For cloning repositories
 
 ### Organization permissions
 
 - Members: Read-only
-
+  - Related to `ALLOWED_ORGANIZATIONS`: see if a user belongs to allowed
+    organizations even if their membership is private
 ### Event subscriptions
 
 - Issue comment
+  - For reacting to pull request comments
