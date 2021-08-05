@@ -16,6 +16,7 @@ import {
 import { Logger } from "./logger"
 import { AppState, PullRequestError, PullRequestTask } from "./types"
 import {
+  displayCommand,
   getCommand,
   getLines,
   getPostPullRequestResult,
@@ -148,11 +149,7 @@ export const getWebhooksHandlers = function (
         let commentId: number | undefined = undefined
 
         const getError = function (body: string) {
-          return new PullRequestError(prParams, {
-            body,
-            requester,
-            commentId,
-          })
+          return new PullRequestError(prParams, { body, requester, commentId })
         }
 
         try {
@@ -274,6 +271,12 @@ export const getWebhooksHandlers = function (
 
               const repoPath = path.join(repositoryCloneDirectory, repo)
 
+              const commandDisplay = displayCommand({
+                execPath,
+                args,
+                secretsToHide: [],
+              })
+
               const taskData: PullRequestTask = {
                 ...prParams,
                 requester,
@@ -290,6 +293,7 @@ export const getWebhooksHandlers = function (
                   repoPath,
                 },
                 version,
+                commandDisplay,
               }
 
               const message = await queue({
@@ -299,7 +303,7 @@ export const getWebhooksHandlers = function (
                   taskData,
                   octokit,
                   handleId,
-                  logger: state.logger,
+                  state,
                 }),
                 state,
               })
@@ -347,7 +351,5 @@ export const getWebhooksHandlers = function (
       })
     }
 
-  return {
-    onIssueCommentCreated,
-  }
+  return { onIssueCommentCreated }
 }

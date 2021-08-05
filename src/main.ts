@@ -79,7 +79,7 @@ const requeueUnterminated = async function (state: AppState) {
         taskData,
         octokit,
         handleId,
-        logger: state.logger,
+        state,
       }),
       state,
     })
@@ -120,6 +120,7 @@ const main = async function (bot: Probot) {
   // location on the persistent volume (ephemeral storage on Kubernetes cluster
   // is too low for building Substrate)
   if (process.env.CLEAR_TMPDIR_ON_START) {
+    console.log(fs.readdirSync(process.env.DATA_PATH))
     assert(process.env.TMPDIR)
     removeDir(process.env.TMPDIR)
     ensureDir(process.env.TMPDIR)

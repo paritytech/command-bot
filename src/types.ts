@@ -26,6 +26,7 @@ export type PullRequestTask = PullRequestParams & {
   prepareBranchParams: PrepareBranchParams
   commentId: number
   version: string
+  commandDisplay: string
 }
 
 export type CommandOutput = Error | string

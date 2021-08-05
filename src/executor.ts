@@ -12,7 +12,11 @@ import {
   PrepareBranchParams,
   PullRequestTask,
 } from "./types"
-import { displayCommand, redactSecrets } from "./utils"
+import {
+  displayCommand,
+  getDeploymentLogsMessage,
+  redactSecrets,
+} from "./utils"
 
 export const cancelHandles: Map<
   string,
@@ -248,14 +252,17 @@ export const queue = async function ({
 }) {
   let child: cp.ChildProcess | undefined = undefined
   let isAlive = true
-  const { execPath, args, prepareBranchParams, commentId, requester } = taskData
-  const commandDisplay = displayCommand({ execPath, args, secretsToHide: [] })
+  const {
+    execPath,
+    args,
+    prepareBranchParams,
+    commentId,
+    requester,
+    commandDisplay,
+  } = taskData
   const { deployment, logger, db, getFetchEndpoint } = state
 
-  let suffixMessage =
-    deployment === undefined
-      ? ""
-      : `The logs for this command should be available on Grafana for the data source \`loki.${deployment.environment}\` and query \`{container=~"${deployment.container}"}\``
+  let suffixMessage = getDeploymentLogsMessage(deployment)
   if (!fs.existsSync(prepareBranchParams.repoPath)) {
     suffixMessage +=
       "\nNote: project will be cloned for the first time, so all dependencies will be compiled from scratch; this might take a long time"
@@ -365,21 +372,7 @@ export const queue = async function ({
           },
           shouldTrackProgress: true,
         })
-
-        return isAlive
-          ? `
-Results are ready for ${commandDisplay}
-
-<details>
-<summary>Output</summary>
-
-\`\`\`
-${result instanceof Error ? result.toString() : result}
-\`\`\`
-
-</details>
-`
-          : cancelledMessage
+        return isAlive ? result : cancelledMessage
       } catch (err) {
         return err
       }
