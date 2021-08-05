@@ -119,17 +119,24 @@ export const getShellExecutor = function ({
                 logger.fatal("Compilation process was killed while executing")
               } else {
                 const retryCargoClean = stderr.match(
-                  /This is a known issue with the compiler. Run `([^`]+)` or/,
+                  /This is a known issue with the compiler. Run `([^`]+)` or `cargo clean`/,
                 )
                 if (retryCargoClean !== null) {
-                  const retryCargoCleanCmd = retryCargoClean[1]
-                  logger.info(
-                    `Running ${retryCargoCleanCmd} in ${
-                      options?.cwd ?? "the current directory"
-                    } before retrying the command due to a compiler error.`,
-                  )
-                  cp.execSync(retryCargoCleanCmd, { cwd: options?.cwd })
-                  resolve(new Retry())
+                  try {
+                    const retryCargoCleanCmd = retryCargoClean[1].replace(
+                      /_/g,
+                      "-",
+                    )
+                    logger.info(
+                      `Running ${retryCargoCleanCmd} in ${
+                        options?.cwd ?? "the current directory"
+                      } before retrying the command due to a compiler error.`,
+                    )
+                    cp.execSync(retryCargoCleanCmd, { cwd: options?.cwd })
+                    resolve(new Retry())
+                  } catch (error) {
+                    resolve(error)
+                  }
                   return
                 }
               }
