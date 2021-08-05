@@ -8,6 +8,7 @@ variables:
   CLEAR_DB_ON_START: "false"
   CLEAR_REPOSITORIES_ON_START: "false"
   CLEAR_TMPDIR_ON_START: "true"
+  PING_PORT: 3001
 
 default:
   image: $CI_IMAGE
@@ -124,6 +125,7 @@ build_bot:
       --set env.CLEAR_REPOSITORIES_ON_START="$CLEAR_REPOSITORIES_ON_START"
       --set env.TMPDIR="$DATA_PATH/tmp"
       --set env.CLEAR_TMPDIR_ON_START="$CLEAR_TMPDIR_ON_START"
+      --set env.PING_PORT="$PING_PORT"
 
 .uninstall-deployment: &uninstall-deployment
   <<: *kubernetes

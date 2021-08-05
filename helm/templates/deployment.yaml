@@ -43,17 +43,20 @@ spec:
             - name: http
               containerPort: 3000
               protocol: TCP
+            - name: ping
+              containerPort: {{ .Values.env.PING_PORT }}
+              protocol: TCP
           livenessProbe:
             httpGet:
-              path: /ping
-              port: 3000
+              path: /
+              port: {{ .Values.env.PING_PORT }}
             failureThreshold: 0
             periodSeconds: 128
             initialDelaySeconds: 128
           readinessProbe:
             httpGet:
-              path: /ping
-              port: 3000
+              path: /
+              port: {{ .Values.env.PING_PORT }}
           volumeMounts:
             {{- if .Values.persistence.enabled }}
             - name: data

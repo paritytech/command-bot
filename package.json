@@ -18,7 +18,8 @@
     "date-fns": "^2.22.1",
     "level-rocksdb": "^4.0.0",
     "lodash": "^4.17.21",
-    "probot": "^12.1.0"
+    "probot": "^12.1.0",
+    "stoppable": "^1.1.0"
   },
   "devDependencies": {
     "@octokit/auth-app": "^3.5.3",
@@ -27,6 +28,7 @@
     "@types/lodash": "^4.14.171",
     "@types/rocksdb": "^3.0.1",
     "@types/shelljs": "^0.8.9",
+    "@types/stoppable": "^1.1.1",
     "@typescript-eslint/eslint-plugin": "^4.28.4",
     "@typescript-eslint/parser": "^4.28.4",
     "@zerollup/ts-transform-paths": "^1.7.18",

@@ -2,8 +2,10 @@ import { createAppAuth } from "@octokit/auth-app"
 import { Octokit } from "@octokit/rest"
 import assert from "assert"
 import fs from "fs"
+import http from "http"
 import path from "path"
 import { Probot, run } from "probot"
+import stoppable from "stoppable"
 
 import { botMentionPrefix } from "src/constants"
 import { getDb, getSortedTasks } from "src/db"
@@ -87,6 +89,19 @@ const requeueUnterminated = async function (state: AppState) {
 }
 
 const main = async function (bot: Probot) {
+  if (process.env.PING_PORT) {
+    // Signal to that we have started listening until Probot kicks in
+    const pingPort = parseInt(process.env.PING_PORT)
+    const pingServer = stoppable(
+      http.createServer(function (_, res) {
+        res.writeHead(200)
+        res.end()
+      }),
+      0,
+    )
+    pingServer.listen(pingPort)
+  }
+
   const logger = new Logger({ name: "app" })
 
   const version = new Date().toISOString()
@@ -186,8 +201,8 @@ const main = async function (bot: Probot) {
   }
 
   await requeueUnterminated(appState)
-  setupProbot(appState)
 
+  setupProbot(appState)
   logger.info("Probot has started!")
 }
 
