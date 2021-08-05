@@ -16,6 +16,7 @@ import {
   displayCommand,
   getDeploymentLogsMessage,
   redactSecrets,
+  Retry,
 } from "./utils"
 
 export const cancelHandles: Map<
@@ -55,71 +56,113 @@ export const getShellExecutor = function ({
   ) {
     return new Promise(function (resolve) {
       try {
-        const commandDisplayed = displayCommand({
-          execPath,
-          args,
-          secretsToHide: secretsToHide ?? [],
-        })
-        logger.info(`Executing ${commandDisplayed}`)
+        const execute = async function (isRetrying: boolean) {
+          const commandDisplayed = displayCommand({
+            execPath,
+            args,
+            secretsToHide: secretsToHide ?? [],
+          })
+          logger.info(
+            `${isRetrying ? "Retrying" : "Executing"} ${commandDisplayed}`,
+          )
 
-        const child = cp.spawn(execPath, args, options)
-        if (onChild) {
-          onChild(child)
-        }
+          const child = cp.spawn(execPath, args, options)
+          if (onChild) {
+            onChild(child)
+          }
 
-        let stdout = ""
-        let stderr = ""
-        const getStreamHandler = function (channel: "stdout" | "stderr") {
-          return function (data: { toString: () => string }) {
-            const str = redactSecrets(data.toString(), secretsToHide)
-            const strTrim = str.trim()
+          let stdout = ""
+          let stderr = ""
+          const getStreamHandler = function (channel: "stdout" | "stderr") {
+            return function (data: { toString: () => string }) {
+              const str = redactSecrets(data.toString(), secretsToHide)
+              const strTrim = str.trim()
 
-            if (shouldTrackProgress && strTrim) {
-              logger.info(strTrim, channel)
-            }
-
-            switch (channel) {
-              case "stdout": {
-                stdout += str
-                break
+              if (shouldTrackProgress && strTrim) {
+                logger.info(strTrim, channel)
               }
-              case "stderr": {
-                stderr += str
-                break
-              }
-              default: {
-                const exhaustivenessCheck: never = channel
-                throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
+
+              switch (channel) {
+                case "stdout": {
+                  stdout += str
+                  break
+                }
+                case "stderr": {
+                  stderr += str
+                  break
+                }
+                default: {
+                  const exhaustivenessCheck: never = channel
+                  throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
+                }
               }
             }
           }
-        }
 
-        child.stdout.on("data", getStreamHandler("stdout"))
-        child.stderr.on("data", getStreamHandler("stderr"))
+          child.stdout.on("data", getStreamHandler("stdout"))
+          child.stderr.on("data", getStreamHandler("stderr"))
 
-        child.on("close", function (code) {
-          stdout = redactSecrets(stdout.trim(), secretsToHide)
-          stderr = redactSecrets(stderr.trim(), secretsToHide)
-          // https://github.com/rust-lang/rust/issues/51309
-          if (
-            stderr.includes("SIGKILL") &&
-            stderr.includes("error: build failed")
+          const result = await new Promise<Retry | Error | string>(function (
+            resolve,
           ) {
-            logger.fatal("Compilation process was killed while executing")
-          }
-          if (
-            code &&
-            (allowedErrorCodes === undefined ||
-              !allowedErrorCodes.includes(code)) &&
-            (testAllowedErrorMessage === undefined ||
-              !testAllowedErrorMessage(stderr))
-          ) {
-            resolve(new Error(stderr))
+            child.on("close", function (code) {
+              stdout = redactSecrets(stdout.trim(), secretsToHide)
+              stderr = redactSecrets(stderr.trim(), secretsToHide)
+
+              // https://github.com/rust-lang/rust/issues/51309
+              // Could happen due to lacking system constraints (we saw it
+              // happen due to out-of-memory)
+              if (
+                stderr.includes("SIGKILL") &&
+                stderr.includes("error: build failed")
+              ) {
+                logger.fatal("Compilation process was killed while executing")
+              } else {
+                const retryCargoClean = stderr.match(
+                  /This is a known issue with the compiler. Run `([^`]+)` or/,
+                )
+                if (retryCargoClean !== null) {
+                  const retryCargoCleanCmd = retryCargoClean[1]
+                  logger.info(
+                    `Running ${retryCargoCleanCmd} in ${
+                      options?.cwd ?? "the current directory"
+                    } before retrying the command due to a compiler error.`,
+                  )
+                  cp.execSync(retryCargoCleanCmd, { cwd: options?.cwd })
+                  resolve(new Retry())
+                  return
+                }
+              }
+
+              if (
+                code &&
+                (allowedErrorCodes === undefined ||
+                  !allowedErrorCodes.includes(code)) &&
+                (testAllowedErrorMessage === undefined ||
+                  !testAllowedErrorMessage(stderr))
+              ) {
+                resolve(new Error(stderr))
+              } else {
+                resolve(stdout || stderr)
+              }
+            })
+          })
+
+          if (result instanceof Retry) {
+            if (isRetrying) {
+              resolve(
+                new Error(
+                  `Failed to recover from compilation error; stderr: ${stderr}`,
+                ),
+              )
+            } else {
+              execute(true)
+            }
           } else {
-            resolve(stdout || stderr)
+            resolve(result)
           }
-        })
+        }
+        execute(false)
       } catch (error) {
         resolve(error)
       }

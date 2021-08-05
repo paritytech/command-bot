@@ -181,3 +181,5 @@ export const getDeploymentLogsMessage = function (
 
   return `The logs for this command should be available on Grafana for the data source \`loki.${deployment.environment}\` and query \`{container=~"${deployment.container}"}\``
 }
+
+export class Retry {}
