@@ -164,7 +164,7 @@ export const getShellExecutor = function ({
                 ),
               )
             } else {
-              execute(retryMotive)
+              execute(result.motive)
             }
           } else {
             resolve(result)
