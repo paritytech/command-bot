@@ -56,14 +56,14 @@ export const getShellExecutor = function ({
   ) {
     return new Promise(function (resolve) {
       try {
-        const execute = async function (isRetrying: boolean) {
+        const execute = async function (retryMotive: string) {
           const commandDisplayed = displayCommand({
             execPath,
             args,
             secretsToHide: secretsToHide ?? [],
           })
           logger.info(
-            `${isRetrying ? "Retrying" : "Executing"} ${commandDisplayed}`,
+            `${retryMotive ? "Retrying" : "Executing"} ${commandDisplayed}`,
           )
 
           const child = cp.spawn(execPath, args, options)
@@ -133,7 +133,7 @@ export const getShellExecutor = function ({
                       } before retrying the command due to a compiler error.`,
                     )
                     cp.execSync(retryCargoCleanCmd, { cwd: options?.cwd })
-                    resolve(new Retry())
+                    resolve(new Retry(retryCargoCleanCmd))
                   } catch (error) {
                     resolve(error)
                   }
@@ -156,20 +156,21 @@ export const getShellExecutor = function ({
           })
 
           if (result instanceof Retry) {
-            if (isRetrying) {
+            // Avoid recursion if it failed with the same error as before
+            if (result.motive === retryMotive) {
               resolve(
                 new Error(
                   `Failed to recover from compilation error; stderr: ${stderr}`,
                 ),
               )
             } else {
-              execute(true)
+              execute(retryMotive)
             }
           } else {
             resolve(result)
           }
         }
-        execute(false)
+        execute("")
       } catch (error) {
         resolve(error)
       }
