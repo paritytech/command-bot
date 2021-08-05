@@ -99,8 +99,8 @@ export const getShellExecutor = function ({
         child.stderr.on("data", getStreamHandler("stderr"))
 
         child.on("close", function (code) {
-          stdout = stdout.trim()
-          stderr = stderr.trim()
+          stdout = redactSecrets(stdout.trim(), secretsToHide)
+          stderr = redactSecrets(stderr.trim(), secretsToHide)
           // https://github.com/rust-lang/rust/issues/51309
           if (
             stderr.includes("SIGKILL") &&
