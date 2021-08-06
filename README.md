@@ -32,7 +32,7 @@ In the pull request where you previously ran `/try-runtime queue`, comment:
 
 ## Build and deploy
 
-Either push a tag with the pattern `/^v[0-9]+\.[0-9]+.*$/` or
+Either push a tag with the pattern `/^v-[0-9]+\.[0-9]+.*$/` or
 [trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
 with `BUILD` set to `production`.
 
