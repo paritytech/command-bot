@@ -133,7 +133,7 @@ const main = async function (bot: Probot) {
   // For the deployment this should always happen because TMPDIR targets a
   // location on the persistent volume (ephemeral storage on Kubernetes cluster
   // is too low for building Substrate)
-  if (process.env.CLEAR_TMPDIR_ON_START) {
+  if (process.env.CLEAR_TMPDIR_ON_START === "true") {
     assert(process.env.TMPDIR)
     removeDir(process.env.TMPDIR)
     ensureDir(process.env.TMPDIR)
