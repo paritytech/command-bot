@@ -86,7 +86,7 @@ persistence:
   mountPath: ""
   subPath: ""
   annotations: {}
-  storageClass: standard
+  storageClass: hdd-csi
   size: 20G
   accessModes:
     - ReadWriteOnce
