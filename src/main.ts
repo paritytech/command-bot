@@ -11,6 +11,7 @@ import { botMentionPrefix } from "src/constants"
 import { getDb, getSortedTasks } from "src/db"
 
 import { queue } from "./executor"
+import { updateComment } from "./github"
 import { Logger } from "./logger"
 import { State } from "./types"
 import {
@@ -65,26 +66,64 @@ const requeueUnterminated = async function (state: State) {
     match: { version, isInverseMatch: true },
   })
 
-  for (const { taskData, id } of unterminatedItems) {
+  for (const {
+    taskData: { timesRequeued, ...taskData },
+    id,
+  } of unterminatedItems) {
     await db.del(id)
-
-    logger.info(`Requeuing ${JSON.stringify(taskData)}`)
 
     const octokit = await (
       bot.auth as (installationId?: number) => Promise<Octokit>
     )(taskData.installationId)
-    const handleId = getPullRequestHandleId(taskData)
-    await queue({
-      handleId,
-      taskData,
-      onResult: getPostPullRequestResult({
-        taskData,
-        octokit,
-        handleId,
-        state,
-      }),
-      state,
-    })
+    const announceCancel = function (message: string) {
+      const { owner, repo, pull_number, commentId, requester } = taskData
+      return updateComment(octokit, {
+        owner,
+        repo,
+        pull_number,
+        comment_id: commentId,
+        body: `@${requester} ${message}`,
+      })
+    }
+
+    if (
+      timesRequeued > 1 &&
+      // Check if the task was requeued and got to execute, but it failed for
+      // some reason, in which case it will not be retried further; in
+      // comparison, it might have been requeued and not had a chance to execute
+      // due to other crash-inducing command being in front of it, thus it's not
+      // reasonable to avoid rescheduling this command if it's not his fault
+      timesRequeued === taskData.timesRequeuedSnapshotBeforeExecution
+    ) {
+      await announceCancel(
+        `command was rescheduled and failed to finish (check for taskId ${id} in the logs); execution will not automatically be restarted further.`,
+      )
+    } else {
+      try {
+        logger.info(`Requeuing ${JSON.stringify(taskData)}`)
+        const nextTaskData = { ...taskData, timesRequeued: timesRequeued + 1 }
+        const handleId = getPullRequestHandleId(taskData)
+        await queue({
+          handleId,
+          taskData: nextTaskData,
+          onResult: getPostPullRequestResult({
+            taskData: nextTaskData,
+            octokit,
+            handleId,
+            state,
+          }),
+          state,
+        })
+      } catch (error) {
+        let errorMessage = error.toString()
+        if (errorMessage.endsWith(".") === false) {
+          errorMessage = `${errorMessage}.`
+        }
+        await announceCancel(
+          `caught exception while trying to reschedule the command; it will not be rescheduled further. Error message: ${errorMessage}.`,
+        )
+      }
+    }
   }
 }
 

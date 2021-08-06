@@ -288,6 +288,9 @@ export const getWebhooksHandlers = function (
                   args,
                   secretsToHide: [],
                 }),
+                timesRequeued: 0,
+                timesRequeuedSnapshotBeforeExecution: 0,
+                timesExecuted: 0,
               }
 
               const message = await queue({

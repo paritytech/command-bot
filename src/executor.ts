@@ -133,7 +133,7 @@ export const getShellExecutor = function ({
                       } before retrying the command due to a compiler error.`,
                     )
                     cp.execSync(retryCargoCleanCmd, { cwd: options?.cwd })
-                    resolve(new Retry(retryCargoCleanCmd))
+                    resolve(new Retry("compilation error", retryCargoCleanCmd))
                   } catch (error) {
                     resolve(error)
                   }
@@ -160,7 +160,7 @@ export const getShellExecutor = function ({
             if (result.motive === retryMotive) {
               resolve(
                 new Error(
-                  `Failed to recover from compilation error; stderr: ${stderr}`,
+                  `Failed to recover from ${result.context}; stderr: ${stderr}`,
                 ),
               )
             } else {
@@ -170,6 +170,7 @@ export const getShellExecutor = function ({
             resolve(result)
           }
         }
+
         execute("")
       } catch (error) {
         resolve(error)
@@ -285,9 +286,9 @@ ${JSON.stringify(value, null, 2)}
 `
     },
     "")}`
-  } else {
-    return `Executing ${commandDisplay}`
   }
+
+  return `Executing ${commandDisplay}`
 }
 
 const mutex = new Mutex()
@@ -377,13 +378,25 @@ export const queue = async function ({
   mutex
     .runExclusive(async function () {
       try {
-        logger.info(
-          `Starting run of ${commandDisplay}\nCurrent queue: ${JSON.stringify(
-            await getSortedTasks(db, { match: { version: taskData.version } }),
-          )}`,
+        await db.put(
+          taskId,
+          JSON.stringify({
+            ...taskData,
+            timesRequeuedSnapshotBeforeExecution: taskData.timesRequeued,
+            timesExecuted: taskData.timesExecuted + 1,
+          }),
         )
 
-        if (!isAlive) {
+        if (isAlive) {
+          logger.info(
+            `Starting task of ${commandDisplay} (handleId: "${handleId}", taskId: "${taskId}")\nCurrent queue: ${JSON.stringify(
+              await getSortedTasks(db, {
+                match: { version: taskData.version },
+              }),
+            )}`,
+          )
+        } else {
+          logger.info(`taskId ${taskId} was cancelled before it could start`)
           return cancelledMessage
         }
 

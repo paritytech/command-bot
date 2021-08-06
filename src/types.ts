@@ -27,6 +27,9 @@ export type PullRequestTask = PullRequestParams & {
   commentId: number
   version: string
   commandDisplay: string
+  timesRequeued: number
+  timesRequeuedSnapshotBeforeExecution: number
+  timesExecuted: number
 }
 
 export type CommandOutput = Error | string

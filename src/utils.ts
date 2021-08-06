@@ -182,5 +182,5 @@ export const getDeploymentLogsMessage = function (
 }
 
 export class Retry {
-  constructor(public motive: string) {}
+  constructor(public context: "compilation error", public motive: string) {}
 }
