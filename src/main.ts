@@ -87,7 +87,7 @@ const requeueUnterminated = async function (state: State) {
     }
 
     if (
-      timesRequeued > 1 &&
+      timesRequeued &&
       // Check if the task was requeued and got to execute, but it failed for
       // some reason, in which case it will not be retried further; in
       // comparison, it might have been requeued and not had a chance to execute
