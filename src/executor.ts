@@ -1,15 +1,23 @@
 import { Mutex } from "async-mutex"
 import cp from "child_process"
+import fs from "fs"
+import path from "path"
 
-import { DB, getSortedItems } from "src/db"
+import { DB, getSortedTasks } from "src/db"
 
+import { Logger } from "./logger"
 import {
-  AppState,
   CommandOutput,
   PrepareBranchParams,
   PullRequestTask,
+  State,
 } from "./types"
-import { displayCommand, redactSecrets } from "./utils"
+import {
+  displayCommand,
+  getDeploymentLogsMessage,
+  redactSecrets,
+  Retry,
+} from "./utils"
 
 export const cancelHandles: Map<
   string,
@@ -24,77 +32,146 @@ export type ShellExecutor = (
     options?: cp.ExecFileOptions
     testAllowedErrorMessage?: (stderr: string) => boolean
     secretsToHide?: string[]
+    shouldTrackProgress?: boolean
   },
 ) => Promise<CommandOutput>
 
 export const getShellExecutor = function ({
-  log,
+  logger,
   onChild,
 }: {
-  log: (str: string) => void
+  logger: Logger
   onChild?: (child: cp.ChildProcess) => void
 }): ShellExecutor {
   return function (
     execPath,
     args,
-    { allowedErrorCodes, options, testAllowedErrorMessage, secretsToHide } = {},
+    {
+      allowedErrorCodes,
+      options,
+      testAllowedErrorMessage,
+      secretsToHide,
+      shouldTrackProgress,
+    } = {},
   ) {
     return new Promise(function (resolve) {
       try {
-        const commandDisplayed = displayCommand({
-          execPath,
-          args,
-          secretsToHide: secretsToHide ?? [],
-        })
-        log(`Executing ${commandDisplayed}`)
+        const execute = async function (retryMotive: string) {
+          const commandDisplayed = displayCommand({
+            execPath,
+            args,
+            secretsToHide: secretsToHide ?? [],
+          })
+          logger.info(
+            `${retryMotive ? "Retrying" : "Executing"} ${commandDisplayed}`,
+          )
 
-        const child = cp.execFile(
-          execPath,
-          args,
-          options,
-          function (error, stdout, stderr) {
-            const sanitizedStderr = redactSecrets(
-              stderr.toString().trim(),
-              secretsToHide,
-            )
-            const isErrorMessageAllowed = testAllowedErrorMessage
-              ? testAllowedErrorMessage(sanitizedStderr)
-              : false
+          const child = cp.spawn(execPath, args, options)
+          if (onChild) {
+            onChild(child)
+          }
 
-            if (!isErrorMessageAllowed) {
-              if (error) {
-                const code = error.code as number | undefined
-                if (code && !allowedErrorCodes?.includes(code)) {
-                  return resolve(
-                    new Error(
-                      redactSecrets(
-                        error.stack ?? error.message,
-                        secretsToHide,
-                      ),
-                    ),
-                  )
+          let stdout = ""
+          let stderr = ""
+          const getStreamHandler = function (channel: "stdout" | "stderr") {
+            return function (data: { toString: () => string }) {
+              const str = redactSecrets(data.toString(), secretsToHide)
+              const strTrim = str.trim()
+
+              if (shouldTrackProgress && strTrim) {
+                logger.info(strTrim, channel)
+              }
+
+              switch (channel) {
+                case "stdout": {
+                  stdout += str
+                  break
                 }
-              } else if (sanitizedStderr) {
-                return resolve(new Error(sanitizedStderr))
+                case "stderr": {
+                  stderr += str
+                  break
+                }
+                default: {
+                  const exhaustivenessCheck: never = channel
+                  throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
+                }
               }
             }
+          }
 
-            const sanitizedStdout = redactSecrets(
-              stdout.toString().trim(),
-              secretsToHide,
-            )
+          child.stdout.on("data", getStreamHandler("stdout"))
+          child.stderr.on("data", getStreamHandler("stderr"))
 
-            if (sanitizedStdout) {
-              log(`Output of ${commandDisplayed}:\n${sanitizedStdout}`)
+          const result = await new Promise<Retry | Error | string>(function (
+            resolve,
+          ) {
+            child.on("close", function (code) {
+              stdout = redactSecrets(stdout.trim(), secretsToHide)
+              stderr = redactSecrets(stderr.trim(), secretsToHide)
+
+              // https://github.com/rust-lang/rust/issues/51309
+              // Could happen due to lacking system constraints (we saw it
+              // happen due to out-of-memory)
+              if (
+                stderr.includes("SIGKILL") &&
+                stderr.includes("error: build failed")
+              ) {
+                logger.fatal("Compilation process was killed while executing")
+              } else {
+                const retryCargoClean = stderr.match(
+                  /This is a known issue with the compiler. Run `([^`]+)` or `cargo clean`/,
+                )
+                if (retryCargoClean !== null) {
+                  try {
+                    const retryCargoCleanCmd = retryCargoClean[1].replace(
+                      /_/g,
+                      "-",
+                    )
+                    logger.info(
+                      `Running ${retryCargoCleanCmd} in ${
+                        options?.cwd ?? "the current directory"
+                      } before retrying the command due to a compiler error.`,
+                    )
+                    cp.execSync(retryCargoCleanCmd, { cwd: options?.cwd })
+                    resolve(new Retry("compilation error", retryCargoCleanCmd))
+                  } catch (error) {
+                    resolve(error)
+                  }
+                  return
+                }
+              }
+
+              if (
+                code &&
+                (allowedErrorCodes === undefined ||
+                  !allowedErrorCodes.includes(code)) &&
+                (testAllowedErrorMessage === undefined ||
+                  !testAllowedErrorMessage(stderr))
+              ) {
+                resolve(new Error(stderr))
+              } else {
+                resolve(stdout || stderr)
+              }
+            })
+          })
+
+          if (result instanceof Retry) {
+            // Avoid recursion if it failed with the same error as before
+            if (result.motive === retryMotive) {
+              resolve(
+                new Error(
+                  `Failed to recover from ${result.context}; stderr: ${stderr}`,
+                ),
+              )
+            } else {
+              execute(result.motive)
             }
-
-            resolve(sanitizedStdout)
-          },
-        )
-
-        if (onChild) {
-          onChild(child)
+          } else {
+            resolve(result)
+          }
         }
+
+        execute("")
       } catch (error) {
         resolve(error)
       }
@@ -155,7 +232,7 @@ export const prepareBranch = async function* (
   const prRemote = "pr"
   yield repoCmd("git", ["remote", "remove", prRemote], {
     testAllowedErrorMessage: function (err) {
-      return err.startsWith("error: No such remote:")
+      return err.includes("No such remote:")
     },
   })
 
@@ -187,9 +264,7 @@ export const getQueueMessage = async function (
   commandDisplay: string,
   version: string,
 ) {
-  const items = await getSortedItems(db, {
-    match: { version },
-  })
+  const items = await getSortedTasks(db, { match: { version } })
 
   if (items.length) {
     return `
@@ -207,32 +282,49 @@ ${i + 1}:
 \`\`\`
 ${JSON.stringify(value, null, 2)}
 \`\`\`
-  
+
 `
     },
     "")}`
-  } else {
-    return `Executing ${commandDisplay}`
   }
+
+  return `Executing ${commandDisplay}`
 }
 
 const mutex = new Mutex()
 export const queue = async function ({
-  log,
-  db,
   taskData,
   onResult,
-  getFetchEndpoint,
   handleId,
-}: Pick<AppState, "db" | "log" | "getFetchEndpoint"> & {
+  state,
+}: {
   taskData: PullRequestTask
   onResult: (result: CommandOutput) => Promise<void>
   handleId: string
+  state: Pick<State, "db" | "logger" | "getFetchEndpoint" | "deployment">
 }) {
   let child: cp.ChildProcess | undefined = undefined
   let isAlive = true
-  const { execPath, args, prepareBranchParams, commentId, requester } = taskData
-  const commandDisplay = displayCommand({ execPath, args, secretsToHide: [] })
+  const {
+    execPath,
+    args,
+    prepareBranchParams,
+    commentId,
+    requester,
+    commandDisplay,
+  } = taskData
+  const { deployment, logger, db, getFetchEndpoint } = state
+
+  let suffixMessage = getDeploymentLogsMessage(deployment)
+  if (!fs.existsSync(prepareBranchParams.repoPath)) {
+    suffixMessage +=
+      "\nNote: project will be cloned for the first time, so all dependencies will be compiled from scratch; this might take a long time"
+  } else if (
+    !fs.existsSync(path.join(prepareBranchParams.repoPath, "target"))
+  ) {
+    suffixMessage +=
+      '\nNote: "target" directory does not exist, so all dependencies will be compiled from scratch; this might take a long time'
+  }
 
   // Assuming the system clock is properly configured, this ID is guaranteed to
   // be unique due to the webhooks mutex's guarantees, because only one webhook
@@ -244,22 +336,27 @@ export const queue = async function ({
   const terminate = async function () {
     isAlive = false
 
-    try {
-      if (child) {
-        log(`Killing child with PID ${child.pid} (${commandDisplay})`)
-        child.kill()
-      }
-    } catch (err) {
-      log(err)
+    if (child === undefined) {
+      return
     }
 
-    await db.del(taskId)
+    try {
+      child.kill()
+    } catch (error) {
+      logger.fatal(
+        error,
+        `Failed to kill child with PID ${child.pid} (${commandDisplay})`,
+      )
+      return
+    }
 
-    log(
+    logger.info(`Killed child with PID ${child.pid} (${commandDisplay})`)
+    child = undefined
+
+    await db.del(taskId)
+    logger.info(
       `Queue after termination: ${JSON.stringify(
-        await getSortedItems(db, {
-          match: { version: taskData.version },
-        }),
+        await getSortedTasks(db, { match: { version: taskData.version } }),
       )}`,
     )
   }
@@ -281,20 +378,30 @@ export const queue = async function ({
   mutex
     .runExclusive(async function () {
       try {
-        log(
-          `Starting run of ${commandDisplay}\nCurrent queue: ${JSON.stringify(
-            await getSortedItems(db, {
-              match: { version: taskData.version },
-            }),
-          )}`,
+        await db.put(
+          taskId,
+          JSON.stringify({
+            ...taskData,
+            timesRequeuedSnapshotBeforeExecution: taskData.timesRequeued,
+            timesExecuted: taskData.timesExecuted + 1,
+          }),
         )
 
-        if (!isAlive) {
+        if (isAlive) {
+          logger.info(
+            `Starting task of ${commandDisplay} (handleId: "${handleId}", taskId: "${taskId}")\nCurrent queue: ${JSON.stringify(
+              await getSortedTasks(db, {
+                match: { version: taskData.version },
+              }),
+            )}`,
+          )
+        } else {
+          logger.info(`taskId ${taskId} was cancelled before it could start`)
           return cancelledMessage
         }
 
         const run = getShellExecutor({
-          log,
+          logger,
           onChild: function (newChild) {
             child = newChild
           },
@@ -306,18 +413,17 @@ export const queue = async function ({
             return getFetchEndpoint(taskData.installationId)
           },
         })
-        let o: IteratorResult<CommandOutput>
         while (isAlive) {
-          o = await prepare.next()
+          const next = await prepare.next()
 
-          if (o.done) {
+          if (next.done) {
             break
           }
 
           child = undefined
 
-          if (typeof o.value !== "string") {
-            return o.value
+          if (typeof next.value !== "string") {
+            return next.value
           }
         }
         if (!isAlive) {
@@ -329,24 +435,11 @@ export const queue = async function ({
             env: { ...process.env, ...taskData.env },
             cwd: prepareBranchParams.repoPath,
           },
+          shouldTrackProgress: true,
         })
-
-        return isAlive
-          ? `
-Results are ready for ${commandDisplay}
-
-<details>
-<summary>Output</summary>
-
-\`\`\`
-${result}
-\`\`\`
-
-</details>
-`
-          : cancelledMessage
-      } catch (err) {
-        return err
+        return isAlive ? result : cancelledMessage
+      } catch (error) {
+        return error
       }
     })
     .then(afterExecution)
@@ -354,5 +447,5 @@ ${result}
 
   cancelHandles.set(handleId, { cancel: terminate, commentId, requester })
 
-  return message
+  return `${message}\n${suffixMessage}`
 }

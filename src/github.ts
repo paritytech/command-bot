@@ -2,6 +2,7 @@ import { RequestError } from "@octokit/request-error"
 import { Octokit } from "@octokit/rest"
 import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types"
 
+import { Logger } from "./logger"
 import { millisecondsDelay } from "./utils"
 
 export type ExtendedOctokit = Octokit & {
@@ -16,9 +17,14 @@ export type ExtendedOctokit = Octokit & {
       }>
     }
   }
+  extendedByTryRuntimeBot: boolean
 }
 
-export const getOctokit = function (octokit: Octokit) {
+export const getOctokit = function (octokit: Octokit): ExtendedOctokit {
+  if ((octokit as ExtendedOctokit).extendedByTryRuntimeBot) {
+    return octokit as ExtendedOctokit
+  }
+
   Object.assign(octokit.orgs, {
     userMembershipByOrganizationId: octokit.request.defaults({
       method: "GET",
@@ -35,8 +41,8 @@ export const getOctokit = function (octokit: Octokit) {
     for (let tryCount = 1; tryCount < 4; tryCount++) {
       try {
         result = await request(options)
-      } catch (err) {
-        result = err
+      } catch (error) {
+        result = error
       }
 
       if (
@@ -56,7 +62,9 @@ export const getOctokit = function (octokit: Octokit) {
     return result
   })
 
-  return octokit as ExtendedOctokit
+  const extendedOctokit = octokit as ExtendedOctokit
+  extendedOctokit.extendedByTryRuntimeBot = true
+  return extendedOctokit
 }
 
 export const createComment = async function (
@@ -87,12 +95,12 @@ export const isOrganizationMember = async function ({
   organizationId,
   username,
   octokit,
-  log,
+  logger,
 }: {
   organizationId: number
   username: string
   octokit: ExtendedOctokit
-  log: (str: string) => void
+  logger: Logger
 }) {
   try {
     const response = await octokit.orgs.userMembershipByOrganizationId({
@@ -106,10 +114,9 @@ export const isOrganizationMember = async function ({
     // 404 is one of the expected responses for this endpoint so this scenario
     // doesn't need to be flagged as an error
     if (error?.status !== 404) {
-      log(
-        `Organization membership API call responded with unexpected status code ${
-          error?.status
-        }\n${error?.stack ?? error?.message}`,
+      logger.fatal(
+        error,
+        "Organization membership API call responded with unexpected status code",
       )
     }
     return false

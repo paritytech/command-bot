@@ -1,0 +1,99 @@
+#!/bin/bash
+
+RUSTUP_HOME=/usr/local/rustup
+CARGO_HOME=/usr/local/cargo
+PRE_COMMIT_BUILD_DEPS="gcc python3-dev libc-dev python3-pip"
+RUST_BUILD_DEPS="curl ca-certificates"
+ROCKSDB_BUILD_DEPS="build-essential python3"
+# https://github.com/paritytech/substrate/search?q=x86_64-unknown-linux-gnu
+SUBSTRATE_HOST=x86_64-unknown-linux-gnu
+APT_INSTALL="apt install --assume-yes --quiet --no-install-recommends"
+
+IFS='' read -r -d '' common <<EOF
+FROM docker.io/node:lts-buster-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN yarn --version
+
+RUN apt update
+
+# Git is needed for both pre-commit and also for cloning repositories before
+# running the bot's commands
+RUN $APT_INSTALL git && git --version
+EOF
+
+case "$1" in
+  ci)
+IFS='' read -r -d '' ci << EOF
+$common
+
+# CI pipeline utilities
+RUN $APT_INSTALL python3 make bash sed
+
+# Needed for pre-commit's installation
+RUN $APT_INSTALL $PRE_COMMIT_BUILD_DEPS && apt-mark auto $PRE_COMMIT_BUILD_DEPS
+
+RUN pip3 install pre-commit && pre-commit --version
+
+RUN apt-get autoremove -y
+EOF
+    echo "$ci"
+    ;;
+
+  app)
+IFS='' read -r -d '' app << EOF
+$common
+
+# Those values are expected to be set from CI.
+ARG REPO
+ENV REPO=\$REPO
+RUN if [ ! "\$REPO" ]; then exit 1; fi
+
+# Rust is needed for running the bot's commands
+RUN $APT_INSTALL $RUST_BUILD_DEPS && apt-mark auto $RUST_BUILD_DEPS
+ENV RUSTUP_HOME=$RUSTUP_HOME \
+  CARGO_HOME=$CARGO_HOME \
+  PATH=$CARGO_HOME/bin:\$PATH
+RUN curl https://sh.rustup.rs -sSf | sh -s -- \
+    -y \
+    --no-modify-path \
+    --default-host $SUBSTRATE_HOST \
+    --profile minimal && \
+  . $CARGO_HOME/env && \
+  cargo --version && rustup --version && \
+  rustup toolchain install stable-$SUBSTRATE_HOST && \
+  rustup toolchain install nightly-$SUBSTRATE_HOST && \
+  rustup target add wasm32-unknown-unknown --toolchain nightly
+
+# Needed for building RocksDB bindings for Node.js
+RUN $APT_INSTALL $ROCKSDB_BUILD_DEPS && apt-mark auto $ROCKSDB_BUILD_DEPS
+
+RUN cd "\$REPO" && \
+  yarn --ignore-optional --frozen-lockfile && \
+  yarn build && \
+  mkdir /bot && \
+  mv build node_modules /bot
+
+RUN apt-get autoremove -y
+
+# gcc & libc are needed for the 'cc' linker for Rust
+# clang and libclang are needed for building RocksDB
+RUN $APT_INSTALL \
+  gcc libc-dev \
+  clang libclang-dev && \
+  cc --version && \
+  clang --version
+
+WORKDIR /bot
+
+CMD . $CARGO_HOME/env && node ./build/main.js
+EOF
+    echo "$app"
+    ;;
+
+  *)
+    >&2 echo "Invalid argument '$1' for image name"
+    exit 1
+    ;;
+esac

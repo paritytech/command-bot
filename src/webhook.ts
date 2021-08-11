@@ -1,9 +1,10 @@
+import { Octokit } from "@octokit/rest"
+import { EmitterWebhookEvent as WebhookEvent } from "@octokit/webhooks"
+import { EmitterWebhookEventName as WebhookEvents } from "@octokit/webhooks/dist-types/types"
 import { Mutex } from "async-mutex"
 import path from "path"
 import { Probot } from "probot"
 
-import { EventTypesPayload } from "../node_modules/probot/node_modules/@octokit/webhooks"
-import { gitDir } from "./constants"
 import { cancelHandles, queue } from "./executor"
 import {
   createComment,
@@ -12,38 +13,44 @@ import {
   isOrganizationMember,
   updateComment,
 } from "./github"
-import { AppState, PullRequestError, PullRequestTask } from "./types"
+import { Logger } from "./logger"
+import { PullRequestError, PullRequestTask, State } from "./types"
 import {
+  displayCommand,
   getCommand,
   getLines,
   getPostPullRequestResult,
   getPullRequestHandleId,
 } from "./utils"
 
-type WebhookHandler<E extends keyof EventTypesPayload> = (
+type WebhookHandler<E extends WebhookEvents> = (
   event: {
     octokit: ExtendedOctokit
-  } & EventTypesPayload[E],
+  } & WebhookEvent<E>,
 ) => Promise<PullRequestError | void> | PullRequestError | void
 
-export const setupEvent = function <E extends keyof EventTypesPayload>(
+export const setupEvent = function <E extends WebhookEvents>(
   bot: Probot,
   event: E,
   handler: WebhookHandler<E>,
+  logger: Logger,
 ) {
   bot.on(event, async function (data) {
-    const { octokit: probotOctokit } = data
-    const octokit = getOctokit(probotOctokit)
+    const installationId: number | undefined = (data.payload as any)
+      .installation?.id
+    const octokit = getOctokit(
+      await (bot.auth as (installationId?: number) => Promise<Octokit>)(
+        installationId,
+      ),
+    )
 
     try {
       const result = await handler({ ...data, octokit })
-
       if (result instanceof PullRequestError) {
         const {
           params: { pull_number, ...params },
           comment: { body, commentId, requester },
         } = result
-
         const sharedCommentParams = {
           ...params,
           issue_number: pull_number,
@@ -59,8 +66,8 @@ export const setupEvent = function <E extends keyof EventTypesPayload>(
           await createComment(octokit, sharedCommentParams)
         }
       }
-    } catch (err) {
-      bot.log(`Exception caught in webhook handler\n${err.stack}`)
+    } catch (error) {
+      logger.fatal(error, "Exception caught in webhook handler")
     }
   })
 }
@@ -69,24 +76,29 @@ export const setupEvent = function <E extends keyof EventTypesPayload>(
 // not get the bot stuck until the command finishes, however, since queueing
 // should be asynchronous
 const mutex = new Mutex()
-export const getWebhooksHandlers = function ({
-  botMentionPrefix,
-  db,
-  log,
-  nodesAddresses,
-  getFetchEndpoint,
-  version,
-  allowedOrganizations,
-}: Pick<
-  AppState,
-  | "botMentionPrefix"
-  | "db"
-  | "log"
-  | "nodesAddresses"
-  | "getFetchEndpoint"
-  | "version"
-  | "allowedOrganizations"
->) {
+export const getWebhooksHandlers = function (
+  state: Pick<
+    State,
+    | "botMentionPrefix"
+    | "db"
+    | "logger"
+    | "nodesAddresses"
+    | "getFetchEndpoint"
+    | "version"
+    | "allowedOrganizations"
+    | "repositoryCloneDirectory"
+    | "deployment"
+  >,
+) {
+  const {
+    botMentionPrefix,
+    logger,
+    nodesAddresses,
+    version,
+    allowedOrganizations,
+    repositoryCloneDirectory,
+  } = state
+
   const isRequesterAllowed = async function (
     octokit: ExtendedOctokit,
     username: string,
@@ -97,7 +109,7 @@ export const getWebhooksHandlers = function ({
           organizationId,
           username,
           octokit,
-          log,
+          logger,
         })
       ) {
         return true
@@ -135,11 +147,7 @@ export const getWebhooksHandlers = function ({
         let commentId: number | undefined = undefined
 
         const getError = function (body: string) {
-          return new PullRequestError(prParams, {
-            body,
-            requester,
-            commentId,
-          })
+          return new PullRequestError(prParams, { body, requester, commentId })
         }
 
         try {
@@ -157,7 +165,7 @@ export const getWebhooksHandlers = function ({
           }
 
           const { execPath: botMention, ...command } = getCommand(commandLine, {
-            baseEnv: { RUST_LOG: "remote-ext=debug" },
+            baseEnv: { RUST_LOG: "remote-ext=info" },
           })
           if (botMention !== botMentionPrefix) {
             return
@@ -187,15 +195,14 @@ export const getWebhooksHandlers = function ({
 
               const addressPrefix = ["wss://", "ws://"]
               toNextArg: for (const i in otherArgs) {
-                const arg = otherArgs[i]
-
                 for (const prefix of addressPrefix) {
+                  const arg = otherArgs[i]
                   if (arg.startsWith(prefix)) {
                     const node = arg.slice(prefix.length)
 
                     if (!node) {
                       return getError(
-                        `Must specify one address in the form \`ws://name\` (found \`${arg}\`). ${nodeOptionsDisplay}`,
+                        `Must specify one address in the form \`${prefix}name\` (found "${arg}"). ${nodeOptionsDisplay}`,
                       )
                     }
 
@@ -206,7 +213,7 @@ export const getWebhooksHandlers = function ({
                       )
                     }
 
-                    otherArgs[i] = `${prefix}${nodeAddress}`
+                    otherArgs[i] = nodeAddress
                     continue toNextArg
                   }
                 }
@@ -214,13 +221,11 @@ export const getWebhooksHandlers = function ({
 
               const args = [
                 "run",
-                // --quiet should be kept so that the command's output buffer
-                // doesn't blow up with a bunch of compilation stuff; bear in
-                // mind the output is posted on Github issues which have limited
-                // output size
-                // https://github.community/t/maximum-length-for-the-comment-body-in-issues-and-pr/148867/2
+                // "--quiet" should be kept so that the output doesn't get
+                // polluted with a bunch of compilation stuff; bear in mind the
+                // output is posted on Github issues which have limited
+                // character count
                 "--quiet",
-                "--release",
                 "--features=try-runtime",
                 "try-runtime",
                 ...otherArgs,
@@ -241,13 +246,14 @@ export const getWebhooksHandlers = function ({
                   `Failed to get branch owner from the Github API`,
                 )
               }
+
               const branch = prResponse.data.head?.ref
               if (!branch) {
                 return getError(`Failed to get branch name from the Github API`)
               }
 
               const commentBody =
-                `Starting try-runtime for branch: "${branch}". Comment will be updated.`.trim()
+                `Preparing try-runtime command for branch: "${branch}". Comment will be updated.`.trim()
               const commentCreationResponse = await createComment(octokit, {
                 ...commentParams,
                 body: commentBody,
@@ -259,10 +265,7 @@ export const getWebhooksHandlers = function ({
                   }\n(${JSON.stringify(commentCreationResponse.data)})`,
                 )
               }
-
               commentId = commentCreationResponse.id
-
-              const repoPath = path.join(gitDir, repo)
 
               const taskData: PullRequestTask = {
                 ...prParams,
@@ -277,24 +280,30 @@ export const getWebhooksHandlers = function ({
                   repo,
                   contributor,
                   branch,
-                  repoPath,
+                  repoPath: path.join(repositoryCloneDirectory, repo),
                 },
                 version,
+                commandDisplay: displayCommand({
+                  execPath,
+                  args,
+                  secretsToHide: [],
+                }),
+                timesRequeued: 0,
+                timesRequeuedSnapshotBeforeExecution: 0,
+                timesExecuted: 0,
               }
 
               const message = await queue({
-                getFetchEndpoint,
                 handleId,
+                taskData,
                 onResult: getPostPullRequestResult({
                   taskData,
                   octokit,
                   handleId,
+                  state,
                 }),
-                db,
-                log,
-                taskData,
+                state,
               })
-
               await updateComment(octokit, {
                 ...commentParams,
                 comment_id: commentId,
@@ -310,21 +319,22 @@ export const getWebhooksHandlers = function ({
               }
 
               const { cancel, commentId } = cancelItem
-              await cancel()
               cancelHandles.delete(handleId)
 
+              await cancel()
               await updateComment(octokit, {
                 ...commentParams,
                 comment_id: commentId,
                 body: `@${requester} command was cancelled`.trim(),
               })
+
               break
             }
             default: {
               return getError(`Unknown sub-command ${subCommand}`)
             }
           }
-        } catch (err) {
+        } catch (error) {
           const cancelHandle = cancelHandles.get(handleId)
 
           if (cancelHandle) {
@@ -333,12 +343,14 @@ export const getWebhooksHandlers = function ({
             cancelHandles.delete(handleId)
           }
 
-          return getError(`Exception caught in webhook handler\n${err.stack}`)
+          return getError(
+            `Exception caught in webhook handler\n${error.toString()}: ${
+              error.stack
+            }`,
+          )
         }
       })
     }
 
-  return {
-    onIssueCommentCreated,
-  }
+  return { onIssueCommentCreated }
 }

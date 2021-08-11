@@ -5,10 +5,7 @@
 replicaCount: 1
 
 image:
-  repository: nginx
-  pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  pullPolicy: Always
 
 imagePullSecrets: []
 nameOverride: ""
@@ -22,8 +19,6 @@ serviceAccount:
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
-
-podAnnotations: {}
 
 podSecurityContext: {}
   # fsGroup: 2000
@@ -59,46 +54,39 @@ ingress:
       hosts:
         - try-runtime.parity.io
 
-resources:
-  requests:
-  limits:
-    cpu: 200m
-    memory: 1G
-    #ephemeral-storage: 128M
-
+# We only want one instance at all times so that the execution queue can be
+# sanely tracked across multiple MRs.
 autoscaling:
   enabled: false
   minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+  maxReplicas: 1
 
 nodeSelector: {}
 
-tolerations: []
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: cloud.google.com/gke-nodepool
+          operator: In
+          values:
+          - try-runtime-pool
 
-affinity: {}
+tolerations:
+- key: "app"
+  operator: "Equal"
+  value: "try-runtime"
+  effect: "NoExecute"
 
-env:
-  NODE_ENV:
-  APP_ID:
-  CLIENT_ID:
-  CLIENT_SECRET:
-  WEBHOOK_SECRET:
-  PRIVATE_KEY_BASE64:
-  DB_PATH:
-  ROCOCO_WEBSOCKET_ADDRESS:
-  POLKADOT_WEBSOCKET_ADDRESS:
-  KUSAMA_WEBSOCKET_ADDRESS:
-  WESTEND_WEBSOCKET_ADDRESS:
+env: {}
 
 persistence:
   enabled: true
   mountPath: ""
   subPath: ""
-  # existingClaim: claim-name
   annotations: {}
-  storageClass: standard
-  size: 5G
+  storageClass: hdd-csi
+  size: 20G
   accessModes:
     - ReadWriteOnce

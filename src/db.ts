@@ -17,7 +17,7 @@ export const getDb = getLevelDb as (
   path: string,
 ) => LevelUp<LevelDB, LevelIterator>
 
-export const getSortedItems = async function (
+export const getSortedTasks = async function (
   db: DB,
   {
     match: { version, isInverseMatch },
@@ -45,18 +45,14 @@ export const getSortedItems = async function (
             (taskData.version === version && !isInverseMatch) ||
             (taskData.version !== version && isInverseMatch)
           ) {
-            items.push({
-              id: key,
-              startDate,
-              taskData,
-            })
+            items.push({ id: key, startDate, taskData })
           }
-        } catch (err) {
-          reject(err)
+        } catch (error) {
+          reject(error)
         }
       })
-      .on("error", function (err) {
-        reject(err)
+      .on("error", function (error) {
+        reject(error)
       })
       .on("end", function () {
         resolve(items)

@@ -13,10 +13,11 @@ spec:
       {{- include "try-runtime.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      # NOTE: Those annotations are needed so that GKE can update the
+      # containers even when the image tag doesn't change between deployments
+      # (e.g. on pushes)
       annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- include "try-runtime.labels" . | nindent 8 }}
       labels:
         {{- include "try-runtime.selectorLabels" . | nindent 8 }}
     spec:
@@ -31,27 +32,31 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
           {{- range $key, $val := .Values.env }}
             - name: {{ $key }}
-              value: {{ $val }}
+              value: "{{ $val }}"
           {{- end }}
           ports:
             - name: http
               containerPort: 3000
               protocol: TCP
+            - name: ping
+              containerPort: {{ .Values.env.PING_PORT }}
+              protocol: TCP
           livenessProbe:
             httpGet:
               path: /
-              port: 3000
+              port: {{ .Values.env.PING_PORT }}
+            failureThreshold: 0
+            periodSeconds: 128
+            initialDelaySeconds: 128
           readinessProbe:
             httpGet:
               path: /
-              port: 3000
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+              port: {{ .Values.env.PING_PORT }}
           volumeMounts:
             {{- if .Values.persistence.enabled }}
             - name: data
@@ -83,4 +88,3 @@ spec:
         {{- else }}
           emptyDir: {}
         {{- end -}}
-

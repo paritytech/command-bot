@@ -1,10 +1,17 @@
 import { Octokit } from "@octokit/rest"
 import assert from "assert"
+import fs from "fs"
 import ld from "lodash"
 
+import { githubCommentCharacterLimit } from "./constants"
 import { cancelHandles } from "./executor"
-import { updateComment } from "./github"
-import { CommandOutput, PullRequestParams, PullRequestTask } from "./types"
+import { createComment } from "./github"
+import {
+  CommandOutput,
+  PullRequestParams,
+  PullRequestTask,
+  State,
+} from "./types"
 
 export const getLines = function (str: string) {
   return str
@@ -43,11 +50,7 @@ export const getCommand = function (
 
   const [execPath, ...args] = command
 
-  return {
-    execPath,
-    args,
-    env,
-  }
+  return { execPath, args, env }
 }
 
 export const redactSecrets = function (str: string, secrets: string[] = []) {
@@ -73,25 +76,70 @@ export const getPostPullRequestResult = function ({
   taskData,
   octokit,
   handleId,
+  state: { logger, deployment },
 }: {
   taskData: PullRequestTask
   octokit: Octokit
   handleId: string
+  state: Pick<State, "deployment" | "logger">
 }) {
   return async function (result: CommandOutput) {
-    cancelHandles.delete(handleId)
+    try {
+      logger.info({ result, taskData }, "Posting pull request result")
 
-    const { owner, repo, commentId, requester, pull_number } = taskData
-    const resultDisplay =
-      typeof result === "string" ? result : result.stack ?? result.message
+      cancelHandles.delete(handleId)
 
-    await updateComment(octokit, {
-      owner,
-      repo,
-      issue_number: pull_number,
-      comment_id: commentId,
-      body: `@${requester} ${resultDisplay}`,
-    })
+      const { owner, repo, requester, pull_number, commandDisplay } = taskData
+
+      const before = `
+@${requester} Results are ready for ${commandDisplay}
+
+<details>
+<summary>Output</summary>
+
+\`\`\``
+      const after = `
+\`\`\`
+
+</details>`
+
+      let resultDisplay =
+        typeof result === "string"
+          ? result
+          : `${result.toString()}\n${result.stack}`
+      let truncateMessageWarning: string
+      if (
+        before.length + resultDisplay.length + after.length >
+        githubCommentCharacterLimit
+      ) {
+        truncateMessageWarning = `\nThe command's output was too big to be fully displayed. Please go to the logs for the full output. ${getDeploymentLogsMessage(
+          deployment,
+        )}`
+        const truncationIndicator = "[truncated]..."
+        resultDisplay = `${truncationIndicator}${resultDisplay.slice(
+          0,
+          githubCommentCharacterLimit -
+            (before.length +
+              truncationIndicator.length +
+              after.length +
+              truncateMessageWarning.length),
+        )}`
+      } else {
+        truncateMessageWarning = ""
+      }
+
+      await createComment(octokit, {
+        owner,
+        repo,
+        issue_number: pull_number,
+        body: `${before}${resultDisplay}${after}${truncateMessageWarning}`,
+      })
+    } catch (error) {
+      logger.fatal(
+        { error, result, taskData },
+        "Caught error while trying to post pull request result",
+      )
+    }
   }
 }
 
@@ -107,4 +155,32 @@ export const millisecondsDelay = function (milliseconds: number) {
   return new Promise(function (resolve) {
     setTimeout(resolve, milliseconds)
   })
+}
+
+export const ensureDir = function (dir: string) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
+  }
+  return dir
+}
+
+export const removeDir = function (dir: string) {
+  if (fs.existsSync(dir)) {
+    fs.rmdirSync(dir, { recursive: true })
+  }
+  return dir
+}
+
+export const getDeploymentLogsMessage = function (
+  deployment: State["deployment"],
+) {
+  if (deployment === undefined) {
+    return ""
+  }
+
+  return `The logs for this command should be available on Grafana for the data source \`loki.${deployment.environment}\` and query \`{container=~"${deployment.container}"}\``
+}
+
+export class Retry {
+  constructor(public context: "compilation error", public motive: string) {}
 }

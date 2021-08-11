@@ -1,6 +1,7 @@
 import { Probot } from "probot"
 
 import type { DB } from "./db"
+import { Logger } from "./logger"
 
 export type PullRequestParams = {
   owner: string
@@ -25,11 +26,15 @@ export type PullRequestTask = PullRequestParams & {
   prepareBranchParams: PrepareBranchParams
   commentId: number
   version: string
+  commandDisplay: string
+  timesRequeued: number
+  timesRequeuedSnapshotBeforeExecution: number
+  timesExecuted: number
 }
 
 export type CommandOutput = Error | string
 
-export type AppState = {
+export type State = {
   version: string
   bot: Probot
   db: DB
@@ -43,6 +48,9 @@ export type AppState = {
   botMentionPrefix: string
   nodesAddresses: Record<string, string>
   allowedOrganizations: number[]
+  logger: Logger
+  repositoryCloneDirectory: string
+  deployment: { environment: string; container: string } | undefined
 }
 
 export class PullRequestError {
