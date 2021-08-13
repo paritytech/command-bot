@@ -19,7 +19,7 @@ default:
   rules:
     - if: $BUILD
       when: never
-    - if: "$CI_MERGE_REQUEST_ID =~ /^./ || $CI_COMMIT_BRANCH == 'master'"
+    - if: "$CI_EXTERNAL_PULL_REQUEST_IID =~ /^./ || $CI_COMMIT_BRANCH == 'master'"
 
 .on-master: &on-master
   rules:
