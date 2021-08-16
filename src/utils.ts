@@ -97,7 +97,9 @@ export const getPostPullRequestResult = function ({
 <details>
 <summary>Output</summary>
 
-\`\`\``
+\`\`\`
+`
+
       const after = `
 \`\`\`
 
