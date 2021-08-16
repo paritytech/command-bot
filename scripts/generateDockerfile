@@ -79,9 +79,9 @@ RUN apt-get autoremove -y
 
 # gcc & libc are needed for the 'cc' linker for Rust
 # clang and libclang are needed for building RocksDB
-# libssl-dev is needed for Substrate
+# libssl-dev and libudev-dev are needed for Substrate
 RUN $APT_INSTALL \
-  gcc libc-dev libssl-dev \
+  gcc libc-dev libssl-dev libudev-dev \
   clang libclang-dev && \
   cc --version && \
   clang --version
