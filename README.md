@@ -6,7 +6,7 @@
 
 Comment in a pull request:
 
-`/try-runtime queue [env_vars] --url ws://{kusama,westend,rococo,polkadot} [args]`
+`/try-runtime queue [env_vars] --url ws://{kusama,westend,polkadot} [args]`
 
 For instance (note that the following arguments might be outdated; this is
 merely an example):
@@ -106,7 +106,7 @@ username as `https://api.github.com/users/${organization}`, for instance
 
 **At least one organization ID has to be provided for the bot to work.**
 
-`{KUSAMA,ROCOCO,POLKADOT,WESTEND}_WEBSOCKET_ADDRESS`
+`{KUSAMA,POLKADOT,WESTEND}_WEBSOCKET_ADDRESS`
 
 Set the websocket address for each runtime variant e.g.
 `POLKADOT_WEBSOCKET_ADDRESS=wss://127.0.0.1:9944`

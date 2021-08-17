@@ -144,13 +144,11 @@ const main = async function (bot: Probot) {
   const version = new Date().toISOString()
   const logger = new Logger({ name: "app" })
 
-  assert(process.env.ROCOCO_WEBSOCKET_ADDRESS)
   assert(process.env.WESTEND_WEBSOCKET_ADDRESS)
   assert(process.env.POLKADOT_WEBSOCKET_ADDRESS)
   assert(process.env.KUSAMA_WEBSOCKET_ADDRESS)
   const nodesAddresses = {
     kusama: process.env.KUSAMA_WEBSOCKET_ADDRESS,
-    rococo: process.env.ROCOCO_WEBSOCKET_ADDRESS,
     polkadot: process.env.POLKADOT_WEBSOCKET_ADDRESS,
     westend: process.env.WESTEND_WEBSOCKET_ADDRESS,
   }

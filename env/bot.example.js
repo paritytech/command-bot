@@ -30,8 +30,6 @@ process.env.PRIVATE_KEY_BASE64 =
 /*
   Set up the Websocket address for all Polkadot runtime flavors.
 */
-process.env.ROCOCO_WEBSOCKET_ADDRESS =
-  process.env.ROCOCO_WEBSOCKET_ADDRESS || "ws://0.0.0.0:9944"
 process.env.POLKADOT_WEBSOCKET_ADDRESS =
   process.env.POLKADOT_WEBSOCKET_ADDRESS || "ws://0.0.0.0:9944"
 process.env.KUSAMA_WEBSOCKET_ADDRESS =
