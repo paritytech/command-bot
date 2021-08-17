@@ -29,7 +29,8 @@ IFS='' read -r -d '' ci << EOF
 $common
 
 # CI pipeline utilities
-RUN $APT_INSTALL python3 make bash sed
+# python3-* is needed for pre-commit
+RUN $APT_INSTALL python3 make bash sed python3-distutils python3-pkg-resources
 
 # Needed for pre-commit's installation
 RUN $APT_INSTALL $PRE_COMMIT_BUILD_DEPS && apt-mark auto $PRE_COMMIT_BUILD_DEPS
