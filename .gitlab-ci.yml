@@ -4,6 +4,7 @@ variables:
   CI_IMAGE: ${IMAGE_REPOSITORY}:ci
   KUBE_NAMESPACE: try-runtime
   DEPLOYMENT_TAG: ${CI_ENVIRONMENT_NAME}${CI_COMMIT_TAG}
+  DEPLOYMENT_CONTAINER: try-runtime
   DATA_PATH: /data
   CLEAR_DB_ON_START: "false"
   CLEAR_REPOSITORIES_ON_START: "false"
@@ -120,12 +121,15 @@ build_bot:
       --set env.LOG_LEVEL_IN_STRING="true"
       --set env.IS_DEPLOYMENT="true"
       --set env.DEPLOYMENT_ENVIRONMENT="$CI_ENVIRONMENT_NAME"
-      --set env.DEPLOYMENT_CONTAINER="try-runtime"
+      --set env.DEPLOYMENT_CONTAINER="$DEPLOYMENT_CONTAINER"
       --set env.CLEAR_DB_ON_START="$CLEAR_DB_ON_START"
       --set env.CLEAR_REPOSITORIES_ON_START="$CLEAR_REPOSITORIES_ON_START"
       --set env.TMPDIR="$DATA_PATH/tmp"
       --set env.CLEAR_TMPDIR_ON_START="$CLEAR_TMPDIR_ON_START"
       --set env.PING_PORT="$PING_PORT"
+      --set env.MATRIX_HOMESERVER="$MATRIX_HOMESERVER"
+      --set env.MATRIX_ACCESS_TOKEN="$MATRIX_ACCESS_TOKEN"
+      --set env.MASTER_TOKEN="$MASTER_TOKEN"
 
 .uninstall-deployment: &uninstall-deployment
   <<: *kubernetes
