@@ -3,7 +3,21 @@ import { Octokit } from "@octokit/rest"
 import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types"
 
 import { Logger } from "./logger"
-import { millisecondsDelay } from "./utils"
+import {
+  CommandOutput,
+  PullRequestParams,
+  PullRequestTask,
+  State,
+} from "./types"
+import {
+  displayError,
+  getDeploymentLogsMessage,
+  millisecondsDelay,
+} from "./utils"
+
+// The actual limit should be 65532 but we're a bit conservative here
+// https://github.community/t/maximum-length-for-the-comment-body-in-issues-and-pr/148867/2
+export const githubCommentCharacterLimit = 65500
 
 export type ExtendedOctokit = Octokit & {
   orgs: Octokit["orgs"] & {
@@ -121,4 +135,79 @@ export const isOrganizationMember = async function ({
     }
     return false
   }
+}
+
+export const getPostPullRequestResult = function ({
+  taskData,
+  octokit,
+  state: { logger, deployment },
+}: {
+  taskData: PullRequestTask
+  octokit: Octokit
+  state: Pick<State, "deployment" | "logger">
+}) {
+  return async function (result: CommandOutput) {
+    try {
+      logger.info({ result, taskData }, "Posting pull request result")
+
+      const { owner, repo, requester, pull_number, commandDisplay } = taskData
+
+      const before = `
+@${requester} Results are ready for ${commandDisplay}
+
+<details>
+<summary>Output</summary>
+
+\`\`\`
+`
+
+      const after = `
+\`\`\`
+
+</details>`
+
+      let resultDisplay =
+        typeof result === "string" ? result : displayError(result)
+      let truncateMessageWarning: string
+      if (
+        before.length + resultDisplay.length + after.length >
+        githubCommentCharacterLimit
+      ) {
+        truncateMessageWarning = `\nThe command's output was too big to be fully displayed. Please go to the logs for the full output. ${getDeploymentLogsMessage(
+          deployment,
+        )}`
+        const truncationIndicator = "[truncated]..."
+        resultDisplay = `${truncationIndicator}${resultDisplay.slice(
+          0,
+          githubCommentCharacterLimit -
+            (before.length +
+              truncationIndicator.length +
+              after.length +
+              truncateMessageWarning.length),
+        )}`
+      } else {
+        truncateMessageWarning = ""
+      }
+
+      await createComment(octokit, {
+        owner,
+        repo,
+        issue_number: pull_number,
+        body: `${before}${resultDisplay}${after}${truncateMessageWarning}`,
+      })
+    } catch (error) {
+      logger.fatal(
+        { error, result, taskData },
+        "Caught error while trying to post pull request result",
+      )
+    }
+  }
+}
+
+export const getPullRequestHandleId = function ({
+  owner,
+  repo,
+  pull_number,
+}: PullRequestParams) {
+  return `owner: ${owner}, repo: ${repo}, pull: ${pull_number}`
 }

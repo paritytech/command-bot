@@ -1,28 +1,47 @@
+import { Octokit } from "@octokit/rest"
 import { Mutex } from "async-mutex"
 import cp from "child_process"
 import fs from "fs"
 import path from "path"
 
-import { DB, getSortedTasks } from "src/db"
+import { getSortedTasks } from "src/db"
 
+import { getPostPullRequestResult, updateComment } from "./github"
 import { Logger } from "./logger"
-import {
-  CommandOutput,
-  PrepareBranchParams,
-  PullRequestTask,
-  State,
-} from "./types"
+import { ApiTask, CommandOutput, PullRequestTask, State, Task } from "./types"
 import {
   displayCommand,
   getDeploymentLogsMessage,
+  getSendMatrixResult,
   redactSecrets,
   Retry,
 } from "./utils"
 
-export const cancelHandles: Map<
-  string,
-  { cancel: () => Promise<void>; commentId: number; requester: string }
-> = new Map()
+type RegisterHandleOptions = { terminate: () => Promise<void> }
+type RegisterHandle = (options: RegisterHandleOptions) => void
+type CancelHandles<T> = Map<string, { cancel: () => Promise<void>; task: T }>
+
+const handlesGetter = function <T>(handles: CancelHandles<T>) {
+  return function (handleId: string) {
+    return handles.get(handleId)
+  }
+}
+
+const pullRequestTaskHandles: CancelHandles<PullRequestTask> = new Map()
+export const getRegisterPullRequestHandle = function (task: PullRequestTask) {
+  return function ({ terminate }: RegisterHandleOptions) {
+    pullRequestTaskHandles.set(task.handleId, { cancel: terminate, task })
+  }
+}
+export const getPullRequestTaskHandle = handlesGetter(pullRequestTaskHandles)
+
+const apiTaskHandles: CancelHandles<ApiTask> = new Map()
+export const getRegisterApiTaskHandle = function (task: ApiTask) {
+  return function ({ terminate }: RegisterHandleOptions) {
+    apiTaskHandles.set(task.handleId, { cancel: terminate, task })
+  }
+}
+export const getApiTaskHandle = handlesGetter(apiTaskHandles)
 
 export type ShellExecutor = (
   execPath: string,
@@ -55,8 +74,8 @@ export const getShellExecutor = function ({
     } = {},
   ) {
     return new Promise(function (resolve) {
-      try {
-        const execute = async function (retryMotive: string) {
+      const execute = async function (retryMotive: string) {
+        try {
           const commandDisplayed = displayCommand({
             execPath,
             args,
@@ -70,6 +89,9 @@ export const getShellExecutor = function ({
           if (onChild) {
             onChild(child)
           }
+          child.on("error", function (error) {
+            resolve(error)
+          })
 
           let stdout = ""
           let stderr = ""
@@ -106,51 +128,63 @@ export const getShellExecutor = function ({
             resolve,
           ) {
             child.on("close", function (code) {
-              stdout = redactSecrets(stdout.trim(), secretsToHide)
-              stderr = redactSecrets(stderr.trim(), secretsToHide)
+              try {
+                stdout = redactSecrets(stdout.trim(), secretsToHide)
+                stderr = redactSecrets(stderr.trim(), secretsToHide)
 
-              // https://github.com/rust-lang/rust/issues/51309
-              // Could happen due to lacking system constraints (we saw it
-              // happen due to out-of-memory)
-              if (
-                stderr.includes("SIGKILL") &&
-                stderr.includes("error: build failed")
-              ) {
-                logger.fatal("Compilation process was killed while executing")
-              } else {
-                const retryCargoClean = stderr.match(
-                  /This is a known issue with the compiler. Run `([^`]+)` or `cargo clean`/,
-                )
-                if (retryCargoClean !== null) {
-                  try {
-                    const retryCargoCleanCmd = retryCargoClean[1].replace(
-                      /_/g,
-                      "-",
+                if (stderr.includes("error: build failed")) {
+                  // https://github.com/rust-lang/rust/issues/51309
+                  // Could happen due to lacking system constraints (we saw it
+                  // happen due to out-of-memory)
+                  if (stderr.includes("SIGKILL")) {
+                    logger.fatal(
+                      "Compilation process was killed while executing",
                     )
+                  } else if (stderr.includes("No space left on device")) {
+                    const cleanCmd =
+                      "git add . && git reset --hard && git clean -xdf"
                     logger.info(
-                      `Running ${retryCargoCleanCmd} in ${
+                      `Running ${cleanCmd} in ${
                         options?.cwd ?? "the current directory"
-                      } before retrying the command due to a compiler error.`,
+                      } before retrying the command due to lack of space in the device.`,
                     )
-                    cp.execSync(retryCargoCleanCmd, { cwd: options?.cwd })
-                    resolve(new Retry("compilation error", retryCargoCleanCmd))
-                  } catch (error) {
-                    resolve(error)
+                    cp.execSync(cleanCmd, { cwd: options?.cwd })
+                    resolve(new Retry("compilation error", cleanCmd))
+                    return
                   }
+                }
+
+                const retryForCompilerIssue = stderr.match(
+                  /This is a known issue with the compiler. Run `([^`]+)`/,
+                )
+                if (retryForCompilerIssue !== null) {
+                  const retryCargoCleanCmd = retryForCompilerIssue[1].replace(
+                    /_/g,
+                    "-",
+                  )
+                  logger.info(
+                    `Running ${retryCargoCleanCmd} in ${
+                      options?.cwd ?? "the current directory"
+                    } before retrying the command due to a compiler error.`,
+                  )
+                  cp.execSync(retryCargoCleanCmd, { cwd: options?.cwd })
+                  resolve(new Retry("compilation error", retryCargoCleanCmd))
                   return
                 }
-              }
 
-              if (
-                code &&
-                (allowedErrorCodes === undefined ||
-                  !allowedErrorCodes.includes(code)) &&
-                (testAllowedErrorMessage === undefined ||
-                  !testAllowedErrorMessage(stderr))
-              ) {
-                resolve(new Error(stderr))
-              } else {
-                resolve(stdout || stderr)
+                if (
+                  code &&
+                  (allowedErrorCodes === undefined ||
+                    !allowedErrorCodes.includes(code)) &&
+                  (testAllowedErrorMessage === undefined ||
+                    !testAllowedErrorMessage(stderr))
+                ) {
+                  resolve(new Error(stderr))
+                } else {
+                  resolve(stdout || stderr)
+                }
+              } catch (error) {
+                resolve(error)
               }
             })
           })
@@ -169,18 +203,22 @@ export const getShellExecutor = function ({
           } else {
             resolve(result)
           }
+        } catch (error) {
+          resolve(error)
         }
-
-        execute("")
-      } catch (error) {
-        resolve(error)
       }
+
+      execute("")
     })
   }
 }
 
 export const prepareBranch = async function* (
-  { contributor, owner, repo, branch, repoPath }: PrepareBranchParams,
+  {
+    repoPath,
+    gitRef: { contributor, owner, repo, branch },
+  }: Pick<Task, "repoPath" | "gitRef">,
+
   {
     run,
     getFetchEndpoint,
@@ -203,6 +241,7 @@ export const prepareBranch = async function* (
     })
   }
 
+  // Clone the repository if it does not exist
   yield repoCmd(
     "git",
     ["clone", "--quiet", `${url}/${owner}/${repo}`, repoPath],
@@ -213,14 +252,17 @@ export const prepareBranch = async function* (
     },
   )
 
+  // Clean up garbage files before checkout
+  yield repoCmd("git", ["add", "."])
+  yield repoCmd("git", ["reset", "--hard"])
+
+  // Check out to the detached head so that any branch can be deleted
   let out = await repoCmd("git", ["rev-parse", "HEAD"], {
     options: { cwd: repoPath },
   })
   if (out instanceof Error) {
     return out
   }
-
-  // Check out to the detached head so that any branch can be deleted
   const detachedHead = out.trim()
   yield repoCmd("git", ["checkout", "--quiet", detachedHead], {
     testAllowedErrorMessage: function (err) {
@@ -260,11 +302,11 @@ export const prepareBranch = async function* (
 }
 
 export const getQueueMessage = async function (
-  db: DB,
+  state: Parameters<typeof getSortedTasks>[0],
   commandDisplay: string,
   version: string,
 ) {
-  const items = await getSortedTasks(db, { match: { version } })
+  const items = await getSortedTasks(state, { match: { version } })
 
   if (items.length) {
     return `
@@ -295,46 +337,65 @@ const mutex = new Mutex()
 export const queue = async function ({
   taskData,
   onResult,
-  handleId,
   state,
+  registerHandle,
 }: {
-  taskData: PullRequestTask
-  onResult: (result: CommandOutput) => Promise<void>
-  handleId: string
-  state: Pick<State, "db" | "logger" | "getFetchEndpoint" | "deployment">
+  taskData: Task
+  onResult: (result: CommandOutput) => Promise<unknown>
+  state: Pick<
+    State,
+    | "taskDb"
+    | "logger"
+    | "getFetchEndpoint"
+    | "deployment"
+    | "getTaskId"
+    | "parseTaskId"
+  >
+  registerHandle: RegisterHandle
 }) {
   let child: cp.ChildProcess | undefined = undefined
   let isAlive = true
-  const {
-    execPath,
-    args,
-    prepareBranchParams,
-    commentId,
-    requester,
-    commandDisplay,
-  } = taskData
-  const { deployment, logger, db, getFetchEndpoint } = state
+  const { execPath, args, commandDisplay, repoPath } = taskData
+  const { deployment, logger, taskDb, getFetchEndpoint, getTaskId } = state
+  const { db } = taskDb
 
   let suffixMessage = getDeploymentLogsMessage(deployment)
-  if (!fs.existsSync(prepareBranchParams.repoPath)) {
+  if (!fs.existsSync(repoPath)) {
     suffixMessage +=
       "\nNote: project will be cloned for the first time, so all dependencies will be compiled from scratch; this might take a long time"
-  } else if (
-    !fs.existsSync(path.join(prepareBranchParams.repoPath, "target"))
-  ) {
+  } else if (!fs.existsSync(path.join(repoPath, "target"))) {
     suffixMessage +=
       '\nNote: "target" directory does not exist, so all dependencies will be compiled from scratch; this might take a long time'
   }
 
-  // Assuming the system clock is properly configured, this ID is guaranteed to
-  // be unique due to the webhooks mutex's guarantees, because only one webhook
-  // handler should execute at a time
-  const taskId = new Date().toISOString()
-  const message = await getQueueMessage(db, commandDisplay, taskData.version)
+  const taskId = getTaskId()
+  const message = await getQueueMessage(state, commandDisplay, taskData.version)
   const cancelledMessage = "Command was cancelled"
 
   const terminate = async function () {
     isAlive = false
+
+    switch (taskData.tag) {
+      case "PullRequestTask": {
+        pullRequestTaskHandles.delete(taskData.handleId)
+        break
+      }
+      case "ApiTask": {
+        apiTaskHandles.delete(taskData.handleId)
+        break
+      }
+      default: {
+        const exhaustivenessCheck: never = taskData
+        throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
+      }
+    }
+
+    await db.del(taskId)
+
+    logger.info(
+      await getSortedTasks(state, { match: { version: taskData.version } }),
+      `Queue after termination of task ${taskId}`,
+    )
 
     if (child === undefined) {
       return
@@ -352,13 +413,6 @@ export const queue = async function ({
 
     logger.info(`Killed child with PID ${child.pid} (${commandDisplay})`)
     child = undefined
-
-    await db.del(taskId)
-    logger.info(
-      `Queue after termination: ${JSON.stringify(
-        await getSortedTasks(db, { match: { version: taskData.version } }),
-      )}`,
-    )
   }
 
   const afterExecution = async function (result: CommandOutput) {
@@ -373,8 +427,6 @@ export const queue = async function ({
 
   await db.put(taskId, JSON.stringify(taskData))
 
-  // This is queued one-at-a-time in the order that the webhooks' events are
-  // received because they're expected to be executed through a mutex as well.
   mutex
     .runExclusive(async function () {
       try {
@@ -389,11 +441,14 @@ export const queue = async function ({
 
         if (isAlive) {
           logger.info(
-            `Starting task of ${commandDisplay} (handleId: "${handleId}", taskId: "${taskId}")\nCurrent queue: ${JSON.stringify(
-              await getSortedTasks(db, {
-                match: { version: taskData.version },
-              }),
-            )}`,
+            { handleId: taskData.handleId, taskId, commandDisplay },
+            `Starting task of ${commandDisplay}`,
+          )
+          logger.info(
+            await getSortedTasks(state, {
+              match: { version: taskData.version },
+            }),
+            "Current task queue",
           )
         } else {
           logger.info(`taskId ${taskId} was cancelled before it could start`)
@@ -407,15 +462,16 @@ export const queue = async function ({
           },
         })
 
-        const prepare = prepareBranch(prepareBranchParams, {
+        const prepare = prepareBranch(taskData, {
           run,
           getFetchEndpoint: function () {
-            return getFetchEndpoint(taskData.installationId)
+            return getFetchEndpoint(
+              "installationId" in taskData ? taskData.installationId : null,
+            )
           },
         })
         while (isAlive) {
           const next = await prepare.next()
-
           if (next.done) {
             break
           }
@@ -431,10 +487,7 @@ export const queue = async function ({
         }
 
         const result = await run(execPath, args, {
-          options: {
-            env: { ...process.env, ...taskData.env },
-            cwd: prepareBranchParams.repoPath,
-          },
+          options: { env: { ...process.env, ...taskData.env }, cwd: repoPath },
           shouldTrackProgress: true,
         })
         return isAlive ? result : cancelledMessage
@@ -445,7 +498,146 @@ export const queue = async function ({
     .then(afterExecution)
     .catch(afterExecution)
 
-  cancelHandles.set(handleId, { cancel: terminate, commentId, requester })
+  registerHandle({ terminate })
 
   return `${message}\n${suffixMessage}`
+}
+
+export const requeueUnterminated = async function (state: State) {
+  const { taskDb, version, logger, bot, matrix } = state
+  const { db } = taskDb
+
+  // Items which are not from this version still remaining in the database are
+  // deemed unterminated.
+  const unterminatedItems = await getSortedTasks(state, {
+    match: { version, isInverseMatch: true },
+  })
+
+  for (const {
+    taskData: { timesRequeued, ...taskData },
+    id,
+  } of unterminatedItems) {
+    await db.del(id)
+
+    const prepareRequeue = function <T>(taskData: T) {
+      logger.info(taskData, "Prepare requeue")
+      return { ...taskData, timesRequeued: timesRequeued + 1 }
+    }
+
+    type RequeueComponent = {
+      requeue: () => Promise<unknown>
+      announceCancel: (msg: string) => Promise<unknown>
+    }
+    const getRequeueResult = async function (): Promise<
+      RequeueComponent | Error
+    > {
+      try {
+        switch (taskData.tag) {
+          case "PullRequestTask": {
+            const { owner, repo, pull_number, commentId, requester } = taskData
+
+            const octokit = await (
+              bot.auth as (installationId?: number) => Promise<Octokit>
+            )(taskData.installationId)
+
+            const announceCancel = function (message: string) {
+              return updateComment(octokit, {
+                owner,
+                repo,
+                pull_number,
+                comment_id: commentId,
+                body: `@${requester} ${message}`,
+              })
+            }
+
+            const nextTaskData = prepareRequeue(taskData)
+            const requeue = async function () {
+              await queue({
+                taskData: nextTaskData,
+                onResult: getPostPullRequestResult({
+                  taskData: nextTaskData,
+                  octokit,
+                  state,
+                }),
+                state,
+                registerHandle: getRegisterPullRequestHandle(nextTaskData),
+              })
+            }
+
+            return { requeue, announceCancel }
+          }
+          case "ApiTask": {
+            if (matrix === null) {
+              return {
+                announceCancel: async function () {
+                  logger.fatal(
+                    taskData,
+                    "ApiTask cannot be requeued because Matrix client is missing",
+                  )
+                },
+                requeue: async function () {},
+              }
+            }
+
+            const { matrixRoom } = taskData
+            const sendMatrixMessage = function (message: string) {
+              return matrix.sendText(matrixRoom, message)
+            }
+
+            const nextTaskData = prepareRequeue(taskData)
+            return {
+              announceCancel: sendMatrixMessage,
+              requeue: function () {
+                return queue({
+                  taskData: nextTaskData,
+                  onResult: getSendMatrixResult(matrix, logger, taskData),
+                  state,
+                  registerHandle: getRegisterApiTaskHandle(nextTaskData),
+                })
+              },
+            }
+          }
+          default: {
+            const exhaustivenessCheck: never = taskData
+            const error = new Error(`Not exhaustive: ${exhaustivenessCheck}`)
+            throw error
+          }
+        }
+      } catch (error) {
+        return error
+      }
+    }
+    const requeueResult = await getRequeueResult()
+    if (requeueResult instanceof Error) {
+      logger.fatal(requeueResult, "Exception while trying to requeue a task")
+      continue
+    }
+
+    const { announceCancel, requeue } = requeueResult
+    if (
+      timesRequeued &&
+      // Check if the task was requeued and got to execute, but it failed for
+      // some reason, in which case it will not be retried further; in
+      // comparison, it might have been requeued and not had a chance to execute
+      // due to other crash-inducing command being in front of it, thus it's not
+      // reasonable to avoid rescheduling this command if it's not his fault
+      timesRequeued === taskData.timesRequeuedSnapshotBeforeExecution
+    ) {
+      await announceCancel(
+        `Command was rescheduled and failed to finish (check for taskId ${id} in the logs); execution will not automatically be restarted further.`,
+      )
+    } else {
+      try {
+        await requeue()
+      } catch (error) {
+        let errorMessage = error.toString()
+        if (errorMessage.endsWith(".") === false) {
+          errorMessage = `${errorMessage}.`
+        }
+        await announceCancel(
+          `Caught exception while trying to reschedule the command; it will not be rescheduled further. Error message: ${errorMessage}.`,
+        )
+      }
+    }
+  }
 }

@@ -1,6 +1,7 @@
+import { MatrixClient } from "matrix-bot-sdk"
 import { Probot } from "probot"
 
-import type { DB } from "./db"
+import type { AccessDB, TaskDB } from "./db"
 import { Logger } from "./logger"
 
 export type PullRequestParams = {
@@ -9,48 +10,63 @@ export type PullRequestParams = {
   pull_number: number
 }
 
-export type PrepareBranchParams = {
+export type GitRef = {
   contributor: string
   owner: string
   repo: string
   branch: string
-  repoPath: string
 }
 
-export type PullRequestTask = PullRequestParams & {
-  installationId: number
-  requester: string
-  execPath: string
-  args: string[]
-  env: Record<string, string>
-  prepareBranchParams: PrepareBranchParams
-  commentId: number
+type TaskBase<T> = {
+  tag: T
+  handleId: string
   version: string
-  commandDisplay: string
   timesRequeued: number
   timesRequeuedSnapshotBeforeExecution: number
   timesExecuted: number
+  commandDisplay: string
+  execPath: string
+  args: string[]
+  env: Record<string, string>
+  gitRef: GitRef
+  repoPath: string
 }
+
+export type PullRequestTask = TaskBase<"PullRequestTask"> &
+  PullRequestParams & {
+    commentId: number
+    installationId: number
+    requester: string
+  }
+
+export type ApiTask = TaskBase<"ApiTask"> & {
+  matrixRoom: string
+}
+
+export type Task = PullRequestTask | ApiTask
 
 export type CommandOutput = Error | string
 
+type TaskIdParseResult = { date: Date; suffix?: string } | Error
 export type State = {
   version: string
   bot: Probot
-  db: DB
-  clientId: string
-  clientSecret: string
-  appId: number
+  taskDb: TaskDB
+  accessDb: AccessDB
   getFetchEndpoint: (
-    installationId: number,
+    installationId: number | null,
   ) => Promise<{ token: string; url: string }>
   log: (str: string) => void
-  botMentionPrefix: string
   nodesAddresses: Record<string, string>
   allowedOrganizations: number[]
   logger: Logger
   repositoryCloneDirectory: string
   deployment: { environment: string; container: string } | undefined
+  matrix: MatrixClient | null
+  masterToken: string | null
+  getUniqueId: () => string
+  getTaskId: () => string
+  parseTaskId: (id: string) => TaskIdParseResult
 }
 
 export class PullRequestError {
@@ -63,3 +79,5 @@ export class PullRequestError {
     },
   ) {}
 }
+
+export type GetCommandOptions = { baseEnv: Record<string, string> }

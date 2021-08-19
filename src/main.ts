@@ -1,54 +1,20 @@
 import { createAppAuth } from "@octokit/auth-app"
-import { Octokit } from "@octokit/rest"
 import assert from "assert"
-import fs from "fs"
+import { isValid, parseISO } from "date-fns"
 import http from "http"
+import { MatrixClient, SimpleFsStorageProvider } from "matrix-bot-sdk"
 import path from "path"
-import { Probot, run } from "probot"
+import { Probot, Server } from "probot"
 import stoppable from "stoppable"
 
-import { botMentionPrefix } from "src/constants"
-import { getDb, getSortedTasks } from "src/db"
+import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db"
 
-import { queue } from "./executor"
-import { updateComment } from "./github"
+import { setupApi } from "./api"
+import { requeueUnterminated } from "./executor"
 import { Logger } from "./logger"
 import { State } from "./types"
-import {
-  ensureDir,
-  getPostPullRequestResult,
-  getPullRequestHandleId,
-  removeDir,
-} from "./utils"
+import { ensureDir, initDatabaseDir, removeDir } from "./utils"
 import { getWebhooksHandlers, setupEvent } from "./webhook"
-
-assert(process.env.APP_ID)
-const appId = parseInt(process.env.APP_ID)
-assert(appId)
-
-assert(process.env.PRIVATE_KEY_BASE64)
-process.env.PRIVATE_KEY = Buffer.from(
-  process.env.PRIVATE_KEY_BASE64,
-  "base64",
-).toString()
-assert(process.env.PRIVATE_KEY)
-const privateKey = process.env.PRIVATE_KEY
-
-assert(process.env.CLIENT_ID)
-const clientId = process.env.CLIENT_ID
-
-assert(process.env.CLIENT_SECRET)
-const clientSecret = process.env.CLIENT_SECRET
-
-let deployment: State["deployment"] = undefined
-if (process.env.IS_DEPLOYMENT === "true") {
-  assert(process.env.DEPLOYMENT_ENVIRONMENT)
-  assert(process.env.DEPLOYMENT_CONTAINER)
-  deployment = {
-    environment: process.env.DEPLOYMENT_ENVIRONMENT,
-    container: process.env.DEPLOYMENT_CONTAINER,
-  }
-}
 
 const setupProbot = async function (state: State) {
   const { bot, logger } = state
@@ -57,92 +23,55 @@ const setupProbot = async function (state: State) {
   setupEvent(bot, "issue_comment.created", onIssueCommentCreated, logger)
 }
 
-const requeueUnterminated = async function (state: State) {
-  const { db, version, logger, bot } = state
-
-  // Items which are not from this version still remaining in the database are
-  // deemed unterminated.
-  const unterminatedItems = await getSortedTasks(db, {
-    match: { version, isInverseMatch: true },
-  })
-
-  for (const {
-    taskData: { timesRequeued, ...taskData },
-    id,
-  } of unterminatedItems) {
-    await db.del(id)
-
-    const octokit = await (
-      bot.auth as (installationId?: number) => Promise<Octokit>
-    )(taskData.installationId)
-    const announceCancel = function (message: string) {
-      const { owner, repo, pull_number, commentId, requester } = taskData
-      return updateComment(octokit, {
-        owner,
-        repo,
-        pull_number,
-        comment_id: commentId,
-        body: `@${requester} ${message}`,
-      })
-    }
-
-    if (
-      timesRequeued &&
-      // Check if the task was requeued and got to execute, but it failed for
-      // some reason, in which case it will not be retried further; in
-      // comparison, it might have been requeued and not had a chance to execute
-      // due to other crash-inducing command being in front of it, thus it's not
-      // reasonable to avoid rescheduling this command if it's not his fault
-      timesRequeued === taskData.timesRequeuedSnapshotBeforeExecution
-    ) {
-      await announceCancel(
-        `command was rescheduled and failed to finish (check for taskId ${id} in the logs); execution will not automatically be restarted further.`,
-      )
-    } else {
-      try {
-        logger.info(`Requeuing ${JSON.stringify(taskData)}`)
-        const nextTaskData = { ...taskData, timesRequeued: timesRequeued + 1 }
-        const handleId = getPullRequestHandleId(taskData)
-        await queue({
-          handleId,
-          taskData: nextTaskData,
-          onResult: getPostPullRequestResult({
-            taskData: nextTaskData,
-            octokit,
-            handleId,
-            state,
-          }),
-          state,
-        })
-      } catch (error) {
-        let errorMessage = error.toString()
-        if (errorMessage.endsWith(".") === false) {
-          errorMessage = `${errorMessage}.`
-        }
-        await announceCancel(
-          `caught exception while trying to reschedule the command; it will not be rescheduled further. Error message: ${errorMessage}.`,
-        )
-      }
-    }
-  }
-}
-
-const main = async function (bot: Probot) {
-  if (process.env.PING_PORT) {
-    // Signal that we have started listening until Probot kicks in
-    const pingPort = parseInt(process.env.PING_PORT)
-    const pingServer = stoppable(
-      http.createServer(function (_, res) {
-        res.writeHead(200)
-        res.end()
-      }),
-      0,
-    )
-    pingServer.listen(pingPort)
-  }
+const taskIdSeparator = "-task-"
+const serverSetup = async function (
+  bot: Probot,
+  server: Server,
+  {
+    appId,
+    clientId,
+    clientSecret,
+    privateKey,
+    deployment,
+  }: {
+    appId: number
+    clientId: string
+    clientSecret: string
+    privateKey: string
+    deployment: State["deployment"]
+  },
+) {
+  const logger = new Logger({ name: "app" })
 
   const version = new Date().toISOString()
-  const logger = new Logger({ name: "app" })
+
+  let uniqueIdCounter = 0
+  const getUniqueId = function () {
+    return `${version}__${++uniqueIdCounter}`
+  }
+  const getTaskId = function () {
+    return `${new Date().toISOString()}${taskIdSeparator}${getUniqueId()}`
+  }
+  const parseTaskId = function (taskId: string) {
+    let rawDate: string
+    let suffix: string | undefined
+
+    let rawDateEnd = taskId.indexOf(taskIdSeparator)
+    if (rawDateEnd === -1) {
+      rawDate = taskId
+      suffix = undefined
+    } else {
+      rawDate = taskId.slice(0, rawDateEnd)
+      suffix = taskId.slice(rawDateEnd + taskIdSeparator.length)
+    }
+
+    const date = parseISO(rawDate)
+    if (!isValid(date)) {
+      return new Error(`Invalid date ${rawDate}`)
+    }
+
+    return { date, suffix }
+  }
 
   assert(process.env.WESTEND_WEBSOCKET_ADDRESS)
   assert(process.env.POLKADOT_WEBSOCKET_ADDRESS)
@@ -165,7 +94,8 @@ const main = async function (bot: Probot) {
     })
   assert(allowedOrganizations.length)
 
-  assert(process.env.DATA_PATH)
+  const dataPath = process.env.DATA_PATH
+  assert(dataPath)
 
   // For the deployment this should always happen because TMPDIR targets a
   // location on the persistent volume (ephemeral storage on Kubernetes cluster
@@ -176,28 +106,26 @@ const main = async function (bot: Probot) {
     ensureDir(process.env.TMPDIR)
   }
 
-  const repositoryCloneDirectoryPath = path.join(
-    process.env.DATA_PATH,
-    "repositories",
-  )
+  const repositoryCloneDirectoryPath = path.join(dataPath, "repositories")
   if (process.env.CLEAR_REPOSITORIES_ON_START === "true") {
     logger.info("Clearing the repositories before starting")
     removeDir(repositoryCloneDirectoryPath)
   }
   const repositoryCloneDirectory = ensureDir(repositoryCloneDirectoryPath)
 
-  const dbPath = ensureDir(path.join(process.env.DATA_PATH, "db"))
-  const lockPath = path.join(dbPath, "LOCK")
-  if (fs.existsSync(lockPath)) {
-    fs.unlinkSync(lockPath)
-  }
-  const db = getDb(dbPath)
+  const taskDbPath = initDatabaseDir(path.join(dataPath, "db"))
+  const taskDb = new TaskDB(getDb(taskDbPath))
+
+  const accessDbPath = initDatabaseDir(path.join(dataPath, "access_db"))
+  const accessDb = new AccessDB(getDb(accessDbPath))
+
   if (process.env.CLEAR_DB_ON_START === "true") {
     logger.info("Clearing the database before starting")
-    for (const { id } of await getSortedTasks(db, {
-      match: { version, isInverseMatch: true },
-    })) {
-      await db.del(id)
+    for (const { id } of await getSortedTasks(
+      { taskDb, parseTaskId },
+      { match: { version, isInverseMatch: true } },
+    )) {
+      await taskDb.db.del(id)
     }
   }
 
@@ -207,37 +135,141 @@ const main = async function (bot: Probot) {
     clientId,
     clientSecret,
   })
-  const getFetchEndpoint = async function (installationId: number) {
-    const token = (
-      await authInstallation({ type: "installation", installationId })
-    ).token
+  const getFetchEndpoint = async function (installationId: number | null) {
+    let token: string
+    let url: string
 
-    const url = `https://x-access-token:${token}@github.com`
+    if (installationId) {
+      token = (await authInstallation({ type: "installation", installationId }))
+        .token
+      url = `https://x-access-token:${token}@github.com`
+    } else {
+      token = ""
+      url = "http://github.com"
+    }
 
     return { url, token }
   }
 
+  const matrixClientPreStart: MatrixClient | Error | undefined = process.env
+    .MATRIX_HOMESERVER
+    ? process.env.MATRIX_ACCESS_TOKEN
+      ? new MatrixClient(
+          process.env.MATRIX_HOMESERVER,
+          process.env.MATRIX_ACCESS_TOKEN,
+          new SimpleFsStorageProvider(path.join(dataPath, "matrix.json")),
+        )
+      : new Error("Missing $MATRIX_ACCESS_TOKEN")
+    : undefined
+  if (matrixClientPreStart instanceof Error) {
+    throw matrixClientPreStart
+  }
+  const matrix = await (matrixClientPreStart === undefined
+    ? Promise.resolve(null)
+    : new Promise<MatrixClient | Error>(function (resolve, reject) {
+        matrixClientPreStart
+          .start()
+          .then(function () {
+            resolve(matrixClientPreStart)
+          })
+          .catch(reject)
+      }))
+  if (matrix instanceof Error) {
+    throw matrix
+  }
+
+  if (deployment !== undefined) {
+    if (matrix === null) {
+      throw new Error("Matrix configuration is expected for deployments")
+    }
+    if (!process.env.MASTER_TOKEN) {
+      throw new Error("Master token is expected for deployments")
+    }
+  }
+
   const state: State = {
     bot,
-    db,
-    appId,
+    taskDb,
+    accessDb,
     getFetchEndpoint,
-    clientSecret,
-    clientId,
     log: bot.log,
-    botMentionPrefix,
     version,
     nodesAddresses,
     allowedOrganizations,
     logger,
     repositoryCloneDirectory,
     deployment,
+    matrix,
+    masterToken: process.env.MASTER_TOKEN || null,
+    getUniqueId,
+    getTaskId,
+    parseTaskId,
   }
 
   await requeueUnterminated(state)
 
   setupProbot(state)
+
+  setupApi(server, state)
+
   logger.info("Probot has started!")
 }
 
-run(main)
+const main = async function () {
+  if (process.env.PING_PORT) {
+    // Signal that we have started listening until Probot kicks in
+    const pingPort = parseInt(process.env.PING_PORT)
+    const pingServer = stoppable(
+      http.createServer(function (_, res) {
+        res.writeHead(200)
+        res.end()
+      }),
+      0,
+    )
+    pingServer.listen(pingPort)
+  }
+
+  assert(process.env.APP_ID)
+  const appId = parseInt(process.env.APP_ID)
+  assert(appId)
+
+  assert(process.env.PRIVATE_KEY_BASE64)
+  process.env.PRIVATE_KEY = Buffer.from(
+    process.env.PRIVATE_KEY_BASE64,
+    "base64",
+  ).toString()
+  assert(process.env.PRIVATE_KEY)
+  const privateKey = process.env.PRIVATE_KEY
+
+  assert(process.env.CLIENT_ID)
+  const clientId = process.env.CLIENT_ID
+
+  assert(process.env.CLIENT_SECRET)
+  const clientSecret = process.env.CLIENT_SECRET
+
+  let deployment: State["deployment"] = undefined
+  if (process.env.IS_DEPLOYMENT === "true") {
+    assert(process.env.DEPLOYMENT_ENVIRONMENT)
+    assert(process.env.DEPLOYMENT_CONTAINER)
+    deployment = {
+      environment: process.env.DEPLOYMENT_ENVIRONMENT,
+      container: process.env.DEPLOYMENT_CONTAINER,
+    }
+  }
+
+  const bot = Probot.defaults({ appId, privateKey, secret: clientSecret })
+  const server = new Server({ Probot: bot })
+  await server.load(async function (bot: Probot) {
+    return serverSetup(bot, server, {
+      appId,
+      clientId,
+      clientSecret,
+      privateKey,
+      deployment,
+    })
+  })
+
+  server.start()
+}
+
+main()
