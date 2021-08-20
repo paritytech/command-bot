@@ -129,6 +129,19 @@ export const getSendMatrixResult = function (
   return async function (message: CommandOutput) {
     try {
       const fileName = `${handleId}-log.txt`
+      const buf = message instanceof Error ? displayError(message) : message
+      const messagePrefix = `Handle ID ${handleId} has finished.`
+
+      if (buf.length < 2048) {
+        await matrix.sendHtmlText(
+          matrixRoom,
+          `${messagePrefix} Results will be displayed inline for <code>${escapeHtml(
+            commandDisplay,
+          )}</code>\n<pre>${escapeHtml(buf)}</pre>`,
+        )
+        return
+      }
+
       const url = await matrix.uploadContent(
         Buffer.from(message instanceof Error ? displayError(message) : message),
         "text/plain",
@@ -136,7 +149,7 @@ export const getSendMatrixResult = function (
       )
       await matrix.sendText(
         matrixRoom,
-        `Handle ID ${handleId} has finished. Results for \`${commandDisplay}\` were uploaded as ${fileName}.`,
+        `${messagePrefix} Results were uploaded as ${fileName} for ${commandDisplay}.`,
       )
       await matrix.sendMessage(matrixRoom, {
         msgtype: "m.file",
@@ -180,4 +193,13 @@ export const displayDuration = function (start: Date, finish: Date) {
   }
 
   return buf.slice(separator.length)
+}
+
+export const escapeHtml = function (str: string) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
 }
