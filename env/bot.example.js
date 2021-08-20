@@ -30,16 +30,6 @@ process.env.PRIVATE_KEY_BASE64 =
   ).toString("base64")
 
 /*
-  Set up the Websocket address for all Polkadot runtime flavors.
-*/
-process.env.POLKADOT_WEBSOCKET_ADDRESS =
-  process.env.POLKADOT_WEBSOCKET_ADDRESS || "ws://0.0.0.0:9944"
-process.env.KUSAMA_WEBSOCKET_ADDRESS =
-  process.env.KUSAMA_WEBSOCKET_ADDRESS || "ws://0.0.0.0:9944"
-process.env.WESTEND_WEBSOCKET_ADDRESS =
-  process.env.WESTEND_WEBSOCKET_ADDRESS || "ws://0.0.0.0:9944"
-
-/*
   The 'data' directory in that location is already ignored on version control.
 */
 process.env.DATA_PATH =

@@ -57,7 +57,6 @@ export type State = {
     installationId: number | null,
   ) => Promise<{ token: string; url: string }>
   log: (str: string) => void
-  nodesAddresses: Record<string, string>
   allowedOrganizations: number[]
   logger: Logger
   repositoryCloneDirectory: string

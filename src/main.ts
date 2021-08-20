@@ -1,6 +1,7 @@
 import { createAppAuth } from "@octokit/auth-app"
 import assert from "assert"
 import { isValid, parseISO } from "date-fns"
+import fs from "fs"
 import http from "http"
 import { MatrixClient, SimpleFsStorageProvider } from "matrix-bot-sdk"
 import path from "path"
@@ -32,15 +33,33 @@ const serverSetup = async function (
     clientId,
     clientSecret,
     privateKey,
-    deployment,
   }: {
     appId: number
     clientId: string
     clientSecret: string
     privateKey: string
-    deployment: State["deployment"]
   },
 ) {
+  let deployment: State["deployment"] = undefined
+  if (process.env.IS_DEPLOYMENT === "true") {
+    assert(process.env.DEPLOYMENT_ENVIRONMENT)
+    assert(process.env.DEPLOYMENT_CONTAINER)
+    deployment = {
+      environment: process.env.DEPLOYMENT_ENVIRONMENT,
+      container: process.env.DEPLOYMENT_CONTAINER,
+    }
+    const nodeEnvVarSuffix = "_TRY_RUNTIME_NODE_WS"
+    for (const [envVar, envVarValue] of Object.entries(process.env)) {
+      if (!envVarValue || !envVar.endsWith(nodeEnvVarSuffix)) {
+        continue
+      }
+      const nodeName = envVar
+        .slice(0, envVar.indexOf(nodeEnvVarSuffix))
+        .toLowerCase()
+      fs.appendFileSync("/etc/hosts", `${nodeName} ${envVarValue}\n`)
+    }
+  }
+
   const logger = new Logger({ name: "app" })
 
   const version = new Date().toISOString()
@@ -71,15 +90,6 @@ const serverSetup = async function (
     }
 
     return { date, suffix }
-  }
-
-  assert(process.env.WESTEND_WEBSOCKET_ADDRESS)
-  assert(process.env.POLKADOT_WEBSOCKET_ADDRESS)
-  assert(process.env.KUSAMA_WEBSOCKET_ADDRESS)
-  const nodesAddresses = {
-    kusama: process.env.KUSAMA_WEBSOCKET_ADDRESS,
-    polkadot: process.env.POLKADOT_WEBSOCKET_ADDRESS,
-    westend: process.env.WESTEND_WEBSOCKET_ADDRESS,
   }
 
   const allowedOrganizations = (process.env.ALLOWED_ORGANIZATIONS ?? "")
@@ -194,7 +204,6 @@ const serverSetup = async function (
     getFetchEndpoint,
     log: bot.log,
     version,
-    nodesAddresses,
     allowedOrganizations,
     logger,
     repositoryCloneDirectory,
@@ -247,16 +256,6 @@ const main = async function () {
   assert(process.env.CLIENT_SECRET)
   const clientSecret = process.env.CLIENT_SECRET
 
-  let deployment: State["deployment"] = undefined
-  if (process.env.IS_DEPLOYMENT === "true") {
-    assert(process.env.DEPLOYMENT_ENVIRONMENT)
-    assert(process.env.DEPLOYMENT_CONTAINER)
-    deployment = {
-      environment: process.env.DEPLOYMENT_ENVIRONMENT,
-      container: process.env.DEPLOYMENT_CONTAINER,
-    }
-  }
-
   const bot = Probot.defaults({ appId, privateKey, secret: clientSecret })
   const server = new Server({ Probot: bot })
   await server.load(async function (bot: Probot) {
@@ -265,7 +264,6 @@ const main = async function () {
       clientId,
       clientSecret,
       privateKey,
-      deployment,
     })
   })
 
