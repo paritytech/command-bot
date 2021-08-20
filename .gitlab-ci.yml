@@ -112,7 +112,6 @@ build_bot:
       --set env.PRIVATE_KEY_BASE64="$PRIVATE_KEY_BASE64"
       --set env.ALLOWED_ORGANIZATIONS="$ALLOWED_ORGANIZATIONS"
       --set env.DATA_PATH="$DATA_PATH"
-      --set env.WESTEND_TRY_RUNTIME_NODE_WS="$WESTEND_TRY_RUNTIME_NODE_WS"
       --set persistence.mountPath="$DATA_PATH"
       --set env.LOG_FORMAT="json"
       --set env.LOG_LEVEL="$PROBOT_LOG_LEVEL"
@@ -128,6 +127,9 @@ build_bot:
       --set env.MATRIX_HOMESERVER="$MATRIX_HOMESERVER"
       --set env.MATRIX_ACCESS_TOKEN="$MATRIX_ACCESS_TOKEN"
       --set env.MASTER_TOKEN="$MASTER_TOKEN"
+      --set env.POLKADOT_WEBSOCKET_ADDRESS="$POLKADOT_WEBSOCKET_ADDRESS"
+      --set env.KUSAMA_WEBSOCKET_ADDRESS="$KUSAMA_WEBSOCKET_ADDRESS"
+      --set env.WESTEND_WEBSOCKET_ADDRESS="$WESTEND_WEBSOCKET_ADDRESS"
 
 .uninstall-deployment: &uninstall-deployment
   <<: *kubernetes

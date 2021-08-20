@@ -25,7 +25,7 @@ import {
 } from "./github"
 import { Logger } from "./logger"
 import { PullRequestError, PullRequestTask, State } from "./types"
-import { displayCommand, getCommand, getLines } from "./utils"
+import { displayCommand, getCommand, getLines, getParsedArgs } from "./utils"
 
 type WebhookHandler<E extends WebhookEvents> = (
   event: {
@@ -81,8 +81,13 @@ export const setupEvent = function <E extends WebhookEvents>(
 // should be asynchronous
 const mutex = new Mutex()
 export const getWebhooksHandlers = function (state: State) {
-  const { logger, version, allowedOrganizations, repositoryCloneDirectory } =
-    state
+  const {
+    logger,
+    version,
+    allowedOrganizations,
+    repositoryCloneDirectory,
+    nodesAddresses,
+  } = state
 
   const isRequesterAllowed = async function (
     octokit: ExtendedOctokit,
@@ -210,7 +215,11 @@ export const getWebhooksHandlers = function (state: State) {
               }
               commentId = commentCreationResponse.id
 
-              const execPath = "cargo"
+              const parsedArgs = getParsedArgs(nodesAddresses, otherArgs)
+              if (typeof parsedArgs === "string") {
+                return getError(parsedArgs)
+              }
+
               const args = [
                 "run",
                 // "--quiet" should be kept so that the output doesn't get
@@ -220,9 +229,10 @@ export const getWebhooksHandlers = function (state: State) {
                 "--quiet",
                 "--features=try-runtime",
                 "try-runtime",
-                ...otherArgs,
+                ...parsedArgs,
               ]
 
+              const execPath = "cargo"
               const taskData: PullRequestTask = {
                 ...prParams,
                 tag: "PullRequestTask",

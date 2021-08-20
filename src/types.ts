@@ -67,6 +67,7 @@ export type State = {
   getUniqueId: () => string
   getTaskId: () => string
   parseTaskId: (id: string) => TaskIdParseResult
+  nodesAddresses: Record<string, string>
 }
 
 export class PullRequestError {

@@ -203,3 +203,47 @@ export const escapeHtml = function (str: string) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;")
 }
+
+const websocketPrefixes = ["wss://", "ws://"]
+const urlArg = "--url="
+const addressPrefixes = websocketPrefixes.concat(
+  websocketPrefixes.map(function (prefix) {
+    return `${urlArg}${prefix}`
+  }),
+)
+export const getParsedArgs = function (
+  nodesAddresses: State["nodesAddresses"],
+  args: string[],
+) {
+  const nodeOptionsDisplay = `Available names are: ${Object.keys(
+    nodesAddresses,
+  ).join(", ")}.`
+
+  const parsedArgs = []
+  toNextArg: for (const arg of args) {
+    for (const prefix of addressPrefixes) {
+      if (!arg.startsWith(prefix)) {
+        continue
+      }
+
+      const node = arg.slice(prefix.length)
+      if (!node) {
+        return `Must specify one address in the form \`${prefix}name\`. ${nodeOptionsDisplay}`
+      }
+
+      const nodeAddress = nodesAddresses[node]
+      if (!nodeAddress) {
+        return `Nodes are referred to by name. No node named "${node}" is available. ${nodeOptionsDisplay}`
+      }
+
+      parsedArgs.push(
+        arg.startsWith(urlArg) ? `${urlArg}${nodeAddress}` : nodeAddress,
+      )
+      continue toNextArg
+    }
+
+    parsedArgs.push(arg)
+  }
+
+  return parsedArgs
+}
