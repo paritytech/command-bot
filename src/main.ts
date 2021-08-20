@@ -4,7 +4,8 @@ import { isValid, parseISO } from "date-fns"
 import http from "http"
 import { MatrixClient, SimpleFsStorageProvider } from "matrix-bot-sdk"
 import path from "path"
-import { Probot, Server } from "probot"
+import { Logger as ProbotLogger, Probot, Server } from "probot"
+import { getLog } from "probot/lib/helpers/get-log"
 import stoppable from "stoppable"
 
 import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db"
@@ -32,22 +33,15 @@ const serverSetup = async function (
     clientId,
     clientSecret,
     privateKey,
+    deployment,
   }: {
     appId: number
     clientId: string
     clientSecret: string
     privateKey: string
+    deployment: State["deployment"]
   },
 ) {
-  let deployment: State["deployment"] = undefined
-  if (process.env.IS_DEPLOYMENT === "true") {
-    assert(process.env.DEPLOYMENT_ENVIRONMENT)
-    assert(process.env.DEPLOYMENT_CONTAINER)
-    deployment = {
-      environment: process.env.DEPLOYMENT_ENVIRONMENT,
-      container: process.env.DEPLOYMENT_CONTAINER,
-    }
-  }
   const logger = new Logger({ name: "app" })
 
   const version = new Date().toISOString()
@@ -228,6 +222,16 @@ const serverSetup = async function (
 }
 
 const main = async function () {
+  let deployment: State["deployment"] = undefined
+  if (process.env.IS_DEPLOYMENT === "true") {
+    assert(process.env.DEPLOYMENT_ENVIRONMENT)
+    assert(process.env.DEPLOYMENT_CONTAINER)
+    deployment = {
+      environment: process.env.DEPLOYMENT_ENVIRONMENT,
+      container: process.env.DEPLOYMENT_CONTAINER,
+    }
+  }
+
   if (process.env.PING_PORT) {
     // Signal that we have started listening until Probot kicks in
     const pingPort = parseInt(process.env.PING_PORT)
@@ -262,14 +266,40 @@ const main = async function () {
   assert(process.env.WEBHOOK_SECRET)
   const webhookSecret = process.env.WEBHOOK_SECRET
 
-  const bot = Probot.defaults({ appId, privateKey, secret: webhookSecret })
-  const server = new Server({ Probot: bot })
+  let probotLogger: ProbotLogger | undefined = undefined
+  switch (process.env.LOG_FORMAT) {
+    case "json": {
+      probotLogger = getLog({
+        level: "error",
+        logFormat: "json",
+        logLevelInString: true,
+        logMessageKey: "msg",
+      })
+      break
+    }
+  }
+  const bot = Probot.defaults({
+    appId,
+    privateKey,
+    secret: webhookSecret,
+    logLevel: "error",
+    ...(probotLogger === undefined
+      ? {}
+      : { log: probotLogger.child({ name: "probot" }) }),
+  })
+  const server = new Server({
+    Probot: bot,
+    ...(probotLogger === undefined
+      ? {}
+      : { log: probotLogger.child({ name: "server" }) }),
+  })
   await server.load(function (bot: Probot) {
     return serverSetup(bot, server, {
       appId,
       clientId,
       clientSecret,
       privateKey,
+      deployment,
     })
   })
 

@@ -113,9 +113,6 @@ build_bot:
       --set env.ALLOWED_ORGANIZATIONS="$ALLOWED_ORGANIZATIONS"
       --set env.DATA_PATH="$DATA_PATH"
       --set persistence.mountPath="$DATA_PATH"
-      --set env.LOG_FORMAT="json"
-      --set env.LOG_LEVEL="$PROBOT_LOG_LEVEL"
-      --set env.LOG_LEVEL_IN_STRING="true"
       --set env.IS_DEPLOYMENT="true"
       --set env.DEPLOYMENT_ENVIRONMENT="$CI_ENVIRONMENT_NAME"
       --set env.DEPLOYMENT_CONTAINER="$DEPLOYMENT_CONTAINER"
@@ -130,6 +127,7 @@ build_bot:
       --set env.POLKADOT_WEBSOCKET_ADDRESS="$POLKADOT_WEBSOCKET_ADDRESS"
       --set env.KUSAMA_WEBSOCKET_ADDRESS="$KUSAMA_WEBSOCKET_ADDRESS"
       --set env.WESTEND_WEBSOCKET_ADDRESS="$WESTEND_WEBSOCKET_ADDRESS"
+      --set env.LOG_FORMAT=json
 
 .uninstall-deployment: &uninstall-deployment
   <<: *kubernetes
