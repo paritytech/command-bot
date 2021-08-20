@@ -270,7 +270,7 @@ const main = async function () {
   switch (process.env.LOG_FORMAT) {
     case "json": {
       probotLogger = getLog({
-        level: "info",
+        level: "error",
         logFormat: "json",
         logLevelInString: true,
         logMessageKey: "msg",
@@ -282,12 +282,16 @@ const main = async function () {
     appId,
     privateKey,
     secret: webhookSecret,
-    logLevel: "info",
-    ...(probotLogger ? { log: probotLogger.child({ name: "probot" }) } : {}),
+    logLevel: "error",
+    ...(probotLogger === undefined
+      ? {}
+      : { log: probotLogger.child({ name: "probot" }) }),
   })
   const server = new Server({
     Probot: bot,
-    ...(probotLogger ? { log: probotLogger.child({ name: "server" }) } : {}),
+    ...(probotLogger === undefined
+      ? {}
+      : { log: probotLogger.child({ name: "server" }) }),
   })
   await server.load(function (bot: Probot) {
     return serverSetup(bot, server, {
