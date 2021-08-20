@@ -232,19 +232,6 @@ const main = async function () {
     }
   }
 
-  let probotLogger: ProbotLogger | undefined = undefined
-  switch (process.env.LOG_FORMAT) {
-    case "json": {
-      probotLogger = getLog({
-        level: "info",
-        logFormat: "json",
-        logLevelInString: true,
-        logMessageKey: "msg",
-      })
-      break
-    }
-  }
-
   if (process.env.PING_PORT) {
     // Signal that we have started listening until Probot kicks in
     const pingPort = parseInt(process.env.PING_PORT)
@@ -279,6 +266,18 @@ const main = async function () {
   assert(process.env.WEBHOOK_SECRET)
   const webhookSecret = process.env.WEBHOOK_SECRET
 
+  let probotLogger: ProbotLogger | undefined = undefined
+  switch (process.env.LOG_FORMAT) {
+    case "json": {
+      probotLogger = getLog({
+        level: "info",
+        logFormat: "json",
+        logLevelInString: true,
+        logMessageKey: "msg",
+      })
+      break
+    }
+  }
   const bot = Probot.defaults({
     appId,
     privateKey,
