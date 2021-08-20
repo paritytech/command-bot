@@ -40,6 +40,8 @@ const serverSetup = async function (
     privateKey: string
   },
 ) {
+  const logger = new Logger({ name: "app" })
+
   let deployment: State["deployment"] = undefined
   if (process.env.IS_DEPLOYMENT === "true") {
     assert(process.env.DEPLOYMENT_ENVIRONMENT)
@@ -48,6 +50,7 @@ const serverSetup = async function (
       environment: process.env.DEPLOYMENT_ENVIRONMENT,
       container: process.env.DEPLOYMENT_CONTAINER,
     }
+    const hostsFile = "/etc/hosts"
     const nodeEnvVarSuffix = "_TRY_RUNTIME_NODE_WS"
     for (const [envVar, envVarValue] of Object.entries(process.env)) {
       if (!envVarValue || !envVar.endsWith(nodeEnvVarSuffix)) {
@@ -56,11 +59,15 @@ const serverSetup = async function (
       const nodeName = envVar
         .slice(0, envVar.indexOf(nodeEnvVarSuffix))
         .toLowerCase()
-      fs.appendFileSync("/etc/hosts", `${nodeName} ${envVarValue}\n`)
+      const hostsMapping = `${nodeName} ${envVarValue}`
+      logger.info(`Adding to ${hostsFile}: ${hostsMapping}`)
+      fs.appendFileSync(hostsFile, `${hostsMapping}\n`)
+      logger.info(
+        fs.readFileSync(hostsFile),
+        `Added ${hostsMapping} to hostsFile`,
+      )
     }
   }
-
-  const logger = new Logger({ name: "app" })
 
   const version = new Date().toISOString()
 
