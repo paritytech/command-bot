@@ -120,14 +120,14 @@ username as `https://api.github.com/users/${organization}`, for instance
 
 ### Nodes
 
-`{NAME}_TRY_RUNTIME_NODE_WS`
+`{NAME}_WEBSOCKET_ADDRESS`
 
 Set addresses of nodes you'll be targetting in the commands. On the deployment,
 those addresses will be added to `/etc/hosts` so that it'll be possible to
 refer to them by name as advertised in [Queue](#queue). e.g.
 
 ```
-POLKADOT_TRY_RUNTIME_NODE_WS=polkadot-node.io
+POLKADOT_WEBSOCKET_ADDRESS=ws://polkadot-node.io:9944
 ```
 
 Then it'll be possible to use them as `ws://polkadot`.

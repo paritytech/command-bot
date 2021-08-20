@@ -8,7 +8,7 @@ import { Server } from "probot"
 import { KeyAlreadyExists } from "./db"
 import { getApiTaskHandle, getRegisterApiTaskHandle, queue } from "./executor"
 import { ApiTask, State } from "./types"
-import { displayCommand, getSendMatrixResult } from "./utils"
+import { displayCommand, getParsedArgs, getSendMatrixResult } from "./utils"
 
 const getApiRoute = function (route: string) {
   return `/api${route}`
@@ -22,6 +22,7 @@ export const setupApi = function (server: Server, state: State) {
     logger,
     getUniqueId,
     version,
+    nodesAddresses,
   } = state
 
   const respond = function <T>(
@@ -114,7 +115,7 @@ export const setupApi = function (server: Server, state: State) {
 
         const {
           execPath,
-          args,
+          args: inputArgs,
           gitRef,
           secretsToHide = [],
           env = {},
@@ -122,6 +123,11 @@ export const setupApi = function (server: Server, state: State) {
           env?: ApiTask["env"]
           secretsToHide?: string[]
         } = req.body
+
+        const args = getParsedArgs(nodesAddresses, inputArgs)
+        if (typeof args === "string") {
+          return err(res, next, 422, args)
+        }
 
         const commandDisplay = displayCommand({ execPath, args, secretsToHide })
         const handleId = getUniqueId()

@@ -1,7 +1,6 @@
 import { createAppAuth } from "@octokit/auth-app"
 import assert from "assert"
 import { isValid, parseISO } from "date-fns"
-import fs from "fs"
 import http from "http"
 import { MatrixClient, SimpleFsStorageProvider } from "matrix-bot-sdk"
 import path from "path"
@@ -42,6 +41,18 @@ const serverSetup = async function (
 ) {
   const logger = new Logger({ name: "app" })
 
+  const nodesAddresses: Record<string, string> = {}
+  const nodeEnvVarSuffix = "_WEBSOCKET_ADDRESS"
+  for (const [envVar, envVarValue] of Object.entries(process.env)) {
+    if (!envVarValue || !envVar.endsWith(nodeEnvVarSuffix)) {
+      continue
+    }
+    const nodeName = envVar
+      .slice(0, envVar.indexOf(nodeEnvVarSuffix))
+      .toLowerCase()
+    nodesAddresses[nodeName] = envVarValue
+  }
+
   let deployment: State["deployment"] = undefined
   if (process.env.IS_DEPLOYMENT === "true") {
     assert(process.env.DEPLOYMENT_ENVIRONMENT)
@@ -49,23 +60,6 @@ const serverSetup = async function (
     deployment = {
       environment: process.env.DEPLOYMENT_ENVIRONMENT,
       container: process.env.DEPLOYMENT_CONTAINER,
-    }
-    const hostsFile = "/etc/hosts"
-    const nodeEnvVarSuffix = "_TRY_RUNTIME_NODE_WS"
-    for (const [envVar, envVarValue] of Object.entries(process.env)) {
-      if (!envVarValue || !envVar.endsWith(nodeEnvVarSuffix)) {
-        continue
-      }
-      const nodeName = envVar
-        .slice(0, envVar.indexOf(nodeEnvVarSuffix))
-        .toLowerCase()
-      const hostsMapping = `${nodeName} ${envVarValue}`
-      logger.info(`Adding to ${hostsFile}: ${hostsMapping}`)
-      fs.appendFileSync(hostsFile, `${hostsMapping}\n`)
-      logger.info(
-        fs.readFileSync(hostsFile),
-        `Added ${hostsMapping} to hostsFile`,
-      )
     }
   }
 
@@ -221,6 +215,7 @@ const serverSetup = async function (
     getUniqueId,
     getTaskId,
     parseTaskId,
+    nodesAddresses,
   }
 
   await requeueUnterminated(state)
