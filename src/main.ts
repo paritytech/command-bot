@@ -41,28 +41,6 @@ const serverSetup = async function (
 ) {
   const logger = new Logger({ name: "app" })
 
-  const nodesAddresses: Record<string, string> = {}
-  const nodeEnvVarSuffix = "_WEBSOCKET_ADDRESS"
-  for (const [envVar, envVarValue] of Object.entries(process.env)) {
-    if (!envVarValue || !envVar.endsWith(nodeEnvVarSuffix)) {
-      continue
-    }
-    const nodeName = envVar
-      .slice(0, envVar.indexOf(nodeEnvVarSuffix))
-      .toLowerCase()
-    nodesAddresses[nodeName] = envVarValue
-  }
-
-  let deployment: State["deployment"] = undefined
-  if (process.env.IS_DEPLOYMENT === "true") {
-    assert(process.env.DEPLOYMENT_ENVIRONMENT)
-    assert(process.env.DEPLOYMENT_CONTAINER)
-    deployment = {
-      environment: process.env.DEPLOYMENT_ENVIRONMENT,
-      container: process.env.DEPLOYMENT_CONTAINER,
-    }
-  }
-
   const version = new Date().toISOString()
 
   let uniqueIdCounter = 0
@@ -189,6 +167,15 @@ const serverSetup = async function (
     throw matrix
   }
 
+  let deployment: State["deployment"] = undefined
+  if (process.env.IS_DEPLOYMENT === "true") {
+    assert(process.env.DEPLOYMENT_ENVIRONMENT)
+    assert(process.env.DEPLOYMENT_CONTAINER)
+    deployment = {
+      environment: process.env.DEPLOYMENT_ENVIRONMENT,
+      container: process.env.DEPLOYMENT_CONTAINER,
+    }
+  }
   if (deployment !== undefined) {
     if (matrix === null) {
       throw new Error("Matrix configuration is expected for deployments")
@@ -197,6 +184,19 @@ const serverSetup = async function (
       throw new Error("Master token is expected for deployments")
     }
   }
+
+  const nodesAddresses: Record<string, string> = {}
+  const nodeEnvVarSuffix = "_WEBSOCKET_ADDRESS"
+  for (const [envVar, envVarValue] of Object.entries(process.env)) {
+    if (!envVarValue || !envVar.endsWith(nodeEnvVarSuffix)) {
+      continue
+    }
+    const nodeName = envVar
+      .slice(0, envVar.indexOf(nodeEnvVarSuffix))
+      .toLowerCase()
+    nodesAddresses[nodeName] = envVarValue
+  }
+  logger.info(nodesAddresses, "Registered nodes addresses")
 
   const state: State = {
     appName: "try-runtime-bot",
