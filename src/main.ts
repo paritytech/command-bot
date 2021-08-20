@@ -257,9 +257,12 @@ const main = async function () {
   assert(process.env.CLIENT_SECRET)
   const clientSecret = process.env.CLIENT_SECRET
 
-  const bot = Probot.defaults({ appId, privateKey, secret: clientSecret })
+  assert(process.env.WEBHOOK_SECRET)
+  const webhookSecret = process.env.WEBHOOK_SECRET
+
+  const bot = Probot.defaults({ appId, privateKey, secret: webhookSecret })
   const server = new Server({ Probot: bot })
-  await server.load(async function (bot: Probot) {
+  await server.load(function (bot: Probot) {
     return serverSetup(bot, server, {
       appId,
       clientId,
