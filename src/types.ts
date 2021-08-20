@@ -49,6 +49,7 @@ export type CommandOutput = Error | string
 
 type TaskIdParseResult = { date: Date; suffix?: string } | Error
 export type State = {
+  appName: string
   version: string
   bot: Probot
   taskDb: TaskDB

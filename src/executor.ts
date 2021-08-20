@@ -11,6 +11,7 @@ import { Logger } from "./logger"
 import { ApiTask, CommandOutput, PullRequestTask, State, Task } from "./types"
 import {
   displayCommand,
+  displayDuration,
   getDeploymentLogsMessage,
   getSendMatrixResult,
   redactSecrets,
@@ -350,13 +351,15 @@ export const queue = async function ({
     | "deployment"
     | "getTaskId"
     | "parseTaskId"
+    | "appName"
   >
   registerHandle: RegisterHandle
 }) {
   let child: cp.ChildProcess | undefined = undefined
   let isAlive = true
   const { execPath, args, commandDisplay, repoPath } = taskData
-  const { deployment, logger, taskDb, getFetchEndpoint, getTaskId } = state
+  const { deployment, logger, taskDb, getFetchEndpoint, getTaskId, appName } =
+    state
   const { db } = taskDb
 
   let suffixMessage = getDeploymentLogsMessage(deployment)
@@ -486,11 +489,20 @@ export const queue = async function ({
           return cancelledMessage
         }
 
+        const startTime = new Date()
         const result = await run(execPath, args, {
           options: { env: { ...process.env, ...taskData.env }, cwd: repoPath },
           shouldTrackProgress: true,
         })
-        return isAlive ? result : cancelledMessage
+        const endTime = new Date()
+
+        return isAlive
+          ? `${appName} took ${displayDuration(
+              startTime,
+              endTime,
+            )} (from ${startTime.toISOString()} to ${endTime.toISOString()} server time) for ${commandDisplay}
+            ${result}`
+          : cancelledMessage
       } catch (error) {
         return error
       }

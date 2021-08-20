@@ -198,6 +198,7 @@ const serverSetup = async function (
   }
 
   const state: State = {
+    appName: "try-runtime-bot",
     bot,
     taskDb,
     accessDb,

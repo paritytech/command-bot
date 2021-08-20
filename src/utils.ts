@@ -1,4 +1,5 @@
 import assert from "assert"
+import { differenceInMilliseconds } from "date-fns"
 import fs from "fs"
 import ld from "lodash"
 import { MatrixClient } from "matrix-bot-sdk"
@@ -146,4 +147,37 @@ export const getSendMatrixResult = function (
       logger.fatal(error?.body?.error, "Error when sending matrix message")
     }
   }
+}
+
+export const displayDuration = function (start: Date, finish: Date) {
+  const delta = Math.abs(differenceInMilliseconds(finish, start))
+
+  const days = Math.floor(delta / 1000 / 60 / 60 / 24)
+  const hours = Math.floor((delta / 1000 / 60 / 60) % 24)
+  const minutes = Math.floor((delta / 1000 / 60) % 60)
+  const seconds = Math.floor((delta / 1000) % 60)
+
+  const milliseconds =
+    delta -
+    days * 24 * 60 * 60 * 1000 -
+    hours * 60 * 60 * 1000 -
+    minutes * 60 * 1000 -
+    seconds * 1000
+
+  let buf = ""
+  const separator = ", "
+  for (const [name, value] of Object.entries({
+    days,
+    hours,
+    minutes,
+    seconds,
+    milliseconds,
+  })) {
+    if (!value) {
+      continue
+    }
+    buf = `${buf}${separator}${value} ${name}`
+  }
+
+  return buf.slice(separator.length)
 }
