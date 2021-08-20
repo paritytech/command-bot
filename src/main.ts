@@ -39,6 +39,15 @@ const serverSetup = async function (
     privateKey: string
   },
 ) {
+  let deployment: State["deployment"] = undefined
+  if (process.env.IS_DEPLOYMENT === "true") {
+    assert(process.env.DEPLOYMENT_ENVIRONMENT)
+    assert(process.env.DEPLOYMENT_CONTAINER)
+    deployment = {
+      environment: process.env.DEPLOYMENT_ENVIRONMENT,
+      container: process.env.DEPLOYMENT_CONTAINER,
+    }
+  }
   const logger = new Logger({ name: "app" })
 
   const version = new Date().toISOString()
@@ -167,24 +176,6 @@ const serverSetup = async function (
     throw matrix
   }
 
-  let deployment: State["deployment"] = undefined
-  if (process.env.IS_DEPLOYMENT === "true") {
-    assert(process.env.DEPLOYMENT_ENVIRONMENT)
-    assert(process.env.DEPLOYMENT_CONTAINER)
-    deployment = {
-      environment: process.env.DEPLOYMENT_ENVIRONMENT,
-      container: process.env.DEPLOYMENT_CONTAINER,
-    }
-  }
-  if (deployment !== undefined) {
-    if (matrix === null) {
-      throw new Error("Matrix configuration is expected for deployments")
-    }
-    if (!process.env.MASTER_TOKEN) {
-      throw new Error("Master token is expected for deployments")
-    }
-  }
-
   const nodesAddresses: Record<string, string> = {}
   const nodeEnvVarSuffix = "_WEBSOCKET_ADDRESS"
   for (const [envVar, envVarValue] of Object.entries(process.env)) {
@@ -197,6 +188,15 @@ const serverSetup = async function (
     nodesAddresses[nodeName] = envVarValue
   }
   logger.info(nodesAddresses, "Registered nodes addresses")
+
+  if (deployment !== undefined) {
+    if (matrix === null) {
+      throw new Error("Matrix configuration is expected for deployments")
+    }
+    if (!process.env.MASTER_TOKEN) {
+      throw new Error("Master token is expected for deployments")
+    }
+  }
 
   const state: State = {
     appName: "try-runtime-bot",
