@@ -127,6 +127,7 @@ build_bot:
       --set env.POLKADOT_WEBSOCKET_ADDRESS="$POLKADOT_WEBSOCKET_ADDRESS"
       --set env.KUSAMA_WEBSOCKET_ADDRESS="$KUSAMA_WEBSOCKET_ADDRESS"
       --set env.WESTEND_WEBSOCKET_ADDRESS="$WESTEND_WEBSOCKET_ADDRESS"
+      --set env.LOG_FORMAT=json
 
 .uninstall-deployment: &uninstall-deployment
   <<: *kubernetes

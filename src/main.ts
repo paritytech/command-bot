@@ -222,8 +222,6 @@ const serverSetup = async function (
 }
 
 const main = async function () {
-  let probotLogger: ProbotLogger | undefined = undefined
-
   let deployment: State["deployment"] = undefined
   if (process.env.IS_DEPLOYMENT === "true") {
     assert(process.env.DEPLOYMENT_ENVIRONMENT)
@@ -232,13 +230,19 @@ const main = async function () {
       environment: process.env.DEPLOYMENT_ENVIRONMENT,
       container: process.env.DEPLOYMENT_CONTAINER,
     }
-    probotLogger = getLog({
-      level: "info",
-      logFormat: "json",
-      logLevelInString: true,
-      logMessageKey: "msg",
-      sentryDsn: "",
-    })
+  }
+
+  let probotLogger: ProbotLogger | undefined = undefined
+  switch (process.env.LOG_FORMAT) {
+    case "json": {
+      probotLogger = getLog({
+        level: "info",
+        logFormat: "json",
+        logLevelInString: true,
+        logMessageKey: "msg",
+      })
+      break
+    }
   }
 
   if (process.env.PING_PORT) {
