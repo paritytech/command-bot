@@ -87,6 +87,6 @@ persistence:
   subPath: ""
   annotations: {}
   storageClass: hdd-csi
-  size: 32G
+  size: 40G
   accessModes:
     - ReadWriteOnce
