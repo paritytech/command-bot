@@ -132,12 +132,13 @@ export const getSendMatrixResult = function (
       const buf = message instanceof Error ? displayError(message) : message
       const messagePrefix = `Handle ID ${handleId} has finished.`
 
-      if (buf.length < 2048) {
+      const lineCount = (buf.match(/\n/g) || "").length + 1
+      if (lineCount < 128) {
         await matrix.sendHtmlText(
           matrixRoom,
           `${messagePrefix} Results will be displayed inline for <code>${escapeHtml(
             commandDisplay,
-          )}</code>\n<pre>${escapeHtml(buf)}</pre>`,
+          )}</code>\n<hr>${escapeHtml(buf)}`,
         )
         return
       }
