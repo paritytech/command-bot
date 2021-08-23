@@ -26,15 +26,17 @@ instead of using arbitrary addresses directly.
 
 In the pull request where you previously ran `/try-runtime queue`, comment:
 
+`/try-runtime cancel`
+
 # API
 
-Before triggering commands through the API, you'll need to get an Access Token.
-That token is registered through `POST /api/access` by the `MASTER_TOKEN` and
-will be tied to a Matrix room ID where the command's output will be posted
-after it finishes. The token might be invalidated at any point through
-`DELETE /api/access`.
+Before triggering commands through the API, you'll need to an Access Token.
+That token is registered through `POST /api/access` by the `MASTER_TOKEN`
+(owned by the OpsTooling team of Parity) and will be tied to a Matrix room
+ID where the command's output will be posted after it finishes. The token
+can be invalidated at any point through `DELETE /api/access`.
 
-After having the token, use `POST /api/queue` for running a command and
+Use the token in `POST /api/queue` for running a command and
 `POST /api/cancel` for cancelling an ongoing command.
 
 For the time being, arguments for those endpoints should be read from
