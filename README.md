@@ -19,6 +19,9 @@ supposed to support the same arguments as
 [try-runtime](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)
 although not all of them have been tried out as of this writing.
 
+Note: you **need to** refer to the nodes by their name e.g. `ws://polkadot`
+instead of using arbitrary addresses directly.
+
 ## Cancel
 
 In the pull request where you previously ran `/try-runtime queue`, comment:
@@ -122,15 +125,16 @@ username as `https://api.github.com/users/${organization}`, for instance
 
 `{NAME}_WEBSOCKET_ADDRESS`
 
-Set addresses of nodes you'll be targetting in the commands. On the deployment,
-those addresses will be added to `/etc/hosts` so that it'll be possible to
-refer to them by name as advertised in [Queue](#queue). e.g.
+The addresses of nodes you'll be targetting (by name) in the commands; e.g. to
+be able to use `ws://polkadot` in try-runtime's arguments, you'll have to
+create a `POLKADOT_WEBSOCKET_ADDRESS` variable.
 
 ```
 POLKADOT_WEBSOCKET_ADDRESS=ws://polkadot-node.io:9944
 ```
 
-Then it'll be possible to use them as `ws://polkadot`.
+The application will automatically register node addresses for environment
+variables following that pattern.
 
 ### API
 
