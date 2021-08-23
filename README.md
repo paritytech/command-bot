@@ -26,7 +26,20 @@ instead of using arbitrary addresses directly.
 
 In the pull request where you previously ran `/try-runtime queue`, comment:
 
-`/try-runtime cancel`
+# API
+
+Before triggering commands through the API, you'll need to get an Access Token.
+That token is registered through `POST /api/access` by the `MASTER_TOKEN` and
+will be tied to a Matrix room ID where the command's output will be posted
+after it finishes. The token might be invalidated at any point through
+`DELETE /api/access`.
+
+After having the token, use `POST /api/queue` for running a command and
+`POST /api/cancel` for cancelling an ongoing command.
+
+For the time being, arguments for those endpoints should be read from
+[the API source](./src/api.ts), e.g. `validateQueueEndpointInput`, until the
+[API documentation](https://github.com/paritytech/try-runtime-bot/issues/17) is done.
 
 # Deploying
 
@@ -87,7 +100,7 @@ From the Github App settings:
 
 `DATA_PATH`
 
-`DATA_PATH` should point to a folder where the program's persistent data, such
+DATA_PATH should point to a folder where the program's persistent data, such
 as the database,  will be stored.
 
 `ALLOWED_ORGANIZATIONS`
@@ -106,12 +119,38 @@ username as `https://api.github.com/users/${organization}`, for instance
 
 **At least one organization ID has to be provided for the bot to work.**
 
-`{KUSAMA,POLKADOT,WESTEND}_WEBSOCKET_ADDRESS`
-
-Set the websocket address for each runtime variant e.g.
-`POLKADOT_WEBSOCKET_ADDRESS=wss://127.0.0.1:9944`
-
 ## Optional environment variables
+
+### Nodes
+
+`{NAME}_WEBSOCKET_ADDRESS`
+
+The addresses of nodes you'll be targetting (by name) in the commands; e.g. to
+be able to use `ws://polkadot` in try-runtime's arguments, you'll have to
+create a `POLKADOT_WEBSOCKET_ADDRESS` variable.
+
+```
+POLKADOT_WEBSOCKET_ADDRESS=ws://polkadot-node.io:9944
+```
+
+The application will automatically register node addresses for environment
+variables following that pattern.
+
+### API
+
+Note: If the following variables are not set, then the API will be disabled,
+but the bot will still be available for pull requests interactions only.
+
+`MATRIX_HOMESERVER` and `MATRIX_ACCESS_TOKEN`
+
+When an API command finishes, the bot will send a message on Matrix in the
+room assigned to the requester's token.
+
+`MASTER_TOKEN`
+
+The token which allows granting access to other tokens through the API.
+
+### Logging
 
 On production, it's recommended to set `LOG_FORMAT` to `json` so that
 [Probot logs are output with structure](https://probot.github.io/docs/logging/#log-formats)

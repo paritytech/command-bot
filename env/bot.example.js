@@ -5,6 +5,8 @@ const path = require("path")
 
 // All variables are required unless explicitly told otherwise.
 
+//process.env.ALLOWED_ORGANIZATIONS = process.env.ALLOWED_ORGANIZATIONS || "14176906"
+
 /*
   The following variables can acquired from https://github.com/settings/apps/[app-name].
 */
@@ -28,21 +30,20 @@ process.env.PRIVATE_KEY_BASE64 =
   ).toString("base64")
 
 /*
-  Set up the Websocket address for all Polkadot runtime flavors.
+  The 'data' directory in that location is already ignored on version control.
 */
-process.env.POLKADOT_WEBSOCKET_ADDRESS =
-  process.env.POLKADOT_WEBSOCKET_ADDRESS || "ws://0.0.0.0:9944"
-process.env.KUSAMA_WEBSOCKET_ADDRESS =
-  process.env.KUSAMA_WEBSOCKET_ADDRESS || "ws://0.0.0.0:9944"
-process.env.WESTEND_WEBSOCKET_ADDRESS =
-  process.env.WESTEND_WEBSOCKET_ADDRESS || "ws://0.0.0.0:9944"
+process.env.DATA_PATH =
+  process.env.DATA_PATH || path.join(__dirname, "..", "data")
 
 /*
-  The 'data' directory is ignored on version control.
+  NOT REQUIRED: API-related variables
+  The API interactions needs a Matrix-related variables to be configured for
+  notifying when a command finishes. Additionally, MASTER_TOKEN is used for
+  allowing tokens to the API. If those are missing, then the API will not work.
 */
-process.env.DATA_PATH = process.env.DATA_PATH || path.join(__dirname, "..", "data")
-
-//process.env.ALLOWED_ORGANIZATIONS = process.env.ALLOWED_ORGANIZATIONS || "14176906"
+//process.env.MATRIX_HOMESERVER = "https://matrix.parity.io"
+//process.env.MATRIX_ACCESS_TOKEN = "XXXXXXX"
+//process.env.MASTER_TOKEN = "0"
 
 /*
   NOT REQUIRED
@@ -57,4 +58,4 @@ process.env.DATA_PATH = process.env.DATA_PATH || path.join(__dirname, "..", "dat
   Probot has builtin smee.io integration. The webhook proxy url should be set
   to the smee.io URL in https://github.com/settings/apps/[app-name].
 */
-// process.env.WEBHOOK_PROXY_URL ??= "https://smee.io/fc8OfV07M1O69fm5"
+//process.env.WEBHOOK_PROXY_URL ??= "https://smee.io/fc8OfV07M1O69fm5"

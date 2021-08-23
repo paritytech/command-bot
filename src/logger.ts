@@ -27,7 +27,7 @@ export class Logger {
         const tag = `${level.toUpperCase()} (${this.options.name}):`
         const fn = item instanceof Error ? console.error : console.log
         if (context) {
-          fn(tag, context, item)
+          fn(tag, `${context}\n`, item)
         } else {
           fn(tag, item)
         }

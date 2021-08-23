@@ -5,23 +5,27 @@ import { Mutex } from "async-mutex"
 import path from "path"
 import { Probot } from "probot"
 
-import { cancelHandles, queue } from "./executor"
+import {
+  botMentionPrefix,
+  defaultTryRuntimeGetCommandOptions,
+} from "./constants"
+import {
+  getPullRequestTaskHandle,
+  getRegisterPullRequestHandle,
+  queue,
+} from "./executor"
 import {
   createComment,
   ExtendedOctokit,
   getOctokit,
+  getPostPullRequestResult,
+  getPullRequestHandleId,
   isOrganizationMember,
   updateComment,
 } from "./github"
 import { Logger } from "./logger"
 import { PullRequestError, PullRequestTask, State } from "./types"
-import {
-  displayCommand,
-  getCommand,
-  getLines,
-  getPostPullRequestResult,
-  getPullRequestHandleId,
-} from "./utils"
+import { displayCommand, getCommand, getLines, getParsedArgs } from "./utils"
 
 type WebhookHandler<E extends WebhookEvents> = (
   event: {
@@ -76,27 +80,13 @@ export const setupEvent = function <E extends WebhookEvents>(
 // not get the bot stuck until the command finishes, however, since queueing
 // should be asynchronous
 const mutex = new Mutex()
-export const getWebhooksHandlers = function (
-  state: Pick<
-    State,
-    | "botMentionPrefix"
-    | "db"
-    | "logger"
-    | "nodesAddresses"
-    | "getFetchEndpoint"
-    | "version"
-    | "allowedOrganizations"
-    | "repositoryCloneDirectory"
-    | "deployment"
-  >,
-) {
+export const getWebhooksHandlers = function (state: State) {
   const {
-    botMentionPrefix,
     logger,
-    nodesAddresses,
     version,
     allowedOrganizations,
     repositoryCloneDirectory,
+    nodesAddresses,
   } = state
 
   const isRequesterAllowed = async function (
@@ -164,9 +154,10 @@ export const getWebhooksHandlers = function (
             )
           }
 
-          const { execPath: botMention, ...command } = getCommand(commandLine, {
-            baseEnv: { RUST_LOG: "remote-ext=info" },
-          })
+          const { execPath: botMention, ...command } = getCommand(
+            commandLine,
+            defaultTryRuntimeGetCommandOptions,
+          )
           if (botMention !== botMentionPrefix) {
             return
           }
@@ -182,54 +173,11 @@ export const getWebhooksHandlers = function (
                 )
               }
 
-              if (cancelHandles.get(handleId) !== undefined) {
+              if (getPullRequestTaskHandle(handleId) !== undefined) {
                 return getError(
                   "try-runtime is already being executed for this pull request",
                 )
               }
-
-              const execPath = "cargo"
-              const nodeOptionsDisplay = `Available names are: ${Object.keys(
-                nodesAddresses,
-              ).join(", ")}.`
-
-              const addressPrefix = ["wss://", "ws://"]
-              toNextArg: for (const i in otherArgs) {
-                for (const prefix of addressPrefix) {
-                  const arg = otherArgs[i]
-                  if (arg.startsWith(prefix)) {
-                    const node = arg.slice(prefix.length)
-
-                    if (!node) {
-                      return getError(
-                        `Must specify one address in the form \`${prefix}name\` (found "${arg}"). ${nodeOptionsDisplay}`,
-                      )
-                    }
-
-                    const nodeAddress = nodesAddresses[node]
-                    if (!nodeAddress) {
-                      return getError(
-                        `Nodes are referred to by name. No node named "${node}" is available. ${nodeOptionsDisplay}`,
-                      )
-                    }
-
-                    otherArgs[i] = nodeAddress
-                    continue toNextArg
-                  }
-                }
-              }
-
-              const args = [
-                "run",
-                // "--quiet" should be kept so that the output doesn't get
-                // polluted with a bunch of compilation stuff; bear in mind the
-                // output is posted on Github issues which have limited
-                // character count
-                "--quiet",
-                "--features=try-runtime",
-                "try-runtime",
-                ...otherArgs,
-              ]
 
               const prResponse = await octokit.pulls.get(prParams)
               if (prResponse.status !== 200) {
@@ -267,21 +215,35 @@ export const getWebhooksHandlers = function (
               }
               commentId = commentCreationResponse.id
 
+              const parsedArgs = getParsedArgs(nodesAddresses, otherArgs)
+              if (typeof parsedArgs === "string") {
+                return getError(parsedArgs)
+              }
+
+              const args = [
+                "run",
+                // "--quiet" should be kept so that the output doesn't get
+                // polluted with a bunch of compilation stuff; bear in mind the
+                // output is posted on Github issues which have limited
+                // character count
+                "--quiet",
+                "--features=try-runtime",
+                "try-runtime",
+                ...parsedArgs,
+              ]
+
+              const execPath = "cargo"
               const taskData: PullRequestTask = {
                 ...prParams,
+                tag: "PullRequestTask",
+                handleId,
                 requester,
                 execPath,
                 args,
                 env: command.env,
                 commentId,
                 installationId,
-                prepareBranchParams: {
-                  owner,
-                  repo,
-                  contributor,
-                  branch,
-                  repoPath: path.join(repositoryCloneDirectory, repo),
-                },
+                gitRef: { owner, repo, contributor, branch },
                 version,
                 commandDisplay: displayCommand({
                   execPath,
@@ -291,18 +253,18 @@ export const getWebhooksHandlers = function (
                 timesRequeued: 0,
                 timesRequeuedSnapshotBeforeExecution: 0,
                 timesExecuted: 0,
+                repoPath: path.join(repositoryCloneDirectory, repo),
               }
 
               const message = await queue({
-                handleId,
                 taskData,
                 onResult: getPostPullRequestResult({
                   taskData,
                   octokit,
-                  handleId,
                   state,
                 }),
                 state,
+                registerHandle: getRegisterPullRequestHandle(taskData),
               })
               await updateComment(octokit, {
                 ...commentParams,
@@ -313,13 +275,15 @@ export const getWebhooksHandlers = function (
               break
             }
             case "cancel": {
-              const cancelItem = cancelHandles.get(handleId)
+              const cancelItem = getPullRequestTaskHandle(handleId)
               if (cancelItem === undefined) {
                 return getError(`No command is running for this pull request`)
               }
 
-              const { cancel, commentId } = cancelItem
-              cancelHandles.delete(handleId)
+              const {
+                cancel,
+                task: { commentId },
+              } = cancelItem
 
               await cancel()
               await updateComment(octokit, {
@@ -335,12 +299,11 @@ export const getWebhooksHandlers = function (
             }
           }
         } catch (error) {
-          const cancelHandle = cancelHandles.get(handleId)
+          const cancelHandle = getPullRequestTaskHandle(handleId)
 
-          if (cancelHandle) {
+          if (cancelHandle !== undefined) {
             const { cancel } = cancelHandle
             await cancel()
-            cancelHandles.delete(handleId)
           }
 
           return getError(

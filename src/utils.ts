@@ -1,17 +1,12 @@
-import { Octokit } from "@octokit/rest"
 import assert from "assert"
+import { differenceInMilliseconds } from "date-fns"
 import fs from "fs"
 import ld from "lodash"
+import { MatrixClient } from "matrix-bot-sdk"
+import path from "path"
 
-import { githubCommentCharacterLimit } from "./constants"
-import { cancelHandles } from "./executor"
-import { createComment } from "./github"
-import {
-  CommandOutput,
-  PullRequestParams,
-  PullRequestTask,
-  State,
-} from "./types"
+import { Logger } from "./logger"
+import { ApiTask, CommandOutput, State } from "./types"
 
 export const getLines = function (str: string) {
   return str
@@ -26,7 +21,7 @@ export const getLines = function (str: string) {
 
 export const getCommand = function (
   commandLine: string,
-  { baseEnv = {} }: { baseEnv?: Record<string, string> },
+  { baseEnv }: { baseEnv: Record<string, string> },
 ) {
   const parts = commandLine.split(" ").filter(function (value) {
     return !!value
@@ -55,6 +50,9 @@ export const getCommand = function (
 
 export const redactSecrets = function (str: string, secrets: string[] = []) {
   for (const secret of secrets) {
+    if (!secret) {
+      continue
+    }
     str = str.replace(secret, "{SECRET}")
   }
   return str
@@ -70,87 +68,6 @@ export const displayCommand = function ({
   secretsToHide: string[]
 }) {
   return redactSecrets(`${execPath} ${args.join(" ")}`, secretsToHide)
-}
-
-export const getPostPullRequestResult = function ({
-  taskData,
-  octokit,
-  handleId,
-  state: { logger, deployment },
-}: {
-  taskData: PullRequestTask
-  octokit: Octokit
-  handleId: string
-  state: Pick<State, "deployment" | "logger">
-}) {
-  return async function (result: CommandOutput) {
-    try {
-      logger.info({ result, taskData }, "Posting pull request result")
-
-      cancelHandles.delete(handleId)
-
-      const { owner, repo, requester, pull_number, commandDisplay } = taskData
-
-      const before = `
-@${requester} Results are ready for ${commandDisplay}
-
-<details>
-<summary>Output</summary>
-
-\`\`\`
-`
-
-      const after = `
-\`\`\`
-
-</details>`
-
-      let resultDisplay =
-        typeof result === "string"
-          ? result
-          : `${result.toString()}\n${result.stack}`
-      let truncateMessageWarning: string
-      if (
-        before.length + resultDisplay.length + after.length >
-        githubCommentCharacterLimit
-      ) {
-        truncateMessageWarning = `\nThe command's output was too big to be fully displayed. Please go to the logs for the full output. ${getDeploymentLogsMessage(
-          deployment,
-        )}`
-        const truncationIndicator = "[truncated]..."
-        resultDisplay = `${truncationIndicator}${resultDisplay.slice(
-          0,
-          githubCommentCharacterLimit -
-            (before.length +
-              truncationIndicator.length +
-              after.length +
-              truncateMessageWarning.length),
-        )}`
-      } else {
-        truncateMessageWarning = ""
-      }
-
-      await createComment(octokit, {
-        owner,
-        repo,
-        issue_number: pull_number,
-        body: `${before}${resultDisplay}${after}${truncateMessageWarning}`,
-      })
-    } catch (error) {
-      logger.fatal(
-        { error, result, taskData },
-        "Caught error while trying to post pull request result",
-      )
-    }
-  }
-}
-
-export const getPullRequestHandleId = function ({
-  owner,
-  repo,
-  pull_number,
-}: PullRequestParams) {
-  return `owner: ${owner}, repo: ${repo}, pull: ${pull_number}`
 }
 
 export const millisecondsDelay = function (milliseconds: number) {
@@ -173,6 +90,15 @@ export const removeDir = function (dir: string) {
   return dir
 }
 
+export const initDatabaseDir = function (dir: string) {
+  dir = ensureDir(dir)
+  const lockPath = path.join(dir, "LOCK")
+  if (fs.existsSync(lockPath)) {
+    fs.unlinkSync(lockPath)
+  }
+  return dir
+}
+
 export const getDeploymentLogsMessage = function (
   deployment: State["deployment"],
 ) {
@@ -185,4 +111,140 @@ export const getDeploymentLogsMessage = function (
 
 export class Retry {
   constructor(public context: "compilation error", public motive: string) {}
+}
+
+export const displayError = function (e: Error) {
+  return `${e.toString()}\n${e.stack}`
+}
+
+export const getSendMatrixResult = function (
+  matrix: MatrixClient,
+  logger: Logger,
+  {
+    matrixRoom,
+    handleId,
+    commandDisplay,
+  }: Pick<ApiTask, "matrixRoom" | "handleId" | "commandDisplay">,
+) {
+  return async function (message: CommandOutput) {
+    try {
+      const fileName = `${handleId}-log.txt`
+      const buf = message instanceof Error ? displayError(message) : message
+      const messagePrefix = `Handle ID ${handleId} has finished.`
+
+      const lineCount = (buf.match(/\n/g) || "").length + 1
+      if (lineCount < 128) {
+        await matrix.sendHtmlText(
+          matrixRoom,
+          `${messagePrefix} Results will be displayed inline for <code>${escapeHtml(
+            commandDisplay,
+          )}</code>\n<hr>${escapeHtml(buf)}`,
+        )
+        return
+      }
+
+      const url = await matrix.uploadContent(
+        Buffer.from(message instanceof Error ? displayError(message) : message),
+        "text/plain",
+        fileName,
+      )
+      await matrix.sendText(
+        matrixRoom,
+        `${messagePrefix} Results were uploaded as ${fileName} for ${commandDisplay}.`,
+      )
+      await matrix.sendMessage(matrixRoom, {
+        msgtype: "m.file",
+        body: fileName,
+        url,
+      })
+    } catch (error) {
+      logger.fatal(error?.body?.error, "Error when sending matrix message")
+    }
+  }
+}
+
+export const displayDuration = function (start: Date, finish: Date) {
+  const delta = Math.abs(differenceInMilliseconds(finish, start))
+
+  const days = Math.floor(delta / 1000 / 60 / 60 / 24)
+  const hours = Math.floor((delta / 1000 / 60 / 60) % 24)
+  const minutes = Math.floor((delta / 1000 / 60) % 60)
+  const seconds = Math.floor((delta / 1000) % 60)
+
+  const milliseconds =
+    delta -
+    days * 24 * 60 * 60 * 1000 -
+    hours * 60 * 60 * 1000 -
+    minutes * 60 * 1000 -
+    seconds * 1000
+
+  let buf = ""
+  const separator = ", "
+  for (const [name, value] of Object.entries({
+    days,
+    hours,
+    minutes,
+    seconds,
+    milliseconds,
+  })) {
+    if (!value) {
+      continue
+    }
+    buf = `${buf}${separator}${value} ${name}`
+  }
+
+  return buf.slice(separator.length)
+}
+
+export const escapeHtml = function (str: string) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+}
+
+const websocketPrefixes = ["wss://", "ws://"]
+const urlArg = "--url="
+const addressPrefixes = websocketPrefixes.concat(
+  websocketPrefixes.map(function (prefix) {
+    return `${urlArg}${prefix}`
+  }),
+)
+export const getParsedArgs = function (
+  nodesAddresses: State["nodesAddresses"],
+  args: string[],
+) {
+  const nodeOptionsDisplay = `Available names are: ${Object.keys(
+    nodesAddresses,
+  ).join(", ")}.`
+
+  const parsedArgs = []
+  toNextArg: for (const arg of args) {
+    for (const prefix of addressPrefixes) {
+      if (!arg.startsWith(prefix)) {
+        continue
+      }
+
+      const node = arg.slice(prefix.length)
+      if (!node) {
+        return `Must specify one address in the form \`${prefix}name\`. ${nodeOptionsDisplay}`
+      }
+
+      const nodeAddress = nodesAddresses[node]
+      if (!nodeAddress) {
+        return `Nodes are referred to by name. No node named "${node}" is available. ${nodeOptionsDisplay}`
+      }
+
+      parsedArgs.push(
+        arg.startsWith(urlArg) ? `${urlArg}${nodeAddress}` : nodeAddress,
+      )
+      continue toNextArg
+    }
+
+    parsedArgs.push(arg)
+  }
+
+  return parsedArgs
 }

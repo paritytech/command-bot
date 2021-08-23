@@ -1,32 +1,42 @@
 import type { AbstractIterator, AbstractLevelDOWN } from "abstract-leveldown"
-import { isBefore, isValid, parseISO } from "date-fns"
+import { isBefore } from "date-fns"
 import getLevelDb from "level-rocksdb"
 import type { LevelUp } from "levelup"
 
-import { PullRequestTask } from "./types"
+import { State, Task } from "./types"
 
-export type DbKey = string
-export type DbValue = string
-
+type DbKey = string
+type DbValue = string
 type LevelDB = AbstractLevelDOWN<DbKey, DbValue>
 type LevelIterator = AbstractIterator<DbKey, DbValue>
-
-export type DB = LevelUp<LevelDB, LevelIterator>
+type DB = LevelUp<LevelDB, LevelIterator>
 
 export const getDb = getLevelDb as (
   path: string,
 ) => LevelUp<LevelDB, LevelIterator>
 
+export class TaskDB {
+  constructor(public db: DB) {}
+}
+
+export class AccessDB {
+  constructor(public db: DB) {}
+}
+
+export class KeyAlreadyExists {}
+
 export const getSortedTasks = async function (
-  db: DB,
+  { taskDb: { db }, parseTaskId }: Pick<State, "parseTaskId" | "taskDb">,
   {
     match: { version, isInverseMatch },
-  }: { match: { version: string; isInverseMatch?: boolean } },
+  }: {
+    match: { version: string; isInverseMatch?: boolean }
+  },
 ) {
   type Item = {
     id: DbKey
     startDate: Date
-    taskData: PullRequestTask
+    taskData: Task
   }
 
   const items = await new Promise<Item[]>(function (resolve, reject) {
@@ -35,11 +45,12 @@ export const getSortedTasks = async function (
     db.createReadStream()
       .on("data", function ({ key, value }) {
         try {
-          const startDate = parseISO(key.toString())
-          if (!isValid(startDate)) {
-            throw new Error(`Invalid startDate ${key}`)
+          const parsedId = parseTaskId(key)
+          if (parsedId instanceof Error) {
+            throw parsedId
           }
 
+          const { date: startDate } = parsedId
           const taskData = JSON.parse(value.toString())
           if (
             (taskData.version === version && !isInverseMatch) ||
