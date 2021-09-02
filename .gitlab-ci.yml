@@ -22,7 +22,12 @@ default:
       when: never
     - if: $CI_COMMIT_REF_NAME == "master"
     - if: $CI_COMMIT_REF_NAME =~ /^[0-9]+$/                         # PRs
-    - if: $CI_COMMIT_REF_NAME =~ /^v[0-9]+\.[0-9]+.*$/              # i.e. v1.0, v2.1rc1
+
+.on-tags: &on-tags
+  rules:
+    - if: $BUILD
+      when: never
+    - if: $CI_COMMIT_REF_NAME =~ /^v-[0-9]+\.[0-9]+.*$/             # i.e. v-1.0, v-2.1rc1
 
 
 .on-master: &on-master
@@ -171,8 +176,7 @@ uninstall-production:
 
 .tagged-production-build: &tagged-production-build
   <<: *production-env
-  only:
-    - /^v-[0-9]+\.[0-9]+.*$/
+  <<: *on-tags
 
 build-production-image:
   <<: *build-app-image
