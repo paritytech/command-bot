@@ -133,7 +133,7 @@ export const getShellExecutor = function ({
                 stdout = redactSecrets(stdout.trim(), secretsToHide)
                 stderr = redactSecrets(stderr.trim(), secretsToHide)
 
-                if (stderr.includes("error: build failed")) {
+                if (code) {
                   // https://github.com/rust-lang/rust/issues/51309
                   // Could happen due to lacking system constraints (we saw it
                   // happen due to out-of-memory)
@@ -152,25 +152,25 @@ export const getShellExecutor = function ({
                     cp.execSync(cleanCmd, { cwd: options?.cwd })
                     resolve(new Retry("compilation error", cleanCmd))
                     return
+                  } else {
+                    const retryForCompilerIssue = stderr.match(
+                      /This is a known issue with the compiler. Run `([^`]+)`/,
+                    )
+                    if (retryForCompilerIssue !== null) {
+                      const retryCargoCleanCmd =
+                        retryForCompilerIssue[1].replace(/_/g, "-")
+                      logger.info(
+                        `Running ${retryCargoCleanCmd} in ${
+                          options?.cwd ?? "the current directory"
+                        } before retrying the command due to a compiler error.`,
+                      )
+                      cp.execSync(retryCargoCleanCmd, { cwd: options?.cwd })
+                      resolve(
+                        new Retry("compilation error", retryCargoCleanCmd),
+                      )
+                      return
+                    }
                   }
-                }
-
-                const retryForCompilerIssue = stderr.match(
-                  /This is a known issue with the compiler. Run `([^`]+)`/,
-                )
-                if (retryForCompilerIssue !== null) {
-                  const retryCargoCleanCmd = retryForCompilerIssue[1].replace(
-                    /_/g,
-                    "-",
-                  )
-                  logger.info(
-                    `Running ${retryCargoCleanCmd} in ${
-                      options?.cwd ?? "the current directory"
-                    } before retrying the command due to a compiler error.`,
-                  )
-                  cp.execSync(retryCargoCleanCmd, { cwd: options?.cwd })
-                  resolve(new Retry("compilation error", retryCargoCleanCmd))
-                  return
                 }
 
                 if (
