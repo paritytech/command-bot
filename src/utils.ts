@@ -1,12 +1,17 @@
 import assert from "assert"
 import { differenceInMilliseconds } from "date-fns"
 import fs from "fs"
+import { globbyStream } from "globby"
 import ld from "lodash"
 import { MatrixClient } from "matrix-bot-sdk"
 import path from "path"
+import { promisify } from "util"
 
+import { ShellExecutor } from "./executor"
 import { Logger } from "./logger"
 import { ApiTask, CommandOutput, State } from "./types"
+
+const fsExists = promisify(fs.exists)
 
 export const getLines = function (str: string) {
   return str
@@ -110,7 +115,19 @@ export const getDeploymentLogsMessage = function (
 }
 
 export class Retry {
-  constructor(public context: "compilation error", public motive: string) {}
+  context: string
+  motive: string
+  stderr: string
+
+  constructor(options: {
+    context: "compilation error"
+    motive: string
+    stderr: string
+  }) {
+    this.context = options.context
+    this.motive = options.motive
+    this.stderr = options.stderr
+  }
 }
 
 export const displayError = function (e: Error) {
@@ -158,7 +175,10 @@ export const getSendMatrixResult = function (
         url,
       })
     } catch (error) {
-      logger.fatal(error?.body?.error, "Error when sending matrix message")
+      logger.fatal(
+        error?.body?.error,
+        "Caught error when sending matrix message",
+      )
     }
   }
 }
@@ -247,4 +267,60 @@ export const getParsedArgs = function (
   }
 
   return parsedArgs
+}
+
+export const cleanupProjects = async function (
+  executor: ShellExecutor,
+  projectsRoot: string,
+  {
+    includeDirs,
+    excludeDirs = [],
+  }: { includeDirs?: string[]; excludeDirs?: string[] } = {},
+) {
+  const results: CommandOutput[] = []
+
+  toNextProject: for await (const rawPath of globbyStream(
+    path.join(projectsRoot, "**", ".git"),
+    { onlyDirectories: true },
+  )) {
+    const p = rawPath.toString()
+
+    if (includeDirs !== undefined) {
+      if (
+        includeDirs.filter(function (includeDir) {
+          return p.startsWith(includeDir)
+        }).length === 0
+      ) {
+        continue toNextProject
+      }
+    }
+
+    for (const excludeDir of excludeDirs) {
+      if (p.startsWith(excludeDir)) {
+        continue toNextProject
+      }
+    }
+
+    const projectDir = path.dirname(p)
+
+    // The project's directory might have been deleted as a result of a previous
+    // cleanup step
+    if (!(await fsExists(projectDir))) {
+      continue
+    }
+
+    try {
+      results.push(
+        await executor(
+          "sh",
+          ["-c", "git add . && git reset --hard && git clean -xdf"],
+          { options: { cwd: projectDir } },
+        ),
+      )
+    } catch (error) {
+      results.push(error)
+    }
+  }
+
+  return results
 }

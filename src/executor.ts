@@ -10,6 +10,7 @@ import { getPostPullRequestResult, updateComment } from "./github"
 import { Logger } from "./logger"
 import { ApiTask, CommandOutput, PullRequestTask, State, Task } from "./types"
 import {
+  cleanupProjects,
   displayCommand,
   displayDuration,
   getDeploymentLogsMessage,
@@ -55,12 +56,13 @@ export type ShellExecutor = (
     shouldTrackProgress?: boolean
   },
 ) => Promise<CommandOutput>
-
 export const getShellExecutor = function ({
   logger,
+  projectsRoot,
   onChild,
 }: {
   logger: Logger
+  projectsRoot: string
   onChild?: (child: cp.ChildProcess) => void
 }): ShellExecutor {
   return function (
@@ -75,16 +77,25 @@ export const getShellExecutor = function ({
     } = {},
   ) {
     return new Promise(function (resolve) {
-      const execute = async function (retryMotive: string) {
+      const execute = async function (retries: Retry[]) {
         try {
+          const cwd = options?.cwd ?? process.cwd()
           const commandDisplayed = displayCommand({
             execPath,
             args,
             secretsToHide: secretsToHide ?? [],
           })
-          logger.info(
-            `${retryMotive ? "Retrying" : "Executing"} ${commandDisplayed}`,
-          )
+
+          const previousRetries = retries.slice(0, -1)
+          const retry: Retry | undefined = retries.slice(-1)[0]
+          if (retry === undefined) {
+            logger.info(`Executing ${commandDisplayed}`)
+          } else {
+            logger.info(
+              { previousRetries, retry },
+              `Retrying ${commandDisplayed}`,
+            )
+          }
 
           const child = cp.spawn(execPath, args, options)
           if (onChild) {
@@ -94,8 +105,8 @@ export const getShellExecutor = function ({
             resolve(error)
           })
 
-          let stdout = ""
-          let stderr = ""
+          let stdoutBuf = ""
+          let stderrBuf = ""
           const getStreamHandler = function (channel: "stdout" | "stderr") {
             return function (data: { toString: () => string }) {
               const str = redactSecrets(data.toString(), secretsToHide)
@@ -107,11 +118,11 @@ export const getShellExecutor = function ({
 
               switch (channel) {
                 case "stdout": {
-                  stdout += str
+                  stdoutBuf += str
                   break
                 }
                 case "stderr": {
-                  stderr += str
+                  stderrBuf += str
                   break
                 }
                 default: {
@@ -128,30 +139,99 @@ export const getShellExecutor = function ({
           const result = await new Promise<Retry | Error | string>(function (
             resolve,
           ) {
-            child.on("close", function (code) {
+            child.on("close", async function (exitCode) {
               try {
-                stdout = redactSecrets(stdout.trim(), secretsToHide)
-                stderr = redactSecrets(stderr.trim(), secretsToHide)
+                const stderr = redactSecrets(stderrBuf.trim(), secretsToHide)
 
-                if (code) {
+                if (exitCode) {
                   // https://github.com/rust-lang/rust/issues/51309
                   // Could happen due to lacking system constraints (we saw it
                   // happen due to out-of-memory)
                   if (stderr.includes("SIGKILL")) {
                     logger.fatal(
-                      "Compilation process was killed while executing",
+                      "Compilation was terminated due to SIGKILL (might have something to do with system resource constraints)",
                     )
                   } else if (stderr.includes("No space left on device")) {
-                    const cleanCmd =
-                      "git add . && git reset --hard && git clean -xdf"
-                    logger.info(
-                      `Running ${cleanCmd} in ${
-                        options?.cwd ?? "the current directory"
-                      } before retrying the command due to lack of space in the device.`,
-                    )
-                    cp.execSync(cleanCmd, { cwd: options?.cwd })
-                    resolve(new Retry("compilation error", cleanCmd))
-                    return
+                    if (cwd.startsWith(projectsRoot)) {
+                      const cleanupMotiveForOtherDirectories = `Cleanup for disk space for excluding ${cwd} from ${projectsRoot} root`
+                      const cleanupMotiveForThisDirectory = `Cleanup for disk space for including only ${cwd} from ${projectsRoot} root`
+
+                      const hasAttemptedCleanupForOtherDirectories =
+                        retries.find(function ({ motive }) {
+                          return motive === cleanupMotiveForOtherDirectories
+                        }) === undefined
+                      const hasAttemptedCleanupForThisDirectory =
+                        retries.find(function ({ motive }) {
+                          return motive === cleanupMotiveForThisDirectory
+                        }) === undefined
+
+                      if (
+                        hasAttemptedCleanupForOtherDirectories &&
+                        hasAttemptedCleanupForThisDirectory
+                      ) {
+                        logger.fatal(
+                          { previousRetries, retry },
+                          "Already tried and failed to recover from lack of disk space",
+                        )
+                      } else {
+                        logger.info(
+                          `Running disk cleanup before retrying the command "${commandDisplayed}" in "${cwd}" due to lack of space in the device.`,
+                        )
+
+                        const executor = getShellExecutor({
+                          logger,
+                          projectsRoot,
+                        })
+
+                        if (!hasAttemptedCleanupForOtherDirectories) {
+                          try {
+                            const otherDirectoriesResults =
+                              await cleanupProjects(executor, projectsRoot, {
+                                excludeDirs: [cwd],
+                              })
+                            if (otherDirectoriesResults.length) {
+                              resolve(
+                                new Retry({
+                                  context: "compilation error",
+                                  motive: cleanupMotiveForOtherDirectories,
+                                  stderr,
+                                }),
+                              )
+                              return
+                            }
+                          } catch (error) {
+                            logger.fatal(
+                              error,
+                              `Caught exception while trying to clean up project diretories from  "${projectsRoot}" excluding "${cwd}" `,
+                            )
+                          }
+                        }
+
+                        const directoryResults = await cleanupProjects(
+                          executor,
+                          projectsRoot,
+                          { includeDirs: [cwd] },
+                        )
+                        if (directoryResults.length) {
+                          resolve(
+                            new Retry({
+                              context: "compilation error",
+                              motive: cleanupMotiveForThisDirectory,
+                              stderr,
+                            }),
+                          )
+                          return
+                        } else {
+                          logger.fatal(
+                            `Expected to have found a project for "${cwd}" during cleanup for disk space`,
+                          )
+                        }
+                      }
+                    } else {
+                      logger.fatal(
+                        `Unable to recover from lack of disk space because the directory "${cwd}" is not included in the projects root (${projectsRoot}).`,
+                      )
+                    }
                   } else {
                     const retryForCompilerIssue = stderr.match(
                       /This is a known issue with the compiler. Run `([^`]+)`/,
@@ -160,30 +240,33 @@ export const getShellExecutor = function ({
                       const retryCargoCleanCmd =
                         retryForCompilerIssue[1].replace(/_/g, "-")
                       logger.info(
-                        `Running ${retryCargoCleanCmd} in ${
-                          options?.cwd ?? "the current directory"
-                        } before retrying the command due to a compiler error.`,
+                        `Running ${retryCargoCleanCmd} in ${cwd} before retrying the command due to a compiler error.`,
                       )
                       cp.execSync(retryCargoCleanCmd, { cwd: options?.cwd })
                       resolve(
-                        new Retry("compilation error", retryCargoCleanCmd),
+                        new Retry({
+                          context: "compilation error",
+                          motive: retryCargoCleanCmd,
+                          stderr,
+                        }),
                       )
                       return
                     }
                   }
+
+                  if (
+                    (allowedErrorCodes === undefined ||
+                      !allowedErrorCodes.includes(exitCode)) &&
+                    (testAllowedErrorMessage === undefined ||
+                      !testAllowedErrorMessage(stderr))
+                  ) {
+                    resolve(new Error(stderr))
+                    return
+                  }
                 }
 
-                if (
-                  code &&
-                  (allowedErrorCodes === undefined ||
-                    !allowedErrorCodes.includes(code)) &&
-                  (testAllowedErrorMessage === undefined ||
-                    !testAllowedErrorMessage(stderr))
-                ) {
-                  resolve(new Error(stderr))
-                } else {
-                  resolve(stdout || stderr)
-                }
+                const stdout = redactSecrets(stdoutBuf.trim(), secretsToHide)
+                resolve(stdout || stderr)
               } catch (error) {
                 resolve(error)
               }
@@ -192,14 +275,14 @@ export const getShellExecutor = function ({
 
           if (result instanceof Retry) {
             // Avoid recursion if it failed with the same error as before
-            if (result.motive === retryMotive) {
+            if (retry?.motive === result.motive) {
               resolve(
                 new Error(
-                  `Failed to recover from ${result.context}; stderr: ${stderr}`,
+                  `Failed to recover from ${result.context}; stderr: ${result.stderr}`,
                 ),
               )
             } else {
-              execute(result.motive)
+              execute(retries.concat(result))
             }
           } else {
             resolve(result)
@@ -209,7 +292,7 @@ export const getShellExecutor = function ({
         }
       }
 
-      execute("")
+      execute([])
     })
   }
 }
@@ -352,14 +435,22 @@ export const queue = async function ({
     | "getTaskId"
     | "parseTaskId"
     | "appName"
+    | "repositoryCloneDirectory"
   >
   registerHandle: RegisterHandle
 }) {
   let child: cp.ChildProcess | undefined = undefined
   let isAlive = true
   const { execPath, args, commandDisplay, repoPath } = taskData
-  const { deployment, logger, taskDb, getFetchEndpoint, getTaskId, appName } =
-    state
+  const {
+    deployment,
+    logger,
+    taskDb,
+    getFetchEndpoint,
+    getTaskId,
+    appName,
+    repositoryCloneDirectory,
+  } = state
   const { db } = taskDb
 
   let suffixMessage = getDeploymentLogsMessage(deployment)
@@ -460,6 +551,7 @@ export const queue = async function ({
 
         const run = getShellExecutor({
           logger,
+          projectsRoot: repositoryCloneDirectory,
           onChild: function (newChild) {
             child = newChild
           },
