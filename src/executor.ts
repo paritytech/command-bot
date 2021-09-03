@@ -3,6 +3,7 @@ import { Mutex } from "async-mutex"
 import cp from "child_process"
 import fs from "fs"
 import path from "path"
+import { promisify } from "util"
 
 import { getSortedTasks } from "src/db"
 
@@ -18,6 +19,8 @@ import {
   redactSecrets,
   Retry,
 } from "./utils"
+
+const cpExec = promisify(cp.exec)
 
 type RegisterHandleOptions = { terminate: () => Promise<void> }
 type RegisterHandle = (options: RegisterHandleOptions) => void
@@ -238,7 +241,7 @@ export const getShellExecutor = function ({
                       logger.info(
                         `Running ${retryCargoCleanCmd} in ${cwd} before retrying the command due to a compiler error.`,
                       )
-                      cp.execSync(retryCargoCleanCmd, { cwd: options?.cwd })
+                      await cpExec(retryCargoCleanCmd, { cwd })
                       resolve(
                         new Retry({
                           context: "compilation error",
