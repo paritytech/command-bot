@@ -1,7 +1,7 @@
 import assert from "assert"
 import { differenceInMilliseconds } from "date-fns"
 import fs from "fs"
-import { globbyStream } from "globby"
+import { globbyStream as expandGlob } from "globby"
 import ld from "lodash"
 import { MatrixClient } from "matrix-bot-sdk"
 import path from "path"
@@ -279,7 +279,7 @@ export const cleanupProjects = async function (
 ) {
   const results: CommandOutput[] = []
 
-  toNextProject: for await (const rawPath of globbyStream(
+  toNextProject: for await (const rawPath of expandGlob(
     path.join(projectsRoot, "**", ".git"),
     { onlyDirectories: true },
   )) {
@@ -288,7 +288,7 @@ export const cleanupProjects = async function (
     if (includeDirs !== undefined) {
       if (
         includeDirs.filter(function (includeDir) {
-          return p.startsWith(includeDir)
+          return isDirectoryOrSubdirectory(includeDir, p)
         }).length === 0
       ) {
         continue toNextProject
@@ -296,7 +296,7 @@ export const cleanupProjects = async function (
     }
 
     for (const excludeDir of excludeDirs) {
-      if (p.startsWith(excludeDir)) {
+      if (isDirectoryOrSubdirectory(excludeDir, p)) {
         continue toNextProject
       }
     }
@@ -323,4 +323,46 @@ export const cleanupProjects = async function (
   }
 
   return results
+}
+
+export const isDirectoryOrSubdirectory = function (
+  parent: string,
+  child: string,
+) {
+  if (arePathsEqual(parent, child)) {
+    return true
+  }
+
+  const relativePath = path.relative(parent, child)
+  if (
+    relativePath &&
+    !relativePath.startsWith("..") &&
+    !path.isAbsolute(relativePath)
+  ) {
+    return true
+  }
+
+  return false
+}
+
+export const arePathsEqual = function (a: string, b: string) {
+  return a === b || normalizePath(a) === normalizePath(b)
+}
+
+export const normalizePath = function normalizePath(v: string) {
+  for (const [pattern, replacement] of [
+    [/\\/g, "/"],
+    [/(\w):/, "/$1"],
+    [/(\w+)\/\.\.\/?/g, ""],
+    [/^\.\//, ""],
+    [/\/\.\//, "/"],
+    [/\/\.$/, ""],
+    [/\/$/, ""],
+  ] as const) {
+    while (pattern.test(v)) {
+      v = v.replace(pattern, replacement)
+    }
+  }
+
+  return v
 }
