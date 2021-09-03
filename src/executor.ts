@@ -184,26 +184,20 @@ export const getShellExecutor = function ({
                         })
 
                         if (!hasAttemptedCleanupForOtherDirectories) {
-                          try {
-                            const otherDirectoriesResults =
-                              await cleanupProjects(executor, projectsRoot, {
-                                excludeDirs: [cwd],
-                              })
-                            if (otherDirectoriesResults.length) {
-                              resolve(
-                                new Retry({
-                                  context: "compilation error",
-                                  motive: cleanupMotiveForOtherDirectories,
-                                  stderr,
-                                }),
-                              )
-                              return
-                            }
-                          } catch (error) {
-                            logger.fatal(
-                              error,
-                              `Caught exception while trying to clean up project diretories from  "${projectsRoot}" excluding "${cwd}" `,
+                          const otherDirectoriesResults = await cleanupProjects(
+                            executor,
+                            projectsRoot,
+                            { excludeDirs: [cwd] },
+                          )
+                          if (otherDirectoriesResults.length) {
+                            resolve(
+                              new Retry({
+                                context: "compilation error",
+                                motive: cleanupMotiveForOtherDirectories,
+                                stderr,
+                              }),
                             )
+                            return
                           }
                         }
 
