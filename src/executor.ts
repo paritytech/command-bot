@@ -189,6 +189,8 @@ export const getShellExecutor = function ({
                             projectsRoot,
                             { excludeDirs: [cwd] },
                           )
+                          // Relevant check because the current project might be
+                          // the only one we have available in this application.
                           if (otherDirectoriesResults.length) {
                             resolve(
                               new Retry({
