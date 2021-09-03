@@ -4,9 +4,13 @@ import fs from "fs"
 import ld from "lodash"
 import { MatrixClient } from "matrix-bot-sdk"
 import path from "path"
+import { promisify } from "util"
 
+import { ShellExecutor } from "./executor"
 import { Logger } from "./logger"
 import { ApiTask, CommandOutput, State } from "./types"
+
+const fsExists = promisify(fs.exists)
 
 export const getLines = function (str: string) {
   return str
@@ -71,7 +75,7 @@ export const displayCommand = function ({
 }
 
 export const millisecondsDelay = function (milliseconds: number) {
-  return new Promise(function (resolve) {
+  return new Promise<void>(function (resolve) {
     setTimeout(resolve, milliseconds)
   })
 }
@@ -110,7 +114,19 @@ export const getDeploymentLogsMessage = function (
 }
 
 export class Retry {
-  constructor(public context: "compilation error", public motive: string) {}
+  context: string
+  motive: string
+  stderr: string
+
+  constructor(options: {
+    context: "compilation error"
+    motive: string
+    stderr: string
+  }) {
+    this.context = options.context
+    this.motive = options.motive
+    this.stderr = options.stderr
+  }
 }
 
 export const displayError = function (e: Error) {
@@ -158,7 +174,10 @@ export const getSendMatrixResult = function (
         url,
       })
     } catch (error) {
-      logger.fatal(error?.body?.error, "Error when sending matrix message")
+      logger.fatal(
+        error?.body?.error,
+        "Caught error when sending matrix message",
+      )
     }
   }
 }
@@ -247,4 +266,116 @@ export const getParsedArgs = function (
   }
 
   return parsedArgs
+}
+
+const walkDirs: (dir: string) => AsyncGenerator<string> = async function* (
+  dir,
+) {
+  for await (const d of await fs.promises.opendir(dir)) {
+    if (!d.isDirectory()) {
+      continue
+    }
+
+    const fullPath = path.join(dir, d.name)
+    yield fullPath
+
+    yield* walkDirs(fullPath)
+  }
+}
+
+export const cleanupProjects = async function (
+  executor: ShellExecutor,
+  projectsRoot: string,
+  {
+    includeDirs,
+    excludeDirs = [],
+  }: { includeDirs?: string[]; excludeDirs?: string[] } = {},
+) {
+  const results: CommandOutput[] = []
+
+  toNextProject: for await (const p of walkDirs(projectsRoot)) {
+    if (!(await fsExists(path.join(p, ".git")))) {
+      continue
+    }
+
+    if (includeDirs !== undefined) {
+      if (
+        includeDirs.filter(function (includeDir) {
+          return isDirectoryOrSubdirectory(includeDir, p)
+        }).length === 0
+      ) {
+        continue toNextProject
+      }
+    }
+
+    for (const excludeDir of excludeDirs) {
+      if (isDirectoryOrSubdirectory(excludeDir, p)) {
+        continue toNextProject
+      }
+    }
+
+    const projectDir = path.dirname(p)
+
+    // The project's directory might have been deleted as a result of a previous
+    // cleanup step
+    if (!(await fsExists(projectDir))) {
+      continue
+    }
+
+    try {
+      results.push(
+        await executor(
+          "sh",
+          ["-c", "git add . && git reset --hard && git clean -xdf"],
+          { options: { cwd: projectDir } },
+        ),
+      )
+    } catch (error) {
+      results.push(error)
+    }
+  }
+
+  return results
+}
+
+export const isDirectoryOrSubdirectory = function (
+  parent: string,
+  child: string,
+) {
+  if (arePathsEqual(parent, child)) {
+    return true
+  }
+
+  const relativePath = path.relative(parent, child)
+  if (
+    relativePath &&
+    !relativePath.startsWith("..") &&
+    !path.isAbsolute(relativePath)
+  ) {
+    return true
+  }
+
+  return false
+}
+
+export const arePathsEqual = function (a: string, b: string) {
+  return a === b || normalizePath(a) === normalizePath(b)
+}
+
+export const normalizePath = function normalizePath(v: string) {
+  for (const [pattern, replacement] of [
+    [/\\/g, "/"],
+    [/(\w):/, "/$1"],
+    [/(\w+)\/\.\.\/?/g, ""],
+    [/^\.\//, ""],
+    [/\/\.\//, "/"],
+    [/\/\.$/, ""],
+    [/\/$/, ""],
+  ] as const) {
+    while (pattern.test(v)) {
+      v = v.replace(pattern, replacement)
+    }
+  }
+
+  return v
 }
