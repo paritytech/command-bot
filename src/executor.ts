@@ -156,8 +156,8 @@ export const getShellExecutor = function ({
                     )
                   } else if (stderr.includes("No space left on device")) {
                     if (cwd.startsWith(projectsRoot)) {
-                      const cleanupMotiveForOtherDirectories = `Cleanup for disk space for excluding ${cwd} from ${projectsRoot} root`
-                      const cleanupMotiveForThisDirectory = `Cleanup for disk space for including only ${cwd} from ${projectsRoot} root`
+                      const cleanupMotiveForOtherDirectories = `Cleanup for disk space for excluding "${cwd}" from "${projectsRoot}" root`
+                      const cleanupMotiveForThisDirectory = `Cleanup for disk space for including only "${cwd}" from "${projectsRoot}" root`
 
                       const hasAttemptedCleanupForOtherDirectories =
                         retries.find(function ({ motive }) {
@@ -228,7 +228,7 @@ export const getShellExecutor = function ({
                       }
                     } else {
                       logger.fatal(
-                        `Unable to recover from lack of disk space because the directory "${cwd}" is not included in the projects root (${projectsRoot}).`,
+                        `Unable to recover from lack of disk space because the directory "${cwd}" is not included in the projects root "${projectsRoot}"`,
                       )
                     }
                   } else {
@@ -239,7 +239,7 @@ export const getShellExecutor = function ({
                       const retryCargoCleanCmd =
                         retryForCompilerIssue[1].replace(/_/g, "-")
                       logger.info(
-                        `Running ${retryCargoCleanCmd} in ${cwd} before retrying the command due to a compiler error.`,
+                        `Running ${retryCargoCleanCmd} in "${cwd}" before retrying the command due to a compiler error.`,
                       )
                       await cpExec(retryCargoCleanCmd, { cwd })
                       resolve(
