@@ -51,18 +51,18 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "prettier": "prettier --loglevel silent **/*.{json,html}",
-    "eslint": "eslint --ext js,ts src",
-    "lint:eslint": "npm run eslint",
-    "lint:prettier": "npm run prettier -- --check",
+    "prettier": "prettier --loglevel silent '{*,**/*}.{json,html}'",
+    "eslint": "eslint '{*,**/*}.{js,ts}'",
+    "lint:eslint": "yarn eslint",
+    "lint:prettier": "yarn prettier --check",
     "lint:ts-prune": "ts-prune --error",
-    "lint": "npm run lint:eslint && npm run lint:prettier",
-    "fix:eslint": "npm run eslint -- --fix",
-    "fix:prettier": "npm run prettier -- --write",
-    "fix": "npm run fix:eslint && npm run fix:prettier",
+    "lint": "yarn lint:eslint && yarn lint:prettier && yarn lint:ts-prune",
+    "fix:eslint": "yarn eslint --fix",
+    "fix:prettier": "yarn prettier --write",
+    "fix": "yarn fix:eslint && yarn fix:prettier",
     "build": "rimraf ./build && ttsc --build",
     "start": "node ./build/main.js",
     "start:env": "node -r ./env/bot.js ./build/main.js",
-    "watch": "nodemon --watch src -e js,ts --exec \"npm run build && npm run start:env\""
+    "watch": "nodemon --watch src -e js,ts --exec \"yarn build && yarn start:env\""
   }
 }

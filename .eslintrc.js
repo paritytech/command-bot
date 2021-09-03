@@ -1,9 +1,5 @@
 module.exports = {
-  env: {
-    browser: true,
-    node: true,
-    jest: true,
-  },
+  env: { browser: true, node: true, jest: true },
   root: true,
   extends: ["eslint:recommended", "plugin:prettier/recommended"],
   parser: "@typescript-eslint/parser",
@@ -14,9 +10,9 @@ module.exports = {
     "import",
     "prettier",
   ],
-  ignorePatterns: [".eslintrc.js", "build/*", "env/*"],
+  ignorePatterns: ["build/*", "env/*", "data/*"],
   parserOptions: {
-    project: "./tsconfig.json",
+    project: "./tsconfig.lint.json",
     tsconfigRootDir: __dirname,
   },
   overrides: [
@@ -105,7 +101,5 @@ module.exports = {
     "@typescript-eslint/camelcase": "off",
     "@typescript-eslint/restrict-plus-operands": "error",
     "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-empty-interface": "off",
-    "@typescript-eslint/interface-name-prefix": "off",
   },
 }
