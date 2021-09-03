@@ -10,7 +10,7 @@ export type PullRequestParams = {
   pull_number: number
 }
 
-export type GitRef = {
+type GitRef = {
   contributor: string
   owner: string
   repo: string

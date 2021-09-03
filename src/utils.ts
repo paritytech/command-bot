@@ -215,7 +215,7 @@ export const displayDuration = function (start: Date, finish: Date) {
   return buf.slice(separator.length)
 }
 
-export const escapeHtml = function (str: string) {
+const escapeHtml = function (str: string) {
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -338,10 +338,7 @@ export const cleanupProjects = async function (
   return results
 }
 
-export const isDirectoryOrSubdirectory = function (
-  parent: string,
-  child: string,
-) {
+const isDirectoryOrSubdirectory = function (parent: string, child: string) {
   if (arePathsEqual(parent, child)) {
     return true
   }
@@ -358,11 +355,11 @@ export const isDirectoryOrSubdirectory = function (
   return false
 }
 
-export const arePathsEqual = function (a: string, b: string) {
+const arePathsEqual = function (a: string, b: string) {
   return a === b || normalizePath(a) === normalizePath(b)
 }
 
-export const normalizePath = function normalizePath(v: string) {
+const normalizePath = function normalizePath(v: string) {
   for (const [pattern, replacement] of [
     [/\\/g, "/"],
     [/(\w):/, "/$1"],

@@ -59,7 +59,7 @@ export type ShellExecutor = (
     shouldTrackProgress?: boolean
   },
 ) => Promise<CommandOutput>
-export const getShellExecutor = function ({
+const getShellExecutor = function ({
   logger,
   projectsRoot,
   onChild,
@@ -296,7 +296,7 @@ export const getShellExecutor = function ({
   }
 }
 
-export const prepareBranch = async function* (
+const prepareBranch = async function* (
   {
     repoPath,
     gitRef: { contributor, owner, repo, branch },
@@ -384,7 +384,7 @@ export const prepareBranch = async function* (
   ])
 }
 
-export const getQueueMessage = async function (
+const getQueueMessage = async function (
   state: Parameters<typeof getSortedTasks>[0],
   commandDisplay: string,
   version: string,
