@@ -1,7 +1,6 @@
 import assert from "assert"
 import { differenceInMilliseconds } from "date-fns"
 import fs from "fs"
-import { globbyStream as expandGlob } from "globby"
 import ld from "lodash"
 import { MatrixClient } from "matrix-bot-sdk"
 import path from "path"
@@ -76,7 +75,7 @@ export const displayCommand = function ({
 }
 
 export const millisecondsDelay = function (milliseconds: number) {
-  return new Promise(function (resolve) {
+  return new Promise<void>(function (resolve) {
     setTimeout(resolve, milliseconds)
   })
 }
@@ -269,6 +268,21 @@ export const getParsedArgs = function (
   return parsedArgs
 }
 
+const walkDirs: (dir: string) => AsyncGenerator<string> = async function* (
+  dir,
+) {
+  for await (const d of await fs.promises.opendir(dir)) {
+    if (!d.isDirectory()) {
+      continue
+    }
+
+    const fullPath = path.join(dir, d.name)
+    yield fullPath
+
+    yield* walkDirs(fullPath)
+  }
+}
+
 export const cleanupProjects = async function (
   executor: ShellExecutor,
   projectsRoot: string,
@@ -279,11 +293,10 @@ export const cleanupProjects = async function (
 ) {
   const results: CommandOutput[] = []
 
-  toNextProject: for await (const rawPath of expandGlob(
-    path.join(projectsRoot, "**", ".git"),
-    { onlyDirectories: true },
-  )) {
-    const p = rawPath.toString()
+  toNextProject: for await (const p of walkDirs(projectsRoot)) {
+    if (!(await fsExists(path.join(p, ".git")))) {
+      continue
+    }
 
     if (includeDirs !== undefined) {
       if (
