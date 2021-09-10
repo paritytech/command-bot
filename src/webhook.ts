@@ -220,6 +220,7 @@ export const getWebhooksHandlers = function (state: State) {
                 return getError(parsedArgs)
               }
 
+              const execPath = "cargo"
               const args = [
                 "run",
                 // "--quiet" should be kept so that the output doesn't get
@@ -232,7 +233,6 @@ export const getWebhooksHandlers = function (state: State) {
                 ...parsedArgs,
               ]
 
-              const execPath = "cargo"
               const taskData: PullRequestTask = {
                 ...prParams,
                 tag: "PullRequestTask",
