@@ -17,7 +17,7 @@
     "ajv": "^8.6.2",
     "async-mutex": "^0.3.1",
     "date-fns": "^2.22.1",
-    "level-rocksdb": "^4.0.0",
+    "level-rocksdb": "^5.0.0",
     "lodash": "^4.17.21",
     "matrix-bot-sdk": "^0.5.19",
     "probot": "^12.1.0",
