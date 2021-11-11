@@ -153,7 +153,7 @@ export const getPostPullRequestResult = function ({
       const { owner, repo, requester, pull_number, commandDisplay } = taskData
 
       const before = `
-@${requester} Results are ready for ${commandDisplay}
+@${requester} Results are ready for:\n\n  \`${commandDisplay}\`
 
 <details>
 <summary>Output</summary>
