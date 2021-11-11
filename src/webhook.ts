@@ -227,6 +227,7 @@ export const getWebhooksHandlers = function (state: State) {
                 // polluted with a bunch of compilation stuff; bear in mind the
                 // output is posted on Github issues which have limited
                 // character count
+                "--release",
                 "--quiet",
                 "--features=try-runtime",
                 "try-runtime",
