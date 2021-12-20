@@ -116,16 +116,16 @@ export const getDeploymentLogsMessage = function (
 export class Retry {
   context: string
   motive: string
-  stderr: string
+  error: string
 
   constructor(options: {
     context: "compilation error"
     motive: string
-    stderr: string
+    error: string
   }) {
     this.context = options.context
     this.motive = options.motive
-    this.stderr = options.stderr
+    this.error = options.error
   }
 }
 
@@ -375,4 +375,96 @@ const normalizePath = function normalizePath(v: string) {
   }
 
   return v
+}
+
+export const freeDiskSpace = async function ({
+  cwd,
+  projectsRoot,
+  logger,
+  executor,
+  error,
+  retries,
+  commandDisplayed,
+}: {
+  cwd: string | null
+  projectsRoot: string
+  logger: Logger
+  executor: ShellExecutor
+  error: string
+  retries: Retry[]
+  commandDisplayed: string | null
+}): Promise<Retry | undefined> {
+  if (cwd !== null && !cwd.startsWith(projectsRoot)) {
+    logger.fatal(
+      `Unable to recover from lack of disk space because the directory "${cwd}" is not included in the projects root "${projectsRoot}"`,
+    )
+    return
+  }
+
+  const cleanupMotiveForOtherDirectories = cwd
+    ? `Cleanup for disk space for excluding "${cwd}" from "${projectsRoot}" root`
+    : "Cleaning up all directories since no specific directory was filtered"
+  const cleanupMotiveForThisDirectory = cwd
+    ? `Cleanup for disk space for including only "${cwd}" from "${projectsRoot}" root`
+    : "Cleaning up all directories since no specific directory was filtered"
+
+  const hasAttemptedCleanupForOtherDirectories =
+    retries.find(function ({ motive }) {
+      return motive === cleanupMotiveForOtherDirectories
+    }) === undefined
+  const hasAttemptedCleanupForThisDirectory = cwd
+    ? retries.find(function ({ motive }) {
+        return motive === cleanupMotiveForThisDirectory
+      }) === undefined
+    : true
+
+  if (
+    hasAttemptedCleanupForOtherDirectories &&
+    hasAttemptedCleanupForThisDirectory
+  ) {
+    logger.fatal(
+      { retries },
+      "No approaches left to try out for recovering from disk space failure",
+    )
+  } else {
+    if (commandDisplayed) {
+      logger.info(
+        `Running disk cleanup before retrying the command "${commandDisplayed}" in "${cwd}" due to lack of disk space in the host.`,
+      )
+    }
+
+    if (!hasAttemptedCleanupForOtherDirectories) {
+      const otherDirectoriesResults = await cleanupProjects(
+        executor,
+        projectsRoot,
+        { excludeDirs: cwd ? [cwd] : [] },
+      )
+      // Relevant check because the current project might be
+      // the only one we have available in this application.
+      if (otherDirectoriesResults.length) {
+        return new Retry({
+          context: "compilation error",
+          motive: cleanupMotiveForOtherDirectories,
+          error,
+        })
+      }
+    }
+
+    if (cwd) {
+      const directoryResults = await cleanupProjects(executor, projectsRoot, {
+        includeDirs: [cwd],
+      })
+      if (directoryResults.length) {
+        return new Retry({
+          context: "compilation error",
+          motive: cleanupMotiveForThisDirectory,
+          error,
+        })
+      } else {
+        logger.fatal(
+          `Expected to have found a project for "${cwd}" during cleanup for disk space`,
+        )
+      }
+    }
+  }
 }

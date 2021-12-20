@@ -14,6 +14,7 @@ import {
   cleanupProjects,
   displayCommand,
   displayDuration,
+  freeDiskSpace,
   getDeploymentLogsMessage,
   getSendMatrixResult,
   redactSecrets,
@@ -59,15 +60,12 @@ export type ShellExecutor = (
     shouldTrackProgress?: boolean
   },
 ) => Promise<CommandOutput>
-const getShellExecutor = function ({
-  logger,
-  projectsRoot,
-  onChild,
-}: {
+const getShellExecutor = function (opts: {
   logger: Logger
   projectsRoot: string
   onChild?: (child: cp.ChildProcess) => void
 }): ShellExecutor {
+  const { logger, projectsRoot, onChild } = opts
   return function (
     execPath,
     args,
@@ -155,82 +153,15 @@ const getShellExecutor = function ({
                       "Compilation was terminated due to SIGKILL (might have something to do with system resource constraints)",
                     )
                   } else if (stderr.includes("No space left on device")) {
-                    if (cwd.startsWith(projectsRoot)) {
-                      const cleanupMotiveForOtherDirectories = `Cleanup for disk space for excluding "${cwd}" from "${projectsRoot}" root`
-                      const cleanupMotiveForThisDirectory = `Cleanup for disk space for including only "${cwd}" from "${projectsRoot}" root`
-
-                      const hasAttemptedCleanupForOtherDirectories =
-                        retries.find(function ({ motive }) {
-                          return motive === cleanupMotiveForOtherDirectories
-                        }) === undefined
-                      const hasAttemptedCleanupForThisDirectory =
-                        retries.find(function ({ motive }) {
-                          return motive === cleanupMotiveForThisDirectory
-                        }) === undefined
-
-                      if (
-                        hasAttemptedCleanupForOtherDirectories &&
-                        hasAttemptedCleanupForThisDirectory
-                      ) {
-                        logger.fatal(
-                          { previousRetries, retry },
-                          "Already tried and failed to recover from lack of disk space",
-                        )
-                      } else {
-                        logger.info(
-                          `Running disk cleanup before retrying the command "${commandDisplayed}" in "${cwd}" due to lack of space in the device.`,
-                        )
-
-                        const executor = getShellExecutor({
-                          logger,
-                          projectsRoot,
-                        })
-
-                        if (!hasAttemptedCleanupForOtherDirectories) {
-                          const otherDirectoriesResults = await cleanupProjects(
-                            executor,
-                            projectsRoot,
-                            { excludeDirs: [cwd] },
-                          )
-                          // Relevant check because the current project might be
-                          // the only one we have available in this application.
-                          if (otherDirectoriesResults.length) {
-                            resolve(
-                              new Retry({
-                                context: "compilation error",
-                                motive: cleanupMotiveForOtherDirectories,
-                                stderr,
-                              }),
-                            )
-                            return
-                          }
-                        }
-
-                        const directoryResults = await cleanupProjects(
-                          executor,
-                          projectsRoot,
-                          { includeDirs: [cwd] },
-                        )
-                        if (directoryResults.length) {
-                          resolve(
-                            new Retry({
-                              context: "compilation error",
-                              motive: cleanupMotiveForThisDirectory,
-                              stderr,
-                            }),
-                          )
-                          return
-                        } else {
-                          logger.fatal(
-                            `Expected to have found a project for "${cwd}" during cleanup for disk space`,
-                          )
-                        }
-                      }
-                    } else {
-                      logger.fatal(
-                        `Unable to recover from lack of disk space because the directory "${cwd}" is not included in the projects root "${projectsRoot}"`,
-                      )
-                    }
+                    const retry = await freeDiskSpace({
+                      retries,
+                      cwd,
+                      projectsRoot,
+                      logger,
+                      executor: getShellExecutor(opts),
+                      commandDisplayed,
+                      error: stderr,
+                    })
                   } else {
                     const retryForCompilerIssue = stderr.match(
                       /This is a known issue with the compiler. Run `([^`]+)`/,
@@ -246,21 +177,17 @@ const getShellExecutor = function ({
                         new Retry({
                           context: "compilation error",
                           motive: retryCargoCleanCmd,
-                          stderr,
+                          error: stderr,
                         }),
                       )
-                      return
+                    } else if (
+                      (allowedErrorCodes === undefined ||
+                        !allowedErrorCodes.includes(exitCode)) &&
+                      (testAllowedErrorMessage === undefined ||
+                        !testAllowedErrorMessage(stderr))
+                    ) {
+                      resolve(new Error(stderr))
                     }
-                  }
-
-                  if (
-                    (allowedErrorCodes === undefined ||
-                      !allowedErrorCodes.includes(exitCode)) &&
-                    (testAllowedErrorMessage === undefined ||
-                      !testAllowedErrorMessage(stderr))
-                  ) {
-                    resolve(new Error(stderr))
-                    return
                   }
                 }
 
@@ -277,7 +204,7 @@ const getShellExecutor = function ({
             if (retry?.motive === result.motive) {
               resolve(
                 new Error(
-                  `Failed to recover from ${result.context}; stderr: ${result.stderr}`,
+                  `Failed to recover from ${result.context}; stderr: ${result.error}`,
                 ),
               )
             } else {

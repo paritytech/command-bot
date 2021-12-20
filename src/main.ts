@@ -221,7 +221,7 @@ const serverSetup = async function (
   logger.info("Probot has started!")
 }
 
-const main = async function () {
+const start = async function () {
   let deployment: State["deployment"] = undefined
   if (process.env.IS_DEPLOYMENT === "true") {
     assert(process.env.DEPLOYMENT_ENVIRONMENT)
@@ -287,6 +287,7 @@ const main = async function () {
       ? {}
       : { log: probotLogger.child({ name: "probot" }) }),
   })
+
   const server = new Server({
     Probot: bot,
     ...(probotLogger === undefined
@@ -302,8 +303,18 @@ const main = async function () {
       deployment,
     })
   })
-
   server.start()
+}
+
+const main = async function() {
+  while (true) {
+    try {
+      await start()
+    } catch (error) {
+      if (error.toString().includes("No space left on device")) {
+      }
+    }
+  }
 }
 
 main()
