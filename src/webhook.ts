@@ -223,6 +223,9 @@ export const getWebhooksHandlers = function (state: State) {
               const execPath = "cargo"
               const args = [
                 "run",
+                // application requirement: always run the command in release mode
+                // see https://github.com/paritytech/try-runtime-bot/issues/26#issue-1049555966
+                "--release",
                 // "--quiet" should be kept so that the output doesn't get
                 // polluted with a bunch of compilation stuff; bear in mind the
                 // output is posted on Github issues which have limited
