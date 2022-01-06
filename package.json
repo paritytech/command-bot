@@ -26,7 +26,7 @@
   "devDependencies": {
     "@octokit/auth-app": "^3.5.3",
     "@types/abstract-leveldown": "^5.0.2",
-    "@types/levelup": "^4.3.3",
+    "@types/levelup": "^5.1.0",
     "@types/lodash": "^4.14.171",
     "@types/rocksdb": "^3.0.1",
     "@types/shelljs": "^0.8.9",
