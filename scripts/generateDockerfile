@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -u
+
 RUSTUP_HOME=/usr/local/rustup
 CARGO_HOME=/usr/local/cargo
 PRE_COMMIT_BUILD_DEPS="gcc python3-dev libc-dev python3-pip"
@@ -10,10 +12,9 @@ SUBSTRATE_HOST=x86_64-unknown-linux-gnu
 APT_INSTALL="apt install --assume-yes --quiet --no-install-recommends"
 APP_DIR="/app"
 NODE_USER="node"
+BASE_IMAGE="docker.io/node:16.13.2-buster-slim"
 
 IFS='' read -r -d '' common <<EOF
-FROM docker.io/node:16.13.2-buster-slim
-
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN yarn --version
@@ -28,6 +29,8 @@ EOF
 case "$1" in
   ci)
 IFS='' read -r -d '' ci << EOF
+FROM $BASE_IMAGE
+
 $common
 
 # CI pipeline utilities
@@ -46,12 +49,14 @@ EOF
 
   app)
 IFS='' read -r -d '' app << EOF
-$common
+FROM $BASE_IMAGE
 
 # Those values are expected to be set from CI.
 ARG REPO
 ENV REPO=\$REPO
 RUN if [ ! "\$REPO" ]; then exit 1; fi
+
+$common
 
 # Rust is needed for running the bot's commands
 RUN $APT_INSTALL $RUST_BUILD_DEPS && apt-mark auto $RUST_BUILD_DEPS
@@ -81,13 +86,14 @@ RUN mkdir $APP_DIR && \
 
 RUN apt-get autoremove -y
 
-# gcc & libc are needed for the 'cc' linker for Rust
-# clang and libclang are needed for building RocksDB
-# libssl-dev, libudev-dev and pkg-config are needed for Substrate
+# Those dependencies are needed to build the Substrate & Polkadot at runtime due
+# to C/C++ dependencies e.g. jemalloc, RocksDB, etc.
 RUN $APT_INSTALL \
-  gcc libc-dev libssl-dev libudev-dev pkg-config \
-  clang libclang-dev && \
+  gcc libc-dev libssl-dev libudev-dev pkg-config build-essential clang libclang-dev && \
   cc --version && \
+  gcc --version && \
+  g++ --version && \
+  make --version && \
   clang --version
 
 WORKDIR $APP_DIR

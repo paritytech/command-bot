@@ -228,7 +228,7 @@ const escapeHtml = function (str: string) {
 const optionPrefixExpression = /^-[^=\s]+[=\s]*/
 
 // This expression catches the following forms: ws://foo, wss://foo, etc.
-const uriPrefixExpression = /^\w+:\/\//
+const uriPrefixExpression = /^ws\w*:\/\//
 
 export const getParsedArgs = function (
   nodesAddresses: State["nodesAddresses"],
@@ -244,11 +244,14 @@ export const getParsedArgs = function (
     const { argPrefix, arg } =
       optionPrefix === null
         ? { argPrefix: "", arg: rawArg }
-        : { argPrefix: optionPrefix[0], arg: rawArg.slice(optionPrefix.length) }
+        : {
+            argPrefix: optionPrefix[0],
+            arg: rawArg.slice(optionPrefix[0].length),
+          }
 
     const uriPrefixMatch = uriPrefixExpression.exec(arg)
     if (uriPrefixMatch === null) {
-      parsedArgs.push(arg)
+      parsedArgs.push(rawArg)
       continue
     }
     const [uriPrefix] = uriPrefixMatch
@@ -265,7 +268,7 @@ export const getParsedArgs = function (
       return `${invalidNodeAddressExplanation}. Nodes are referred to by name. No node named "${node}" is available. ${nodeOptionsDisplay}`
     }
 
-    parsedArgs.push(`${argPrefix}${uriPrefix}${nodeAddress}`)
+    parsedArgs.push(`${argPrefix}${nodeAddress}`)
   }
 
   return parsedArgs

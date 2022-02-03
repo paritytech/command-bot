@@ -419,7 +419,7 @@ ${JSON.stringify(value, null, 2)}
     "")}`
   }
 
-  return `Executing ${commandDisplay}`
+  return `\nExecuting:\n\n\`${commandDisplay}\``
 }
 
 const mutex = new Mutex()
@@ -461,10 +461,10 @@ export const queue = async function ({
   let suffixMessage = getDeploymentLogsMessage(deployment)
   if (!fs.existsSync(repoPath)) {
     suffixMessage +=
-      "\nNote: project will be cloned for the first time, so all dependencies will be compiled from scratch; this might take a long time"
+      "\n**Note:** project will be cloned for the first time, so all dependencies will be compiled from scratch; this might take a long time"
   } else if (!fs.existsSync(path.join(repoPath, "target"))) {
     suffixMessage +=
-      '\nNote: "target" directory does not exist, so all dependencies will be compiled from scratch; this might take a long time'
+      '\n**Note:** "target" directory does not exist, so all dependencies will be compiled from scratch; this might take a long time'
   }
 
   const taskId = getTaskId()
