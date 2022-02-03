@@ -164,7 +164,9 @@ export const getPostPullRequestResult = function ({
       const after = `
 \`\`\`
 
-</details>`
+</details>
+
+`
 
       let resultDisplay =
         typeof result === "string" ? result : displayError(result)
@@ -173,18 +175,18 @@ export const getPostPullRequestResult = function ({
         before.length + resultDisplay.length + after.length >
         githubCommentCharacterLimit
       ) {
-        truncateMessageWarning = `\nThe command's output was too big to be fully displayed. Please go to the logs for the full output. ${getDeploymentLogsMessage(
+        truncateMessageWarning = `\nThe command's output was too big to be fully displayed. ${getDeploymentLogsMessage(
           deployment,
-        )}`
+        )}.`
         const truncationIndicator = "[truncated]..."
-        resultDisplay = `${truncationIndicator}${resultDisplay.slice(
+        resultDisplay = `${resultDisplay.slice(
           0,
           githubCommentCharacterLimit -
             (before.length +
               truncationIndicator.length +
               after.length +
               truncateMessageWarning.length),
-        )}`
+        )}${truncationIndicator}`
       } else {
         truncateMessageWarning = ""
       }
