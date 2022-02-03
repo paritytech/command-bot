@@ -10,7 +10,7 @@ SUBSTRATE_HOST=x86_64-unknown-linux-gnu
 APT_INSTALL="apt install --assume-yes --quiet --no-install-recommends"
 
 IFS='' read -r -d '' common <<EOF
-FROM docker.io/node:16-buster-slim
+FROM docker.io/node:16.13.2-buster-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
