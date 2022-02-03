@@ -1,10 +1,10 @@
 import { RequestError } from "@octokit/request-error"
-import { Octokit } from "@octokit/rest"
 import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types"
 
 import { Logger } from "./logger"
 import {
   CommandOutput,
+  Octokit,
   PullRequestParams,
   PullRequestTask,
   State,

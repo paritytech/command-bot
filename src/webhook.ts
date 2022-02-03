@@ -1,6 +1,4 @@
-import { Octokit } from "@octokit/rest"
-import { EmitterWebhookEvent as WebhookEvent } from "@octokit/webhooks"
-import { EmitterWebhookEventName as WebhookEvents } from "@octokit/webhooks/dist-types/types"
+import { IssueCommentCreatedEvent } from "@octokit/webhooks-types/schema"
 import { Mutex } from "async-mutex"
 import path from "path"
 import { Probot } from "probot"
@@ -24,14 +22,21 @@ import {
   updateComment,
 } from "./github"
 import { Logger } from "./logger"
-import { PullRequestError, PullRequestTask, State } from "./types"
+import {
+  PullRequestError,
+  PullRequestTask,
+  State,
+  WebhookEvents,
+} from "./types"
 import { displayCommand, getCommand, getLines, getParsedArgs } from "./utils"
 
-type WebhookHandler<E extends WebhookEvents> = (
-  event: {
-    octokit: ExtendedOctokit
-  } & WebhookEvent<E>,
-) => Promise<PullRequestError | void> | PullRequestError | void
+type WebhookEventPayload<E extends WebhookEvents> =
+  E extends "issue_comment.created" ? IssueCommentCreatedEvent : never
+
+export type WebhookHandler<E extends WebhookEvents> = (
+  octokit: ExtendedOctokit,
+  event: WebhookEventPayload<E>,
+) => Promise<PullRequestError | void>
 
 export const setupEvent = function <E extends WebhookEvents>(
   bot: Probot,
@@ -39,17 +44,18 @@ export const setupEvent = function <E extends WebhookEvents>(
   handler: WebhookHandler<E>,
   logger: Logger,
 ) {
-  bot.on(event, async function (data) {
-    const installationId: number | undefined = (data.payload as any)
-      .installation?.id
-    const octokit = getOctokit(
-      await (bot.auth as (installationId?: number) => Promise<Octokit>)(
-        installationId,
-      ),
-    )
+  bot.on(event, async function (event) {
+    const installationId: number | undefined =
+      "installation" in event.payload
+        ? event.payload.installation?.id
+        : undefined
+    const octokit = getOctokit(await bot.auth(installationId))
 
     try {
-      const result = await handler({ ...data, octokit })
+      const result = await handler(
+        octokit,
+        event.payload as WebhookEventPayload<E>,
+      )
       if (result instanceof PullRequestError) {
         const {
           params: { pull_number, ...params },
@@ -110,7 +116,7 @@ export const getWebhooksHandlers = function (state: State) {
   }
 
   const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> =
-    function ({ payload, octokit }) {
+    function (octokit, payload) {
       // Note: async-mutex implements a "fair mutex" which means requests will be
       // queued in the same order as they're received; if changing to a different
       // library then verify that this aspect is maintained.
@@ -120,8 +126,7 @@ export const getWebhooksHandlers = function (state: State) {
 
         if (
           !requester ||
-          // eslint-disable-next-line no-prototype-builtins
-          !issue.hasOwnProperty("pull_request") ||
+          !("pull_request" in issue) ||
           payload.action !== "created" ||
           comment.user?.type !== "User"
         ) {

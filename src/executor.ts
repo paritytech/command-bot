@@ -1,4 +1,3 @@
-import { Octokit } from "@octokit/rest"
 import { Mutex } from "async-mutex"
 import cp from "child_process"
 import fs from "fs"
@@ -9,7 +8,14 @@ import { getSortedTasks } from "src/db"
 
 import { getPostPullRequestResult, updateComment } from "./github"
 import { Logger } from "./logger"
-import { ApiTask, CommandOutput, PullRequestTask, State, Task } from "./types"
+import {
+  ApiTask,
+  CommandOutput,
+  Octokit,
+  PullRequestTask,
+  State,
+  Task,
+} from "./types"
 import {
   cleanupProjects,
   displayCommand,
