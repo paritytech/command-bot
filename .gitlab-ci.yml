@@ -56,12 +56,6 @@ lint:
   <<: *on-pr-and-master
   stage: lint
   script:
-    - yarn lint
-
-pre_commit:
-  <<: *on-pr-and-master
-  stage: lint
-  script:
     - pre-commit run --color=always --all
 
 #### App deployment
