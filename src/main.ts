@@ -42,7 +42,7 @@ const serverSetup = async function (
     deployment: State["deployment"]
   },
 ) {
-  const logger = new Logger({ name: "app" })
+  const logger = new Logger({ name: "try-runtime-bot" })
 
   const version = new Date().toISOString()
 
@@ -270,7 +270,7 @@ const main = async function () {
   switch (process.env.LOG_FORMAT) {
     case "json": {
       probotLogger = getLog({
-        level: "error",
+        level: "info",
         logFormat: "json",
         logLevelInString: true,
         logMessageKey: "msg",
@@ -282,7 +282,7 @@ const main = async function () {
     appId,
     privateKey,
     secret: webhookSecret,
-    logLevel: "error",
+    logLevel: "info",
     ...(probotLogger === undefined
       ? {}
       : { log: probotLogger.child({ name: "probot" }) }),

@@ -6,19 +6,20 @@ export class Logger {
       case "json": {
         const base = { level, name: this.options.name, context }
 
-        // This structure is aligned with Probot's pino format for JSON logging
-        let logEntry: {
+        // This structure is aligned with Probot's pino output format for JSON
+        const logEntry: {
           level: string
           name: string
           msg: string
           stack?: string
           context?: string
-        }
-        if (item instanceof Error) {
-          logEntry = { ...base, stack: item.stack, msg: item.toString() }
-        } else {
-          logEntry = { ...base, msg: item }
-        }
+        } = (function () {
+          if (item instanceof Error) {
+            return { ...base, stack: item.stack, msg: item.toString() }
+          } else {
+            return { ...base, msg: item }
+          }
+        })()
 
         console.log(JSON.stringify(logEntry))
         break
