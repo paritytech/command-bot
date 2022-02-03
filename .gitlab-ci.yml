@@ -64,12 +64,6 @@ pre_commit:
   script:
     - pre-commit run --color=always --all
 
-build_bot:
-  <<: *on-pr-and-master
-  stage: after_lint
-  script:
-    - yarn build
-
 #### App deployment
 
 .kubernetes: &kubernetes
