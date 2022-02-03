@@ -419,7 +419,7 @@ ${JSON.stringify(value, null, 2)}
     "")}`
   }
 
-  return `\nExecuting:\n\n\`$ ${commandDisplay}\`
+  return `\nExecuting:\n\n\`${commandDisplay}\``
 }
 
 const mutex = new Mutex()
