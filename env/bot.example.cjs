@@ -1,4 +1,4 @@
-// Set the secrets and then rename this file to bot.js (it's ignored by default)
+// Set the secrets and then rename this file to bot.cjs (it's ignored by default)
 
 const fs = require("fs")
 const path = require("path")

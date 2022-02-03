@@ -12,7 +12,7 @@ import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db"
 
 import { setupApi } from "./api"
 import { requeueUnterminated } from "./executor"
-import { Logger } from "./logger"
+import { Logger, LoggingLevels } from "./logger"
 import { State } from "./types"
 import { ensureDir, initDatabaseDir, removeDir } from "./utils"
 import { getWebhooksHandlers, setupEvent } from "./webhook"
@@ -34,15 +34,20 @@ const serverSetup = async function (
     clientSecret,
     privateKey,
     deployment,
+    logging,
   }: {
     appId: number
     clientId: string
     clientSecret: string
     privateKey: string
     deployment: State["deployment"]
+    logging: { minLogLevel: LoggingLevels }
   },
 ) {
-  const logger = new Logger({ name: "app" })
+  const logger = new Logger({
+    name: "try-runtime-bot",
+    minLogLevel: logging.minLogLevel,
+  })
 
   const version = new Date().toISOString()
 
@@ -270,7 +275,7 @@ const main = async function () {
   switch (process.env.LOG_FORMAT) {
     case "json": {
       probotLogger = getLog({
-        level: "error",
+        level: "info",
         logFormat: "json",
         logLevelInString: true,
         logMessageKey: "msg",
@@ -282,7 +287,7 @@ const main = async function () {
     appId,
     privateKey,
     secret: webhookSecret,
-    logLevel: "error",
+    logLevel: "info",
     ...(probotLogger === undefined
       ? {}
       : { log: probotLogger.child({ name: "probot" }) }),
@@ -293,6 +298,24 @@ const main = async function () {
       ? {}
       : { log: probotLogger.child({ name: "server" }) }),
   })
+
+  const minLogLevel = (function () {
+    const value = process.env.MIN_LOG_LEVEL
+    switch (value) {
+      case undefined: {
+        return "info"
+      }
+      case "debug":
+      case "info":
+      case "error":
+      case "fatal": {
+        return value
+      }
+      default: {
+        throw new Error(`Invalid log level ${value}`)
+      }
+    }
+  })()
   await server.load(function (bot: Probot) {
     return serverSetup(bot, server, {
       appId,
@@ -300,6 +323,7 @@ const main = async function () {
       clientSecret,
       privateKey,
       deployment,
+      logging: { minLogLevel },
     })
   })
 

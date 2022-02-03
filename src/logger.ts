@@ -1,24 +1,57 @@
-export class Logger {
-  constructor(public options: { name: string }) {}
+enum LoggingLevel {
+  debug,
+  info,
+  error,
+  fatal,
+}
+export type LoggingLevels = keyof typeof LoggingLevel
 
-  private logToConsole(level: "fatal" | "info", item: any, context?: string) {
+export class Logger {
+  constructor(
+    public options: {
+      name: string
+      minLogLevel: LoggingLevels
+      context?: Record<string, any>
+    },
+  ) {}
+
+  child(context: Record<string, any>) {
+    return new Logger({
+      ...this.options,
+      context: { ...this.options.context, ...context },
+    })
+  }
+
+  private log(level: LoggingLevels, item: any, context?: string) {
+    if (LoggingLevel[level] < LoggingLevel[this.options.minLogLevel]) {
+      return
+    }
+
     switch (process.env.LOG_FORMAT) {
       case "json": {
-        const base = { level, name: this.options.name, context }
+        const base = {
+          level,
+          name: this.options.name,
+          context:
+            this.options.context === undefined
+              ? context
+              : { ...this.options.context, context },
+        }
 
-        // This structure is aligned with Probot's pino format for JSON logging
-        let logEntry: {
+        // This structure is aligned with Probot's pino output format for JSON
+        const logEntry: {
           level: string
           name: string
           msg: string
           stack?: string
-          context?: string
-        }
-        if (item instanceof Error) {
-          logEntry = { ...base, stack: item.stack, msg: item.toString() }
-        } else {
-          logEntry = { ...base, msg: item }
-        }
+          context?: any
+        } = (function () {
+          if (item instanceof Error) {
+            return { ...base, stack: item.stack, msg: item.toString() }
+          } else {
+            return { ...base, msg: item }
+          }
+        })()
 
         console.log(JSON.stringify(logEntry))
         break
@@ -36,11 +69,13 @@ export class Logger {
     }
   }
 
-  info(msg: any, context?: string) {
-    return this.logToConsole("info", msg, context)
+  private loggerCallback(level: LoggingLevels) {
+    return (msg: any, context?: string) => {
+      return this.log(level, msg, context)
+    }
   }
-
-  fatal(err: any, context?: string) {
-    return this.logToConsole("fatal", err, context)
-  }
+  info = this.loggerCallback("info")
+  error = this.loggerCallback("error")
+  fatal = this.loggerCallback("fatal")
+  debug = this.loggerCallback("debug")
 }

@@ -1,3 +1,4 @@
+import { EmitterWebhookEventName } from "@octokit/webhooks/dist-types/types"
 import { MatrixClient } from "matrix-bot-sdk"
 import { Probot } from "probot"
 
@@ -82,3 +83,10 @@ export class PullRequestError {
 }
 
 export type GetCommandOptions = { baseEnv: Record<string, string> }
+
+export type Octokit = Awaited<ReturnType<Probot["auth"]>>
+
+export type WebhookEvents = Extract<
+  EmitterWebhookEventName,
+  "issue_comment.created"
+>
