@@ -1,7 +1,18 @@
-type LoggingLevel = "debug" | "info" | "error" | "fatal"
+enum LoggingLevel {
+  debug,
+  info,
+  error,
+  fatal,
+}
+export type LoggingLevels = keyof typeof LoggingLevel
+
 export class Logger {
   constructor(
-    public options: { name: string; context?: Record<string, any> },
+    public options: {
+      name: string
+      minLogLevel: LoggingLevels
+      context?: Record<string, any>
+    },
   ) {}
 
   child(context: Record<string, any>) {
@@ -11,7 +22,11 @@ export class Logger {
     })
   }
 
-  private log(level: LoggingLevel, item: any, context?: string) {
+  private log(level: LoggingLevels, item: any, context?: string) {
+    if (LoggingLevel[level] < LoggingLevel[this.options.minLogLevel]) {
+      return
+    }
+
     switch (process.env.LOG_FORMAT) {
       case "json": {
         const base = {
@@ -54,7 +69,7 @@ export class Logger {
     }
   }
 
-  private loggerCallback(level: LoggingLevel) {
+  private loggerCallback(level: LoggingLevels) {
     return (msg: any, context?: string) => {
       return this.log(level, msg, context)
     }
