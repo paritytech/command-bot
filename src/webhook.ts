@@ -34,17 +34,20 @@ type WebhookEventPayload<E extends WebhookEvents> =
   E extends "issue_comment.created" ? IssueCommentCreatedEvent : never
 
 type WebhookHandler<E extends WebhookEvents> = (
+  logger: Logger,
   octokit: ExtendedOctokit,
   event: WebhookEventPayload<E>,
 ) => Promise<PullRequestError | void>
 
 export const setupEvent = function <E extends WebhookEvents>(
   bot: Probot,
-  event: E,
+  eventName: E,
   handler: WebhookHandler<E>,
   logger: Logger,
 ) {
-  bot.on(event, async function (event) {
+  bot.on(eventName, async function (event) {
+    logger.debug(event, `Got event for ${eventName}`)
+
     const installationId: number | undefined =
       "installation" in event.payload
         ? event.payload.installation?.id
@@ -53,6 +56,7 @@ export const setupEvent = function <E extends WebhookEvents>(
 
     try {
       const result = await handler(
+        logger.child({ event: eventName, eventId: event.id }),
         octokit,
         event.payload as WebhookEventPayload<E>,
       )
@@ -116,7 +120,7 @@ export const getWebhooksHandlers = function (state: State) {
   }
 
   const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> =
-    function (octokit, payload) {
+    function (eventName, octokit, payload) {
       // Note: async-mutex implements a "fair mutex" which means requests will be
       // queued in the same order as they're received; if changing to a different
       // library then verify that this aspect is maintained.
@@ -124,12 +128,32 @@ export const getWebhooksHandlers = function (state: State) {
         const { issue, comment, repository, installation } = payload
         const requester = comment.user?.login
 
-        if (
-          !requester ||
-          !("pull_request" in issue) ||
-          payload.action !== "created" ||
-          comment.user?.type !== "User"
-        ) {
+        if (!("pull_request" in issue)) {
+          logger.debug(
+            payload,
+            `Skipping payload in ${eventName} because it's not from a pull request`,
+          )
+          return
+        }
+
+        if (!requester) {
+          logger.debug(payload, "Skipping payload because it has no requester")
+          return
+        }
+
+        if (payload.action !== "created") {
+          logger.debug(
+            payload,
+            "Skipping payload because it's not for created comments",
+          )
+          return
+        }
+
+        if (comment.user?.type !== "User") {
+          logger.debug(
+            payload,
+            `Skipping payload because comment.user.type (${comment.user?.type}) is not "User"`,
+          )
           return
         }
 

@@ -1,10 +1,27 @@
+type LoggingLevel = "debug" | "info" | "error" | "fatal"
 export class Logger {
-  constructor(public options: { name: string }) {}
+  constructor(
+    public options: { name: string; context?: Record<string, any> },
+  ) {}
 
-  private logToConsole(level: "fatal" | "info", item: any, context?: string) {
+  child(context: Record<string, any>) {
+    return new Logger({
+      ...this.options,
+      context: { ...this.options.context, ...context },
+    })
+  }
+
+  private log(level: LoggingLevel, item: any, context?: string) {
     switch (process.env.LOG_FORMAT) {
       case "json": {
-        const base = { level, name: this.options.name, context }
+        const base = {
+          level,
+          name: this.options.name,
+          context:
+            this.options.context === undefined
+              ? context
+              : { ...this.options.context, context },
+        }
 
         // This structure is aligned with Probot's pino output format for JSON
         const logEntry: {
@@ -12,7 +29,7 @@ export class Logger {
           name: string
           msg: string
           stack?: string
-          context?: string
+          context?: any
         } = (function () {
           if (item instanceof Error) {
             return { ...base, stack: item.stack, msg: item.toString() }
@@ -37,11 +54,13 @@ export class Logger {
     }
   }
 
-  info(msg: any, context?: string) {
-    return this.logToConsole("info", msg, context)
+  private loggerCallback(level: LoggingLevel) {
+    return (msg: any, context?: string) => {
+      return this.log(level, msg, context)
+    }
   }
-
-  fatal(err: any, context?: string) {
-    return this.logToConsole("fatal", err, context)
-  }
+  info = this.loggerCallback("info")
+  error = this.loggerCallback("error")
+  fatal = this.loggerCallback("fatal")
+  debug = this.loggerCallback("debug")
 }
