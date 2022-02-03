@@ -7,7 +7,7 @@
     "noFallthroughCasesInSwitch": true,
     "allowJs": true,
     "moduleResolution": "node",
-    "module": "commonjs",
+    "module": "esnext",
     "target": "ES2021", // Node.js LTS 16
     "lib": ["ES2021"], // Node.js LTS 16
     "strict": true,
@@ -17,13 +17,10 @@
     "allowSyntheticDefaultImports": true,
     "useUnknownInCatchVariables": false,
     "types": ["node"],
-    "typeRoots": ["./node_modules/@types", "./src"],
-    "plugins": [
-      {
-        "transform": "@zerollup/ts-transform-paths",
-        "tryLoadJs": true
-      }
-    ]
+    "typeRoots": ["./node_modules/@types", "./src"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  "ts-node": {
+    "files": true // This makes ts-node able to find the src/index.d.ts file
+  }
 }

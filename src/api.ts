@@ -1,7 +1,7 @@
 import Ajv from "ajv"
 import bodyParser from "body-parser"
 import { NextFunction, Response } from "express"
-import { NotFoundError } from "level-errors"
+import LevelErrors from "level-errors"
 import path from "path"
 import { Server } from "probot"
 
@@ -72,10 +72,10 @@ export const setupApi = function (server: Server, state: State) {
         try {
           matrixRoom = await accessDb.db.get(token)
           if (!matrixRoom) {
-            throw new NotFoundError("Not found")
+            throw new LevelErrors.NotFoundError("Not found")
           }
         } catch (error) {
-          if (error instanceof NotFoundError) {
+          if (error instanceof LevelErrors.NotFoundError) {
             return err(res, next, 404)
           } else {
             logger.fatal(error, "Unhandled error for database get")
@@ -217,7 +217,7 @@ export const setupApi = function (server: Server, state: State) {
         } catch (error) {
           if (error instanceof KeyAlreadyExists) {
             return err(res, next, 422, "requesterToken already exists")
-          } else if (!(error instanceof NotFoundError)) {
+          } else if (!(error instanceof LevelErrors.NotFoundError)) {
             logger.fatal(error, "Unhandled error for database get")
             return err(res, next, 500)
           }
@@ -248,10 +248,10 @@ export const setupApi = function (server: Server, state: State) {
         try {
           const value = await accessDb.db.get(token)
           if (!value) {
-            throw new NotFoundError("Not found")
+            throw new LevelErrors.NotFoundError("Not found")
           }
         } catch (error) {
-          if (error instanceof NotFoundError) {
+          if (error instanceof LevelErrors.NotFoundError) {
             return err(res, next, 404)
           } else {
             logger.fatal(error, "Unhandled error for database get")
@@ -279,10 +279,10 @@ export const setupApi = function (server: Server, state: State) {
         try {
           const value = await accessDb.db.get(token)
           if (!value) {
-            throw new NotFoundError("Not found")
+            throw new LevelErrors.NotFoundError("Not found")
           }
         } catch (error) {
-          if (error instanceof NotFoundError) {
+          if (error instanceof LevelErrors.NotFoundError) {
             return err(res, next, 404)
           } else {
             logger.fatal(error, "Unhandled error for database get")

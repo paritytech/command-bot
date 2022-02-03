@@ -8,6 +8,8 @@ ROCKSDB_BUILD_DEPS="build-essential python3"
 # https://github.com/paritytech/substrate/search?q=x86_64-unknown-linux-gnu
 SUBSTRATE_HOST=x86_64-unknown-linux-gnu
 APT_INSTALL="apt install --assume-yes --quiet --no-install-recommends"
+APP_DIR="/app"
+NODE_USER="node"
 
 IFS='' read -r -d '' common <<EOF
 FROM docker.io/node:16.13.2-buster-slim
@@ -70,11 +72,11 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- \
 # Needed for building RocksDB bindings for Node.js
 RUN $APT_INSTALL $ROCKSDB_BUILD_DEPS && apt-mark auto $ROCKSDB_BUILD_DEPS
 
-RUN cd "\$REPO" && \
+RUN mkdir $APP_DIR && \
+  chown $NODE_USER:$NODE_USER $APP_DIR && \
   yarn --ignore-optional --frozen-lockfile && \
-  yarn build && \
-  mkdir /bot && \
-  mv build node_modules /bot
+  mv * $APP_DIR && \
+  chown -R $NODE_USER:$NODE_USER $APP_DIR
 
 RUN apt-get autoremove -y
 
@@ -87,9 +89,9 @@ RUN $APT_INSTALL \
   cc --version && \
   clang --version
 
-WORKDIR /bot
+WORKDIR $APP_DIR
 
-CMD . $CARGO_HOME/env && node ./build/main.js
+CMD . $CARGO_HOME/env && yarn start
 EOF
     echo "$app"
     ;;

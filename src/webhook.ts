@@ -33,7 +33,7 @@ import { displayCommand, getCommand, getLines, getParsedArgs } from "./utils"
 type WebhookEventPayload<E extends WebhookEvents> =
   E extends "issue_comment.created" ? IssueCommentCreatedEvent : never
 
-export type WebhookHandler<E extends WebhookEvents> = (
+type WebhookHandler<E extends WebhookEvents> = (
   octokit: ExtendedOctokit,
   event: WebhookEventPayload<E>,
 ) => Promise<PullRequestError | void>

@@ -71,8 +71,8 @@ References:
 # Developing
 
 `yarn watch` is recommended because it will restart the server when the source
-code changes. You'll want to copy [the example file](./env/bot.example.js) to
-`./env/bot.js` and set the values there for this command to work.
+code changes. You'll want to copy [the example file](./env/bot.example.cjs) to
+`./env/bot.cjs` and set the values there for this command to work.
 
 Here's a Docker command you can use to set up a node for running `/try-runtime`
 locally:

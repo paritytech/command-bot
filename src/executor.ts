@@ -59,7 +59,7 @@ export type ShellExecutor = (
   args: string[],
   opts?: {
     allowedErrorCodes?: number[]
-    options?: cp.ExecFileOptions
+    options?: cp.SpawnOptionsWithoutStdio & { cwd?: string }
     testAllowedErrorMessage?: (stderr: string) => boolean
     secretsToHide?: string[]
     shouldTrackProgress?: boolean

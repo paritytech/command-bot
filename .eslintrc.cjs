@@ -15,15 +15,6 @@ module.exports = {
     project: "./tsconfig.lint.json",
     tsconfigRootDir: __dirname,
   },
-  overrides: [
-    {
-      files: "**/*.js",
-      rules: {
-        "@typescript-eslint/no-var-requires": "off",
-        "@typescript-eslint/strict-boolean-expressions": "off",
-      },
-    },
-  ],
   rules: {
     // prettier
     "prettier/prettier": "error",
