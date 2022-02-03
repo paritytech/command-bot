@@ -175,7 +175,7 @@ export const getPostPullRequestResult = function ({
         before.length + resultDisplay.length + after.length >
         githubCommentCharacterLimit
       ) {
-        truncateMessageWarning = `\n\nThe command's output was too big to be fully displayed. ${getDeploymentLogsMessage(
+        truncateMessageWarning = `\n---\nThe command's output was too big to be fully displayed. ${getDeploymentLogsMessage(
           deployment,
         )}.`
         const truncationIndicator = "[truncated]..."
