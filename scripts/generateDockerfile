@@ -46,12 +46,12 @@ EOF
 
   app)
 IFS='' read -r -d '' app << EOF
-$common
-
 # Those values are expected to be set from CI.
 ARG REPO
 ENV REPO=\$REPO
 RUN if [ ! "\$REPO" ]; then exit 1; fi
+
+$common
 
 # Rust is needed for running the bot's commands
 RUN $APT_INSTALL $RUST_BUILD_DEPS && apt-mark auto $RUST_BUILD_DEPS
@@ -81,13 +81,14 @@ RUN mkdir $APP_DIR && \
 
 RUN apt-get autoremove -y
 
-# gcc & libc are needed for the 'cc' linker for Rust
-# clang and libclang are needed for building RocksDB
-# libssl-dev, libudev-dev and pkg-config are needed for Substrate
+# Those dependencies are needed to build the Substrate & Polkadot at runtime due
+# to C/C++ dependencies e.g. jemalloc, RocksDB, etc.
 RUN $APT_INSTALL \
-  gcc libc-dev libssl-dev libudev-dev pkg-config \
-  clang libclang-dev && \
+  gcc libc-dev libssl-dev libudev-dev pkg-config build-essential clang libclang-dev && \
   cc --version && \
+  gcc --version && \
+  g++ --version && \
+  make --version && \
   clang --version
 
 WORKDIR $APP_DIR
