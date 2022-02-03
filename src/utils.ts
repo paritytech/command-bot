@@ -224,7 +224,12 @@ const escapeHtml = function (str: string) {
     .replace(/'/g, "&#039;")
 }
 
-const websocketPrefixes = ["wss://", "ws://"]
+// This expression catches the following forms: --foo, -foo, -foo=, --foo=
+const optionPrefixExpression = /^-[^=\s]+[=\s]*/
+
+// This expression catches the following forms: ws://foo, wss://foo, etc.
+const uriPrefixExpression = /^\w+:\/\//
+
 export const getParsedArgs = function (
   nodesAddresses: State["nodesAddresses"],
   args: string[],
@@ -234,29 +239,32 @@ export const getParsedArgs = function (
   ).join(", ")}.`
 
   const parsedArgs = []
-  toNextArg: for (const arg of args) {
-    for (const prefix of websocketPrefixes) {
-      if (!arg.startsWith(prefix)) {
-        continue
-      }
+  for (const rawArg of args) {
+    const optionPrefix = optionPrefixExpression.exec(rawArg)
+    const { argPrefix, arg } =
+      optionPrefix === null
+        ? { argPrefix: "", arg: rawArg }
+        : { argPrefix: optionPrefix[0], arg: rawArg.slice(optionPrefix.length) }
 
-      const invalidNodeAddressExplanation = `Argument "${arg}" started with ${prefix} and therefore it was interpreted as a node address, but it is invalid`
-
-      const node = arg.slice(prefix.length)
-      if (!node) {
-        return `${invalidNodeAddressExplanation}. Must specify one address in the form \`${prefix}name\`. ${nodeOptionsDisplay}`
-      }
-
-      const nodeAddress = nodesAddresses[node]
-      if (!nodeAddress) {
-        return `${invalidNodeAddressExplanation}. Nodes are referred to by name. No node named "${node}" is available. ${nodeOptionsDisplay}`
-      }
-
-      parsedArgs.push(nodeAddress)
-      continue toNextArg
+    const uriPrefix = uriPrefixExpression.exec(arg)
+    if (uriPrefix === null) {
+      parsedArgs.push(arg)
+      continue
     }
 
-    parsedArgs.push(arg)
+    const invalidNodeAddressExplanation = `Argument "${arg}" started with ${uriPrefix} and therefore it was interpreted as a node address, but it is invalid`
+
+    const node = arg.slice(uriPrefix.length)
+    if (!node) {
+      return `${invalidNodeAddressExplanation}. Must specify one address in the form \`${uriPrefix}name\`. ${nodeOptionsDisplay}`
+    }
+
+    const nodeAddress = nodesAddresses[node]
+    if (!nodeAddress) {
+      return `${invalidNodeAddressExplanation}. Nodes are referred to by name. No node named "${node}" is available. ${nodeOptionsDisplay}`
+    }
+
+    parsedArgs.push(`${argPrefix}${uriPrefix}${nodeAddress}`)
   }
 
   return parsedArgs
