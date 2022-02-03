@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -u
+
 RUSTUP_HOME=/usr/local/rustup
 CARGO_HOME=/usr/local/cargo
 PRE_COMMIT_BUILD_DEPS="gcc python3-dev libc-dev python3-pip"
@@ -10,10 +12,9 @@ SUBSTRATE_HOST=x86_64-unknown-linux-gnu
 APT_INSTALL="apt install --assume-yes --quiet --no-install-recommends"
 APP_DIR="/app"
 NODE_USER="node"
+BASE_IMAGE="docker.io/node:16.13.2-buster-slim"
 
 IFS='' read -r -d '' common <<EOF
-FROM docker.io/node:16.13.2-buster-slim
-
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN yarn --version
@@ -28,6 +29,8 @@ EOF
 case "$1" in
   ci)
 IFS='' read -r -d '' ci << EOF
+FROM $BASE_IMAGE
+
 $common
 
 # CI pipeline utilities
@@ -46,6 +49,8 @@ EOF
 
   app)
 IFS='' read -r -d '' app << EOF
+FROM $BASE_IMAGE
+
 # Those values are expected to be set from CI.
 ARG REPO
 ENV REPO=\$REPO
