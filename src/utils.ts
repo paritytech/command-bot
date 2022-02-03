@@ -228,7 +228,7 @@ const escapeHtml = function (str: string) {
 const optionPrefixExpression = /^-[^=\s]+[=\s]*/
 
 // This expression catches the following forms: ws://foo, wss://foo, etc.
-const uriPrefixExpression = /^\w+:\/\//
+const uriPrefixExpression = /^ws\w+:\/\//
 
 export const getParsedArgs = function (
   nodesAddresses: State["nodesAddresses"],
@@ -268,7 +268,7 @@ export const getParsedArgs = function (
       return `${invalidNodeAddressExplanation}. Nodes are referred to by name. No node named "${node}" is available. ${nodeOptionsDisplay}`
     }
 
-    parsedArgs.push(`${argPrefix}${uriPrefix}${nodeAddress}`)
+    parsedArgs.push(`${argPrefix}${nodeAddress}`)
   }
 
   return parsedArgs
