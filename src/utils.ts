@@ -246,11 +246,12 @@ export const getParsedArgs = function (
         ? { argPrefix: "", arg: rawArg }
         : { argPrefix: optionPrefix[0], arg: rawArg.slice(optionPrefix.length) }
 
-    const uriPrefix = uriPrefixExpression.exec(arg)
-    if (uriPrefix === null) {
+    const uriPrefixMatch = uriPrefixExpression.exec(arg)
+    if (uriPrefixMatch === null) {
       parsedArgs.push(arg)
       continue
     }
+    const [uriPrefix] = uriPrefixMatch
 
     const invalidNodeAddressExplanation = `Argument "${arg}" started with ${uriPrefix} and therefore it was interpreted as a node address, but it is invalid`
 
