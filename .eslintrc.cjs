@@ -10,11 +10,21 @@ module.exports = {
     "import",
     "prettier",
   ],
-  ignorePatterns: ["build/*", "env/*", "data/*"],
+  ignorePatterns: ["data/*"],
   parserOptions: {
     project: "./tsconfig.lint.json",
     tsconfigRootDir: __dirname,
+    extraFileExtensions: [".cjs"],
   },
+  overrides: [
+    {
+      files: "**/*.cjs",
+      rules: {
+        "@typescript-eslint/no-var-requires": "off",
+        "@typescript-eslint/strict-boolean-expressions": "off",
+      },
+    },
+  ],
   rules: {
     // prettier
     "prettier/prettier": "error",
