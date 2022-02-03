@@ -228,7 +228,7 @@ const escapeHtml = function (str: string) {
 const optionPrefixExpression = /^-[^=\s]+[=\s]*/
 
 // This expression catches the following forms: ws://foo, wss://foo, etc.
-const uriPrefixExpression = /^ws\w+:\/\//
+const uriPrefixExpression = /^ws\w*:\/\//
 
 export const getParsedArgs = function (
   nodesAddresses: State["nodesAddresses"],
