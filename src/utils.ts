@@ -225,12 +225,6 @@ const escapeHtml = function (str: string) {
 }
 
 const websocketPrefixes = ["wss://", "ws://"]
-const urlArg = "--url="
-const addressPrefixes = websocketPrefixes.concat(
-  websocketPrefixes.map(function (prefix) {
-    return `${urlArg}${prefix}`
-  }),
-)
 export const getParsedArgs = function (
   nodesAddresses: State["nodesAddresses"],
   args: string[],
@@ -241,24 +235,24 @@ export const getParsedArgs = function (
 
   const parsedArgs = []
   toNextArg: for (const arg of args) {
-    for (const prefix of addressPrefixes) {
+    for (const prefix of websocketPrefixes) {
       if (!arg.startsWith(prefix)) {
         continue
       }
 
+      const invalidNodeAddressExplanation = `Argument "${arg}" started with ${prefix} and therefore it was interpreted as a node address, but it is invalid`
+
       const node = arg.slice(prefix.length)
       if (!node) {
-        return `Must specify one address in the form \`${prefix}name\`. ${nodeOptionsDisplay}`
+        return `${invalidNodeAddressExplanation}. Must specify one address in the form \`${prefix}name\`. ${nodeOptionsDisplay}`
       }
 
       const nodeAddress = nodesAddresses[node]
       if (!nodeAddress) {
-        return `Nodes are referred to by name. No node named "${node}" is available. ${nodeOptionsDisplay}`
+        return `${invalidNodeAddressExplanation}. Nodes are referred to by name. No node named "${node}" is available. ${nodeOptionsDisplay}`
       }
 
-      parsedArgs.push(
-        arg.startsWith(urlArg) ? `${urlArg}${nodeAddress}` : nodeAddress,
-      )
+      parsedArgs.push(nodeAddress)
       continue toNextArg
     }
 
