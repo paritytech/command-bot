@@ -257,7 +257,7 @@ export const getWebhooksHandlers = function (state: State) {
                 "--release",
                 // "--quiet" should be kept so that the output doesn't get
                 // polluted with a bunch of compilation stuff; bear in mind the
-                // output is posted on Github issues which have limited
+                // output is posted on Github comments which have limited
                 // character count
                 "--quiet",
                 "--features=try-runtime",
