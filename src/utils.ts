@@ -35,7 +35,7 @@ export const getCommand = function (
     return value.match(/^[A-Za-z_]+=/)
   })
 
-  const env: Record<string, string> = baseEnv
+  const env: Record<string, string> = { ...baseEnv }
   for (const rawValue of envArgs) {
     const matches = rawValue.match(/^([A-Za-z_]+)=(.*)/)
     assert(matches)
