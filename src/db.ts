@@ -1,5 +1,6 @@
 import type { AbstractIterator, AbstractLevelDOWN } from "abstract-leveldown"
 import { isBefore } from "date-fns"
+// @ts-ignore because level-rocksdb is not typed
 import getLevelDb from "level-rocksdb"
 import type { LevelUp } from "levelup"
 
