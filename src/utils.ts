@@ -38,7 +38,7 @@ export const getCommand = function (
   // envArgs are only collected at the start of the command line
   let isCollectingEnvVars = true
   while (true) {
-    const token = tokens.pop()
+    const token = tokens.shift()
     if (token === undefined) {
       break
     }

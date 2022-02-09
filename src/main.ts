@@ -301,6 +301,7 @@ const main = async function () {
     ...(probotLogger === undefined
       ? {}
       : { log: probotLogger.child({ name: "server" }) }),
+    webhookProxy: process.env.WEBHOOK_PROXY_URL,
   })
 
   const minLogLevel = (function () {
