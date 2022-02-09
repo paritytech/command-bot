@@ -56,7 +56,7 @@ export const getRegisterApiTaskHandle = function (task: ApiTask) {
 }
 export const getApiTaskHandle = handlesGetter(apiTaskHandles)
 
-const cleanupMotiveForCargoClean = "Freeing disk space through cargo clean"
+const cleanupMotiveForCargoTargetDir = "Freeing disk space for CARGO_TARGET_DIR"
 export type ShellExecutor = (
   execPath: string,
   args: string[],
@@ -170,7 +170,7 @@ const getShellExecutor = function ({
                       isDeployed &&
                       process.env.CARGO_TARGET_DIR &&
                       retries.find(function ({ motive }) {
-                        return motive === cleanupMotiveForCargoClean
+                        return motive === cleanupMotiveForCargoTargetDir
                       }) === undefined
                     ) {
                       await removeDir(process.env.CARGO_TARGET_DIR)
@@ -178,7 +178,7 @@ const getShellExecutor = function ({
                       return resolve(
                         new Retry({
                           context: "compilation error",
-                          motive: cleanupMotiveForCargoClean,
+                          motive: cleanupMotiveForCargoTargetDir,
                           stderr,
                         }),
                       )
