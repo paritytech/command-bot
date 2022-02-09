@@ -72,10 +72,12 @@ const getShellExecutor = function ({
   logger,
   projectsRoot,
   onChild,
+  isDeployed,
 }: {
   logger: Logger
   projectsRoot: string
   onChild?: (child: cp.ChildProcess) => void
+  isDeployed: boolean
 }): ShellExecutor {
   return function (
     execPath,
@@ -165,6 +167,7 @@ const getShellExecutor = function ({
                     )
                   } else if (stderr.includes("No space left on device")) {
                     if (
+                      isDeployed &&
                       process.env.CARGO_TARGET_DIR &&
                       retries.find(function ({ motive }) {
                         return motive === cleanupMotiveForCargoClean
@@ -210,6 +213,7 @@ const getShellExecutor = function ({
                         const executor = getShellExecutor({
                           logger,
                           projectsRoot,
+                          isDeployed,
                         })
 
                         if (!hasAttemptedCleanupForOtherDirectories) {
@@ -577,6 +581,7 @@ export const queue = async function ({
         const run = getShellExecutor({
           logger,
           projectsRoot: repositoryCloneDirectory,
+          isDeployed: deployment !== undefined,
           onChild: function (newChild) {
             child = newChild
           },
