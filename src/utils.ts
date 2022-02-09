@@ -1,7 +1,6 @@
 import assert from "assert"
 import { differenceInMilliseconds } from "date-fns"
 import fs from "fs"
-import ld from "lodash"
 import { MatrixClient } from "matrix-bot-sdk"
 import path from "path"
 import { promisify } from "util"
@@ -30,23 +29,37 @@ export const getCommand = function (
   commandLine: string,
   { baseEnv }: { baseEnv: Record<string, string> },
 ) {
-  const parts = commandLine.split(" ").filter(function (value) {
+  const tokens = commandLine.split(" ").filter(function (value) {
     return !!value
   })
 
-  const [envArgs, command] = ld.partition(parts, function (value) {
-    return value.match(/^[A-Za-z_]+=/)
-  })
+  const envVars: { name: string; value: string }[] = []
+  const command: string[] = []
+  // envArgs are only collected at the start of the command line
+  let isCollectingEnvVars = true
+  while (true) {
+    const token = tokens.pop()
+    if (token === undefined) {
+      break
+    }
+
+    if (isCollectingEnvVars) {
+      const matches = token.match(/^([A-Za-z_]+)=(.*)/)
+      if (matches === null) {
+        isCollectingEnvVars = false
+      } else {
+        const [, name, value] = matches
+        assert(name)
+        envVars.push({ name, value })
+        continue
+      }
+    }
+
+    command.push(token)
+  }
 
   const env: Record<string, string> = { ...baseEnv }
-  for (const rawValue of envArgs) {
-    const matches = rawValue.match(/^([A-Za-z_]+)=(.*)/)
-    assert(matches)
-
-    const [, name, value] = matches
-    assert(name)
-    assert(value !== undefined && value !== null)
-
+  for (const { name, value } of envVars) {
     env[name] = value
   }
 
