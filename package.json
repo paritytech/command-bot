@@ -54,7 +54,7 @@
     "typecheck": "tsc --noEmit",
     "prettier": "prettier --loglevel silent '{*,**/*}.{json,html}'",
     "eslint": "eslint '{*,**/*}.{cjs,ts}'",
-    "fix:eslint": "eslint --fix",
+    "fix:eslint": "yarn eslint --fix",
     "fix:prettier": "yarn prettier --write",
     "fix": "yarn fix:eslint && yarn fix:prettier",
     "start:prefix": "node --es-module-specifier-resolution=node --loader ./loader.cjs",
