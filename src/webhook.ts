@@ -120,13 +120,12 @@ export const getWebhooksHandlers = function (state: State) {
   }
 
   const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> =
-    function (eventName, octokit, payload) {
+    async function (eventName, octokit, payload) {
       // Note: async-mutex implements a "fair mutex" which means requests will be
       // queued in the same order as they're received; if changing to a different
       // library then verify that this aspect is maintained.
-      return mutex.runExclusive(async function () {
+      await mutex.runExclusive(async function () {
         const { issue, comment, repository, installation } = payload
-        const requester = comment.user?.login
 
         if (!("pull_request" in issue)) {
           logger.debug(
@@ -135,6 +134,8 @@ export const getWebhooksHandlers = function (state: State) {
           )
           return
         }
+
+        const requester = comment.user?.login
 
         if (!requester) {
           logger.debug(payload, "Skipping payload because it has no requester")

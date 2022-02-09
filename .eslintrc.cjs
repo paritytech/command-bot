@@ -102,5 +102,6 @@ module.exports = {
     "@typescript-eslint/camelcase": "off",
     "@typescript-eslint/restrict-plus-operands": "error",
     "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-floating-promises": "error",
   },
 }

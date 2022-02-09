@@ -1,4 +1,10 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src", ".eslintrc.cjs", "env/bot.example.cjs", "loader.cjs"]
+  "include": [
+    "src",
+    ".eslintrc.cjs",
+    "env/bot.example.cjs",
+    "loader.cjs",
+    "env/bot.cjs"
+  ]
 }

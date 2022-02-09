@@ -51,14 +51,15 @@
     "typescript": "4.5.5"
   },
   "scripts": {
+    "typecheck": "tsc --noEmit",
     "prettier": "prettier --loglevel silent '{*,**/*}.{json,html}'",
     "eslint": "eslint '{*,**/*}.{cjs,ts}'",
-    "fix:eslint": "eslint --fix",
+    "fix:eslint": "yarn eslint --fix",
     "fix:prettier": "yarn prettier --write",
     "fix": "yarn fix:eslint && yarn fix:prettier",
     "start:prefix": "node --es-module-specifier-resolution=node --loader ./loader.cjs",
     "start": "yarn start:prefix ./src/main.ts",
     "dev": "yarn start:prefix --trace-warnings -r ./env/bot.cjs ./src/main.ts",
-    "watch": "nodemon --watch src --watch env/bot.js cjs,ts --exec \"yarn dev\""
+    "watch": "nodemon --watch src --watch env/bot.cjs -e cjs,ts --exec \"yarn dev\""
   }
 }

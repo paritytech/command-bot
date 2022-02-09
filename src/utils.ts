@@ -1,7 +1,6 @@
 import assert from "assert"
 import { differenceInMilliseconds } from "date-fns"
 import fs from "fs"
-import ld from "lodash"
 import { MatrixClient } from "matrix-bot-sdk"
 import path from "path"
 import { promisify } from "util"
@@ -11,6 +10,9 @@ import { Logger } from "./logger"
 import { ApiTask, CommandOutput, State } from "./types"
 
 const fsExists = promisify(fs.exists)
+const fsRmdir = promisify(fs.rmdir)
+const fsMkdir = promisify(fs.mkdir)
+const fsUnlink = promisify(fs.unlink)
 
 export const getLines = function (str: string) {
   return str
@@ -27,23 +29,37 @@ export const getCommand = function (
   commandLine: string,
   { baseEnv }: { baseEnv: Record<string, string> },
 ) {
-  const parts = commandLine.split(" ").filter(function (value) {
+  const tokens = commandLine.split(" ").filter(function (value) {
     return !!value
   })
 
-  const [envArgs, command] = ld.partition(parts, function (value) {
-    return value.match(/^[A-Za-z_]+=/)
-  })
+  const envVars: { name: string; value: string }[] = []
+  const command: string[] = []
+  // envArgs are only collected at the start of the command line
+  let isCollectingEnvVars = true
+  while (true) {
+    const token = tokens.shift()
+    if (token === undefined) {
+      break
+    }
+
+    if (isCollectingEnvVars) {
+      const matches = token.match(/^([A-Za-z_]+)=(.*)/)
+      if (matches === null) {
+        isCollectingEnvVars = false
+      } else {
+        const [, name, value] = matches
+        assert(name)
+        envVars.push({ name, value })
+        continue
+      }
+    }
+
+    command.push(token)
+  }
 
   const env: Record<string, string> = { ...baseEnv }
-  for (const rawValue of envArgs) {
-    const matches = rawValue.match(/^([A-Za-z_]+)=(.*)/)
-    assert(matches)
-
-    const [, name, value] = matches
-    assert(name)
-    assert(value !== undefined && value !== null)
-
+  for (const { name, value } of envVars) {
     env[name] = value
   }
 
@@ -80,25 +96,25 @@ export const millisecondsDelay = function (milliseconds: number) {
   })
 }
 
-export const ensureDir = function (dir: string) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true })
+export const ensureDir = async function (dir: string) {
+  if (!(await fsExists(dir))) {
+    await fsMkdir(dir, { recursive: true })
   }
   return dir
 }
 
-export const removeDir = function (dir: string) {
-  if (fs.existsSync(dir)) {
-    fs.rmdirSync(dir, { recursive: true })
+export const removeDir = async function (dir: string) {
+  if (!(await fsExists(dir))) {
+    await fsRmdir(dir, { recursive: true })
   }
   return dir
 }
 
-export const initDatabaseDir = function (dir: string) {
-  dir = ensureDir(dir)
+export const initDatabaseDir = async function (dir: string) {
+  dir = await ensureDir(dir)
   const lockPath = path.join(dir, "LOCK")
-  if (fs.existsSync(lockPath)) {
-    fs.unlinkSync(lockPath)
+  if (await fsExists(lockPath)) {
+    await fsUnlink(lockPath)
   }
   return dir
 }
