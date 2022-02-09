@@ -11,6 +11,9 @@ import { Logger } from "./logger"
 import { ApiTask, CommandOutput, State } from "./types"
 
 const fsExists = promisify(fs.exists)
+const fsRmdir = promisify(fs.rmdir)
+const fsMkdir = promisify(fs.mkdir)
+const fsUnlink = promisify(fs.unlink)
 
 export const getLines = function (str: string) {
   return str
@@ -80,25 +83,25 @@ export const millisecondsDelay = function (milliseconds: number) {
   })
 }
 
-export const ensureDir = function (dir: string) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true })
+export const ensureDir = async function (dir: string) {
+  if (!(await fsExists(dir))) {
+    await fsMkdir(dir, { recursive: true })
   }
   return dir
 }
 
-export const removeDir = function (dir: string) {
-  if (fs.existsSync(dir)) {
-    fs.rmdirSync(dir, { recursive: true })
+export const removeDir = async function (dir: string) {
+  if (!(await fsExists(dir))) {
+    await fsRmdir(dir, { recursive: true })
   }
   return dir
 }
 
-export const initDatabaseDir = function (dir: string) {
-  dir = ensureDir(dir)
+export const initDatabaseDir = async function (dir: string) {
+  dir = await ensureDir(dir)
   const lockPath = path.join(dir, "LOCK")
-  if (fs.existsSync(lockPath)) {
-    fs.unlinkSync(lockPath)
+  if (await fsExists(lockPath)) {
+    await fsUnlink(lockPath)
   }
   return dir
 }

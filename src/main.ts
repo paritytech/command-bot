@@ -94,26 +94,30 @@ const serverSetup = async function (
   const dataPath = process.env.DATA_PATH
   assert(dataPath)
 
+  if (process.env.CARGO_TARGET_DIR) {
+    await ensureDir(process.env.CARGO_TARGET_DIR)
+  }
+
   // For the deployment this should always happen because TMPDIR targets a
   // location on the persistent volume (ephemeral storage on Kubernetes cluster
   // is too low for building Substrate)
   if (process.env.CLEAR_TMPDIR_ON_START === "true") {
     assert(process.env.TMPDIR)
-    removeDir(process.env.TMPDIR)
-    ensureDir(process.env.TMPDIR)
+    await removeDir(process.env.TMPDIR)
+    await ensureDir(process.env.TMPDIR)
   }
 
   const repositoryCloneDirectoryPath = path.join(dataPath, "repositories")
   if (process.env.CLEAR_REPOSITORIES_ON_START === "true") {
     logger.info("Clearing the repositories before starting")
-    removeDir(repositoryCloneDirectoryPath)
+    await removeDir(repositoryCloneDirectoryPath)
   }
-  const repositoryCloneDirectory = ensureDir(repositoryCloneDirectoryPath)
+  const repositoryCloneDirectory = await ensureDir(repositoryCloneDirectoryPath)
 
-  const taskDbPath = initDatabaseDir(path.join(dataPath, "db"))
+  const taskDbPath = await initDatabaseDir(path.join(dataPath, "db"))
   const taskDb = new TaskDB(getDb(taskDbPath))
 
-  const accessDbPath = initDatabaseDir(path.join(dataPath, "access_db"))
+  const accessDbPath = await initDatabaseDir(path.join(dataPath, "access_db"))
   const accessDb = new AccessDB(getDb(accessDbPath))
 
   if (process.env.CLEAR_DB_ON_START === "true") {
@@ -219,9 +223,9 @@ const serverSetup = async function (
 
   await requeueUnterminated(state)
 
-  setupProbot(state)
+  void setupProbot(state)
 
-  setupApi(server, state)
+  void setupApi(server, state)
 
   logger.info("Probot has started!")
 }
@@ -327,7 +331,7 @@ const main = async function () {
     })
   })
 
-  server.start()
+  void server.start()
 }
 
-main()
+void main()

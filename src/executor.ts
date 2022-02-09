@@ -20,9 +20,11 @@ import {
   cleanupProjects,
   displayCommand,
   displayDuration,
+  ensureDir,
   getDeploymentLogsMessage,
   getSendMatrixResult,
   redactSecrets,
+  removeDir,
   Retry,
 } from "./utils"
 
@@ -54,6 +56,7 @@ export const getRegisterApiTaskHandle = function (task: ApiTask) {
 }
 export const getApiTaskHandle = handlesGetter(apiTaskHandles)
 
+const cleanupMotiveForCargoClean = "Freeing disk space through cargo clean"
 export type ShellExecutor = (
   execPath: string,
   args: string[],
@@ -161,9 +164,26 @@ const getShellExecutor = function ({
                       "Compilation was terminated due to SIGKILL (might have something to do with system resource constraints)",
                     )
                   } else if (stderr.includes("No space left on device")) {
+                    if (
+                      process.env.CARGO_TARGET_DIR &&
+                      retries.find(function ({ motive }) {
+                        return motive === cleanupMotiveForCargoClean
+                      }) === undefined
+                    ) {
+                      await removeDir(process.env.CARGO_TARGET_DIR)
+                      await ensureDir(process.env.CARGO_TARGET_DIR)
+                      return resolve(
+                        new Retry({
+                          context: "compilation error",
+                          motive: cleanupMotiveForCargoClean,
+                          stderr,
+                        }),
+                      )
+                    }
+
                     if (cwd.startsWith(projectsRoot)) {
-                      const cleanupMotiveForOtherDirectories = `Cleanup for disk space for excluding "${cwd}" from "${projectsRoot}" root`
-                      const cleanupMotiveForThisDirectory = `Cleanup for disk space for including only "${cwd}" from "${projectsRoot}" root`
+                      const cleanupMotiveForOtherDirectories = `Freeing disk space while excluding "${cwd}" from "${projectsRoot}" root`
+                      const cleanupMotiveForThisDirectory = `Freeing disk space while including only "${cwd}" from "${projectsRoot}" root`
 
                       const hasAttemptedCleanupForOtherDirectories =
                         retries.find(function ({ motive }) {
@@ -201,14 +221,13 @@ const getShellExecutor = function ({
                           // Relevant check because the current project might be
                           // the only one we have available in this application.
                           if (otherDirectoriesResults.length) {
-                            resolve(
+                            return resolve(
                               new Retry({
                                 context: "compilation error",
                                 motive: cleanupMotiveForOtherDirectories,
                                 stderr,
                               }),
                             )
-                            return
                           }
                         }
 
@@ -218,14 +237,13 @@ const getShellExecutor = function ({
                           { includeDirs: [cwd] },
                         )
                         if (directoryResults.length) {
-                          resolve(
+                          return resolve(
                             new Retry({
                               context: "compilation error",
                               motive: cleanupMotiveForThisDirectory,
                               stderr,
                             }),
                           )
-                          return
                         } else {
                           logger.fatal(
                             `Expected to have found a project for "${cwd}" during cleanup for disk space`,
@@ -248,14 +266,13 @@ const getShellExecutor = function ({
                         `Running ${retryCargoCleanCmd} in "${cwd}" before retrying the command due to a compiler error.`,
                       )
                       await cpExec(retryCargoCleanCmd, { cwd })
-                      resolve(
+                      return resolve(
                         new Retry({
                           context: "compilation error",
                           motive: retryCargoCleanCmd,
                           stderr,
                         }),
                       )
-                      return
                     }
                   }
 
@@ -265,8 +282,7 @@ const getShellExecutor = function ({
                     (testAllowedErrorMessage === undefined ||
                       !testAllowedErrorMessage(stderr))
                   ) {
-                    resolve(new Error(stderr))
-                    return
+                    return resolve(new Error(stderr))
                   }
                 }
 
@@ -287,7 +303,7 @@ const getShellExecutor = function ({
                 ),
               )
             } else {
-              execute(retries.concat(result))
+              void execute(retries.concat(result))
             }
           } else {
             resolve(result)
@@ -297,7 +313,7 @@ const getShellExecutor = function ({
         }
       }
 
-      execute([])
+      void execute([])
     })
   }
 }
@@ -462,7 +478,11 @@ export const queue = async function ({
   if (!fs.existsSync(repoPath)) {
     suffixMessage +=
       "\n**Note:** project will be cloned for the first time, so all dependencies will be compiled from scratch; this might take a long time"
-  } else if (!fs.existsSync(path.join(repoPath, "target"))) {
+  } else if (
+    process.env.CARGO_TARGET_DIR
+      ? !fs.existsSync(process.env.CARGO_TARGET_DIR)
+      : !fs.existsSync(path.join(repoPath, "target"))
+  ) {
     suffixMessage +=
       '\n**Note:** "target" directory does not exist, so all dependencies will be compiled from scratch; this might take a long time'
   }
@@ -520,7 +540,7 @@ export const queue = async function ({
     await terminate()
 
     if (wasAlive) {
-      onResult(result)
+      void onResult(result)
     }
   }
 

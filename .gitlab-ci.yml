@@ -93,6 +93,9 @@ lint:
       sed -i "s/version:.*/version: $KUBERNETES_VERSION_TAG/" helm/Chart.yaml
     - |-
       sed -i "s/appVersion:.*/appVersion: $KUBERNETES_VERSION_TAG/" helm/Chart.yaml
+    # CARGO_TARGET_DIR is shared for the projects we compile because then their
+    # common build artifacts can be reused, overall both speeding up the
+    # compilation and using less disk space
     - helm upgrade --install "$KUBE_NAMESPACE" ./helm
       --values helm/values.yaml
       --namespace "$KUBE_NAMESPACE"
@@ -113,6 +116,7 @@ lint:
       --set env.CLEAR_REPOSITORIES_ON_START="$CLEAR_REPOSITORIES_ON_START"
       --set env.TMPDIR="$DATA_PATH/tmp"
       --set env.CLEAR_TMPDIR_ON_START="$CLEAR_TMPDIR_ON_START"
+      --set env.CARGO_TARGET_DIR="$DATA_PATH/cargo-target"
       --set env.PING_PORT="$PING_PORT"
       --set env.MATRIX_HOMESERVER="$MATRIX_HOMESERVER"
       --set env.MATRIX_ACCESS_TOKEN="$MATRIX_ACCESS_TOKEN"
