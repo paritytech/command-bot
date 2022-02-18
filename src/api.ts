@@ -202,7 +202,7 @@ export const setupApi = function (server: Server, state: State) {
           return err(res, next, 422, `Invalid ${token} for master token`)
         }
 
-        const { requesterToken, matrixRoom } = req.body
+        const { token: requesterToken, matrixRoom } = req.body
         if (typeof requesterToken !== "string" || !requesterToken) {
           return err(res, next, 400, "Invalid requesterToken")
         }
