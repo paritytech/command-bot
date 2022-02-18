@@ -1,8 +1,30 @@
-# try-runtime-bot
+# Introduction
 
-# Commands
+This bot provides interfaces for executing the
+[try-runtime cli](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/)
+on a dedicated remote host.
 
-## Queue
+# TOC
+
+- [Pull request commands](#pull-request-commands)
+  - [Queue](#pull-request-command-queue)
+  - [Cancel](#pull-request-command-cancel)
+- [API](#api)
+  - [Create a Personal Token](#api-create-token)
+  - [Queue](#api-command-queue)
+  - [Cancel](#api-command-cancel)
+- [Deploying](#deploying)
+  - [Build and deploy](#build-and-deploy)
+  - [Only deploy](#only-deploy)
+- [Developing](#developing)
+  - [Running locally](#running-locally)
+- [Configuration](#configuration)
+  - [Environment variables](#configuration-environment-variables)
+  - [GitHub App Settings](#configuration-github-app-settings)
+
+# Pull request commands <a name="pull-request-commands"></a>
+
+## Queue <a name="pull-request-command-queue"></a>
 
 Comment in a pull request:
 
@@ -22,161 +44,146 @@ although not all of them have been tried out as of this writing.
 Note: you **need to** refer to the nodes by their name e.g. `ws://polkadot`
 instead of using arbitrary addresses directly.
 
-## Cancel
+## Cancel <a name="pull-request-command-cancel"></a>
 
 In the pull request where you previously ran `/try-runtime queue`, comment:
 
 `/try-runtime cancel`
 
-# API
+# API <a name="api"></a>
 
-Before triggering commands through the API, you'll need to an Access Token.
-That token is registered through `POST /api/access` by the `MASTER_TOKEN`
-(owned by the OpsTooling team of Parity) and will be tied to a Matrix room
-ID where the command's output will be posted after it finishes. The token
-can be invalidated at any point through `DELETE /api/access`.
+The API provides an alternative interface for executing commands directly
+without having to go through pull request comments.
 
-Use the token in `POST /api/queue` for running a command and
-`POST /api/cancel` for cancelling an ongoing command.
+## Create a Personal Token <a name="api-create-token"></a>
 
-For the time being, arguments for those endpoints should be read from
-[the API source](./src/api.ts), e.g. `validateQueueEndpointInput`, until the
-[API documentation](https://github.com/paritytech/try-runtime-bot/issues/17) is done.
+For interacting with the commands, first a Personal Token needs to be registered
+through `POST /api/access` by the
+[`$MASTER_TOKEN`](#configuration-environment-variables) (it is currently owned
+by the OpsTooling team of Parity for Parity's deployments).
 
-# Deploying
+Each Personal Token is tied to a Matrix Room ID where the command's output will
+be posted to after it finishes.
 
-## Build and deploy
+```
+curl \
+  -H "X-Auth: $MASTER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -X POST http://try-runtime-bot/api/access \
+  -d '{
+    "token": "secret",
+    "matrixRoom": "!tZrvvMzoIkIYbCkLuk:matrix.foo.io",
+  }'
+```
+
+## Queue <a name="api-command-queue"></a>
+
+Use a [Personal Token](#api-create-token) for queueing a command through `POST
+/api/queue`:
+
+```
+curl \
+  -H "X-Auth: $token" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -X POST http://try-runtime-bot/api/queue \
+  -d '{
+    "execPath": "cargo",
+    "args": [
+      "run",
+      "--quiet",
+      "--features=try-runtime",
+      "try-runtime",
+      "--block-at=0x5d67782862757220cb25cf073585f6a75a9031f1da4115e5cba1721c2c6e249c",
+      "--url=ws://polkadot",
+      "on-runtime-upgrade",
+      "live"
+    ],
+    "gitRef": {
+      "contributor": "paritytech",
+      "owner": "paritytech",
+      "repo": "substrate",
+      "branch": "master"
+    }
+  }'
+```
+
+## Cancel <a name="api-command-cancel"></a>
+
+`POST /api/queue` will return a `{ "handleId": string }` response which can be
+used for cancelling an ongoing command through `POST /api/cancel`.
+
+```
+curl \
+  -H "X-Auth: $token" \
+  -H "Content-Type: application/json" \
+  -X POST http://try-runtime/api/cancel \
+  -d '{
+    "handleId": "foo"
+  }'
+```
+
+# Deploying <a name="deploying"></a>
+
+## Build and deploy <a name="build-and-deploy"></a>
 
 Either push a tag with the pattern `/^v-[0-9]+\.[0-9]+.*$/` or
 [trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
 with `BUILD` set to `production`.
 
-## Only deploy
+## Only deploy <a name="only-deploy"></a>
 
 [Trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
 with `DEPLOY` set to `production`.
 
-# Running manually
+# Developing <a name="developing"></a>
 
-1. [Configure your environment](https://github.com/paritytech/try-runtime-bot#configuration)
-2. Install dependencies: `yarn`
-3. Build: `yarn build`
-4. Start: `yarn start`
+Before developing you'll have to to copy
+[the example environment file](./env/bot.example.cjs) to `./env/bot.cjs` and set
+the appropriate values there.
 
-References:
+## Running locally <a name="running-locally"></a>
 
-- [Dockerfile](https://github.com/paritytech/try-runtime-bot/blob/master/Dockerfile)
-- [Scripts on package.json](https://github.com/paritytech/try-runtime-bot/blob/master/package.json)
+1. [Configure your environment](#developing)
+2. Install dependencies: `yarn install`
+3. Start the application `yarn dev` for a static development server or `yarn
+  watch` for a development server which automatically restarts when you make
+  changes to the source files
 
-# Developing
+The following command can be used to set up a blockchain node locally (for usage
+in [`${NAME}_WEBSOCKET_ADDRESS`](#configuration-environment-variables)):
 
-`yarn watch` is recommended because it will restart the server when the source
-code changes. You'll want to copy [the example file](./env/bot.example.cjs) to
-`./env/bot.cjs` and set the values there for this command to work.
-
-Here's a Docker command you can use to set up a node for running `/try-runtime`
-locally:
-
-`docker run -p 9944:9944 parity/polkadot:v0.9.3 --base-path /polkadot --unsafe-rpc-external --unsafe-ws-external --rpc-cors all --chain kusama`
+`docker run -p 9944:9944 parity/polkadot:latest --base-path /polkadot --unsafe-rpc-external --unsafe-ws-external --rpc-cors all --chain kusama`
 
 Note the `--chain` argument as it should be set to the specific runtime you're
 targetting.
 
-# Configuration
+# Configuration <a name="configuration"></a>
 
-## Required environment variables
+## Environment variables <a name="configuration-environment-variables"></a>
 
-From the Github App settings:
-  - `APP_ID`
-  - `CLIENT_ID`
-  - `CLIENT_SECRET`
-  - `WEBHOOK_SECRET`
-  - `PRIVATE_KEY_BASE64`
-    - The Github Settings page will give you the private key as a `.pem` file
-      in plain-text with newlines. This is inconvenient because Gitlab CI will
-      not be able to protect the secret if it stays like that. Our workaround is
-      to encrypt the key as Base64 before setting it up as a Gitlab CI
-      variable. That means you'll have to encode manually: take the plain-text
-      content from the `.pem` file and encode it as Base64 **without newlines**
-      (on Linux this can be done with `base64 -w 0 file.pem`).
+Please check [the environment example file](./env/bot.example.cjs) for the
+explanation on all the required environment variables.
 
-`DATA_PATH`
-
-DATA_PATH should point to a folder where the program's persistent data, such
-as the database,  will be stored.
-
-`ALLOWED_ORGANIZATIONS`
-
-Comma-delimited Github organization IDs whose members are allowed to run the
-bot's commands. The ID can be fetched from the Github API by the organization's
-username as `https://api.github.com/users/${organization}`, for instance
-`https://api.github.com/users/paritytech` which will respond with:
-
-```json
-{
-  "login": "paritytech",
-  "id": 14176906,
-}
-```
-
-**At least one organization ID has to be provided for the bot to work.**
-
-## Optional environment variables
-
-### Nodes
-
-`{NAME}_WEBSOCKET_ADDRESS`
-
-The addresses of nodes you'll be targetting (by name) in the commands; e.g. to
-be able to use `ws://polkadot` in try-runtime's arguments, you'll have to
-create a `POLKADOT_WEBSOCKET_ADDRESS` variable.
-
-```
-POLKADOT_WEBSOCKET_ADDRESS=ws://polkadot-node.io:9944
-```
-
-The application will automatically register node addresses for environment
-variables following that pattern.
-
-### API
-
-Note: If the following variables are not set, then the API will be disabled,
-but the bot will still be available for pull requests interactions only.
-
-`MATRIX_HOMESERVER` and `MATRIX_ACCESS_TOKEN`
-
-When an API command finishes, the bot will send a message on Matrix in the
-room assigned to the requester's token.
-
-`MASTER_TOKEN`
-
-The token which allows granting access to other tokens through the API.
-
-### Logging
-
-On production, it's recommended to set `LOG_FORMAT` to `json` so that
-[Probot logs are output with structure](https://probot.github.io/docs/logging/#log-formats)
-which is handy for querying in your logging aggregator.
-
-## Github Settings
+## GitHub App Settings <a name="configuration-github-app-settings"></a>
 
 ### Repository permissions
 
-- Metadata: Read-only
-  - Automatically assigned
 - Issues: Read-only
-  - For interacting with the comments API
+  - Allows for interacting with the comments API
 - Pull Requests: Read & write
-  - For posting comments on pull requests
+  - Allows for posting comments on pull requests
 - Contents: Read-only
-  - For cloning repositories
+  - Allows for cloning repositories before running commands
 
 ### Organization permissions
 
 - Members: Read-only
-  - Related to `ALLOWED_ORGANIZATIONS`: see if a user belongs to allowed
-    organizations even if their membership is private
+  - Related to [`$ALLOWED_ORGANIZATIONS`](#configuration-environment-variables):
+    this permission enables the bot to request the organization membership of
+    the command's requester even if their membership is private
+
 ### Event subscriptions
 
 - Issue comment
-  - For reacting to pull request comments
+  - Allows for receiving events for pull request comments

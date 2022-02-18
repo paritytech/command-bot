@@ -1,49 +1,83 @@
-// Set the secrets and then rename this file to bot.cjs (it's ignored by default)
+/*
+  Set the appropriate values and rename this file to bot.cjs (it's already
+  .gitignore by default)
+*/
 
 const fs = require("fs")
 const path = require("path")
 
-// All variables are required unless explicitly told otherwise.
+/*
 
-//process.env.ALLOWED_ORGANIZATIONS = process.env.ALLOWED_ORGANIZATIONS || "14176906"
+  Notes:
+  - All variables are required unless explicitly told otherwise.
+  - All values used for the variables are presented only for the sake of
+    exemplifying what should be used in them. Read the description of each value
+    in order to figure out how they should be provided.
+
+*/
 
 /*
   The following variables can acquired from https://github.com/settings/apps/[app-name].
+  Guides:
+    - https://docs.github.com/en/developers/apps/building-github-apps/creating-a-github-app
+    - https://probot.github.io/docs/development/#manually-configuring-a-github-app
+    - https://probot.github.io/docs/development/#installing-the-app-on-a-repository
 */
-process.env.WEBHOOK_SECRET =
-  process.env.WEBHOOK_SECRET || "87aaeef4ca4b2cc0828ed88f8c738ba86g448877"
-process.env.APP_ID = process.env.APP_ID || 114992
-process.env.CLIENT_ID = process.env.CLIENT_ID || "Iv3.36aaff1b0716cc4e"
-process.env.CLIENT_SECRET =
-  process.env.CLIENT_SECRET || "33c62a84d21bbff11494c2ef34e2ff73bb628b19"
+process.env.WEBHOOK_SECRET ??= "secret"
+process.env.APP_ID ??= 123
+process.env.CLIENT_ID ??= "secret"
+process.env.CLIENT_SECRET ??= "secret"
 
 /*
-  This private key's file can be generated and downloaded from https://github.com/settings/apps/[app-name].
+  This private key's file can be generated and downloaded from
+  https://github.com/settings/apps/[app-name].
+  If you need to calculate the Base64 of the value manually, that can be done
+  with `base64 -w 0 private-key.pem`.
 */
-process.env.PRIVATE_KEY_BASE64 =
-  process.env.PRIVATE_KEY_BASE64 ||
-  Buffer.from(
-    fs.readFileSync(
-      path.join(__dirname, "..", "githubPrivateKey.pem"),
-      "utf-8",
-    ),
-  ).toString("base64")
+process.env.PRIVATE_KEY_BASE64 ??= Buffer.from(
+  fs.readFileSync(path.join(__dirname, "..", "githubPrivateKey.pem"), "utf-8"),
+).toString("base64")
+
+// The 'data' directory in this location is already ignored on version control.
+process.env.DATA_PATH ??= path.join(__dirname, "..", "data")
 
 /*
-  The 'data' directory in that location is already ignored on version control.
+  Comma-separated organizations whose members will be able to run the commands.
+  At least one organization ID *has to* be provided for the bot to work.
+
+  The ID for each organization can be figured out by making a request to
+  https://api.github.com/users/$org.
 */
-process.env.DATA_PATH =
-  process.env.DATA_PATH || path.join(__dirname, "..", "data")
+process.env.ALLOWED_ORGANIZATIONS ??= "123,456"
 
 /*
-  NOT REQUIRED: API-related variables
+  Any environment variable following the pattern `${NAME}_WEBSOCKET_ADDRESS`
+  will be registered as a possible node target at the start of the application.
+  For instance, if you define a `POLKADOT_WEBSOCKET_ADDRESS` it will be
+  possible try use `ws://polkadot` in try-runtime's arguments.
+*/
+//process.env.POLKADOT_WEBSOCKET_ADDRESS ??= "ws://0.0.0.0:9944"
+//process.env.KUSAMA_WEBSOCKET_ADDRESS ??= "ws://0.0.0.0:9945"
+//process.env.WESTEND_WEBSOCKET_ADDRESS ??= "ws://0.0.0.0:9946"
+
+/*
+  NOT REQUIRED
   The API interactions needs a Matrix-related variables to be configured for
   notifying when a command finishes. Additionally, MASTER_TOKEN is used for
   allowing tokens to the API. If those are missing, then the API will not work.
 */
-//process.env.MATRIX_HOMESERVER = "https://matrix.parity.io"
-//process.env.MATRIX_ACCESS_TOKEN = "XXXXXXX"
-//process.env.MASTER_TOKEN = "0"
+//process.env.MATRIX_HOMESERVER ??= "https://matrix.parity.io"
+//process.env.MATRIX_ACCESS_TOKEN ??= "secret"
+//process.env.MASTER_TOKEN ??= "secret"
+
+/*
+  NOT REQUIRED
+  - For production it's recommended to set LOG_FORMAT to "json" so that log
+  entries it can be queried easily.
+  - For development it's recommended to leave this variable empty because the
+  output should end up being more readable that way.
+*/
+//process.env.LOG_FORMAT ??= "json"
 
 /*
   NOT REQUIRED
@@ -51,7 +85,7 @@ process.env.DATA_PATH =
   instead of creating comments on the API. Useful while you're trying something
   out in order to avoid spamming pull requests with useless comments.
 */
-//process.env.POST_COMMENT = process.env.POST_COMMENT || "false"
+//process.env.POST_COMMENT ??= false
 
 /*
   NOT REQUIRED
