@@ -86,8 +86,8 @@ RUN mkdir $APP_DIR && \
 
 RUN apt-get autoremove -y
 
-# Those dependencies are needed to build the Substrate & Polkadot at runtime due
-# to C/C++ dependencies e.g. jemalloc, RocksDB, etc.
+# Those dependencies are needed to Substrate-based projects at runtime due to
+# C/C++ dependencies e.g. jemalloc, RocksDB, etc.
 RUN $APT_INSTALL \
   gcc libc-dev libssl-dev libudev-dev pkg-config build-essential clang libclang-dev && \
   cc --version && \
