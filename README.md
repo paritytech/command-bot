@@ -16,6 +16,7 @@ on a dedicated remote host.
 - [Deploying](#deploying)
   - [Build and deploy](#build-and-deploy)
   - [Only deploy](#only-deploy)
+- [Implementation](#implementation)
 - [Developing](#developing)
   - [Running locally](#running-locally)
 - [Configuration](#configuration)
@@ -28,21 +29,21 @@ on a dedicated remote host.
 
 Comment in a pull request:
 
-`/try-runtime queue [env_vars] --url ws://{kusama,westend,polkadot} [args]`
+`/try-runtime queue [env-vars] --url ws://[kusama | westend | polkadot] [try-runtime-cli-args]`
 
-For instance (note that the following arguments might be outdated; this is
-merely an example):
+For instance:
 
 `/try-runtime queue RUST_LOG=debug --url ws://kusama --block-at "0x0" on-runtime-upgrade live`
 
-Then the try-runtime Substrate CLI command will be ran for your pull request's
-branch with the provided arguments and post the result as a comment. It's
-supposed to support the same arguments as
-[try-runtime](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)
-although not all of them have been tried out as of this writing.
+The `[try-runtime-cli-args]` form accepts the same arguments as the
+[try-runtime CLI](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)
+except that you **need to** refer to the nodes by their name e.g.
+`ws://polkadot` instead of using arbitrary addresses.
 
-Note: you **need to** refer to the nodes by their name e.g. `ws://polkadot`
-instead of using arbitrary addresses directly.
+Upon receiving the event for that comment, try-runtime-bot will queue the
+execution of the try-runtime CLI using the pull request's branch and post the
+result (`stdout` for success or `stderr` for errors) as a pull request comment
+when it finishes.
 
 ## Cancel <a name="pull-request-command-cancel"></a>
 
@@ -135,6 +136,46 @@ with `BUILD` set to `production`.
 
 [Trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
 with `DEPLOY` set to `production`.
+
+# Implementation <a name="implementation"></a>
+
+**Step 1**: Create a Task for a command request
+
+A request is turned into a
+[task](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/types.ts#L47)
+either
+[via API](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/api.ts#L135) or
+[through a pull request Webhook event](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/webhook.ts#L269)
+(which are delivered from GitHub [as `POST` requests](https://probot.github.io/docs/webhooks/)).
+
+**Step 2**: Queue the task
+
+The task is
+[saved to the database](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L551)
+so that
+[it will be retried later in case it can't be finished](https://github.com/paritytech/try-runtime-bot/blob/06a2d872c752f216dc890596e633112de99b6699/src/executor.ts#L640)
+(e.g. due to a container restart or crash).
+
+After being saved to the database, the task is
+[queued through `mutex.runExclusive`](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L554).
+
+Note: since execution of the task entails compiling the
+[try-runtime cli](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/),
+which in turn entails compiling Substrate (or some other project based on
+Substrate, such as Polkadot), the bot needs quite a lot of disk space since
+those projects consume upwards of dozens of gigabytes per build. In this sense
+the application also deeply cares about having enough space for running the
+commands, as discussed in
+https://github.com/paritytech/try-runtime-bot/issues/24#issuecomment-920737773.
+
+**Step 3**: Get the result
+
+[Take the result](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L615)
+from the
+[command's execution](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L94) and
+[post it as a pull request comment](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/github.ts#L151)
+if it originated from a pull request comment or
+[send it to a Matrix room](https://github.com/paritytech/try-runtime-bot/blob/412e82d728798db0505f6f9dd622805a4ca43829/src/utils.ts#L187) if it originated from an API request.
 
 # Developing <a name="developing"></a>
 
