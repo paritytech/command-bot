@@ -146,7 +146,8 @@ A request is turned into a
 either
 [via API](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/api.ts#L135) or
 [through a pull request Webhook event](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/webhook.ts#L269)
-(which are delivered from GitHub [as `POST` requests](https://probot.github.io/docs/webhooks/)).
+(which are delivered from GitHub
+[as HTTP `POST` requests](https://probot.github.io/docs/webhooks/)).
 
 **Step 2**: Queue the task
 
