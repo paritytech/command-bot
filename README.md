@@ -4,6 +4,9 @@ This bot provides interfaces for executing the
 [try-runtime cli](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/)
 on a dedicated remote host.
 
+Before starting to work on this project, we recommend reading the
+[Implementation section](#implementation).
+
 # TOC
 
 - [Pull request commands](#pull-request-commands)
