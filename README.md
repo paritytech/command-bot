@@ -180,6 +180,7 @@ GitHub App, install it in a repository through
 - `yarn` for installing packages and running scripts
   - If it's not already be bundled with Node.js, install with
     `npm install -g yarn`
+- `git` for cloning branches before executing try-runtime-cli
 - Rust for being able to build the try-runtime-cli
   - [rustup](https://rustup.rs/) is the recommended way of setting up a Rust
     toolchain
