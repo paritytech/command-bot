@@ -220,7 +220,7 @@ automatically once the application starts.
   development server which automatically restarts when you make changes to the
   source files
 6. Trigger the [commands](#pull-request-commands) in the repositories where
-  you've installed the GitHub Apps (Step 2) and check if it works
+  you've installed the GitHub App (Step 2) and check if it works
 
 # Deployment <a name="deployment"></a>
 
