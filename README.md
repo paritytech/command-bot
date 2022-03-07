@@ -207,10 +207,13 @@ automatically once the application starts.
 
 1. [Set up the GitHub App](#github-app)
 2. [Set up the application](#setup)
+
     During development it's handy to use a [smee.io](https://smee.io/) proxy,
     through the `WEBHOOK_PROXY_URL` environment variable, for receiving GitHub
     Webhook Events in your local server instance.
+
 3. Set up the blockchain nodes
+
     The following command can be used to set up a blockchain node locally (for usage
     in [`${NAME}_WEBSOCKET_ADDRESS`](#setup-environment-variables)):
 
@@ -218,6 +221,7 @@ automatically once the application starts.
 
     Note the `--chain` argument as it should be set to the specific runtime you're
     targetting.
+
 4. Run `yarn` to install the dependencies
 5. Run `yarn dev` to start a development server or `yarn watch` for a
   development server which automatically restarts when you make changes to the
