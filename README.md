@@ -4,6 +4,9 @@ This bot provides interfaces for executing the
 [try-runtime cli](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/)
 on a dedicated remote host.
 
+Before starting to work on this project, we recommend reading the
+[Implementation section](#implementation).
+
 # TOC
 
 - [Pull request commands](#pull-request-commands)
@@ -13,14 +16,18 @@ on a dedicated remote host.
   - [Create a Personal Token](#api-create-token)
   - [Queue](#api-command-queue)
   - [Cancel](#api-command-cancel)
-- [Deploying](#deploying)
-  - [Build and deploy](#build-and-deploy)
-  - [Only deploy](#only-deploy)
-- [Developing](#developing)
-  - [Running locally](#running-locally)
-- [Configuration](#configuration)
-  - [Environment variables](#configuration-environment-variables)
-  - [GitHub App Settings](#configuration-github-app-settings)
+- [GitHub App](#github-app)
+  - [Configuration](#github-app-configuration)
+  - [Installation](#github-app-installation)
+- [Setup](#setup)
+  - [Requirements](#setup-requirements)
+  - [Environment variables](#setup-environment-variables)
+- [Development](#development)
+  - [Run the application](#development-run)
+- [Deployment](#deployment)
+  - [Logs](#deployment-logs)
+  - [Production](#deployment-production)
+- [Implementation](#implementation)
 
 # Pull request commands <a name="pull-request-commands"></a>
 
@@ -28,21 +35,21 @@ on a dedicated remote host.
 
 Comment in a pull request:
 
-`/try-runtime queue [env_vars] --url ws://{kusama,westend,polkadot} [args]`
+`/try-runtime queue [env-vars] --url ws://[kusama | westend | polkadot] [try-runtime-cli-args]`
 
-For instance (note that the following arguments might be outdated; this is
-merely an example):
+For instance:
 
 `/try-runtime queue RUST_LOG=debug --url ws://kusama --block-at "0x0" on-runtime-upgrade live`
 
-Then the try-runtime Substrate CLI command will be ran for your pull request's
-branch with the provided arguments and post the result as a comment. It's
-supposed to support the same arguments as
-[try-runtime](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)
-although not all of them have been tried out as of this writing.
+The `[try-runtime-cli-args]` form accepts the same arguments as the
+[try-runtime CLI](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)
+except that you **need to** refer to the nodes by their name e.g.
+`ws://polkadot` instead of using arbitrary addresses.
 
-Note: you **need to** refer to the nodes by their name e.g. `ws://polkadot`
-instead of using arbitrary addresses directly.
+Upon receiving the event for that comment, try-runtime-bot will queue the
+execution of the try-runtime CLI using the pull request's branch and post the
+result (`stdout` for success or `stderr` for errors) as a pull request comment
+when it finishes.
 
 ## Cancel <a name="pull-request-command-cancel"></a>
 
@@ -59,7 +66,7 @@ without having to go through pull request comments.
 
 For interacting with the commands, first a Personal Token needs to be registered
 through `POST /api/access` by the
-[`$MASTER_TOKEN`](#configuration-environment-variables) (it is currently owned
+[`$MASTER_TOKEN`](#setup-environment-variables) (it is currently owned
 by the OpsTooling team of Parity for Parity's deployments).
 
 Each Personal Token is tied to a Matrix Room ID where the command's output will
@@ -123,49 +130,23 @@ curl \
   }'
 ```
 
-# Deploying <a name="deploying"></a>
+# GitHub App <a name="github-app"></a>
 
-## Build and deploy <a name="build-and-deploy"></a>
+The GitHub App is necessary for the application to receive
+[webhook events](https://probot.github.io/docs/webhooks) and
+access the GitHub API properly.
 
-Either push a tag with the pattern `/^v-[0-9]+\.[0-9]+.*$/` or
-[trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
-with `BUILD` set to `production`.
+Follow the instructions of
+<https://gitlab.parity.io/groups/parity/opstooling/-/wikis/Bots/Development/Create-a-new-GitHub-App>
+for creating a new GitHub App.
 
-## Only deploy <a name="only-deploy"></a>
+After creating the app, you should [configure](#github-app-configuration) and
+[install it](#github-app-installation) (make sure the
+[environment](#setup-environment-variables) is properly set up before using it).
 
-[Trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
-with `DEPLOY` set to `production`.
+## Configuration <a name="github-app-configuration"></a>
 
-# Developing <a name="developing"></a>
-
-Before developing you'll have to to copy
-[the example environment file](./env/bot.example.cjs) to `./env/bot.cjs` and set
-the appropriate values there.
-
-## Running locally <a name="running-locally"></a>
-
-1. [Configure your environment](#developing)
-2. Install dependencies: `yarn install`
-3. Start the application `yarn dev` for a static development server or `yarn
-  watch` for a development server which automatically restarts when you make
-  changes to the source files
-
-The following command can be used to set up a blockchain node locally (for usage
-in [`${NAME}_WEBSOCKET_ADDRESS`](#configuration-environment-variables)):
-
-`docker run -p 9944:9944 parity/polkadot:latest --base-path /polkadot --unsafe-rpc-external --unsafe-ws-external --rpc-cors all --chain kusama`
-
-Note the `--chain` argument as it should be set to the specific runtime you're
-targetting.
-
-# Configuration <a name="configuration"></a>
-
-## Environment variables <a name="configuration-environment-variables"></a>
-
-Please check [the environment example file](./env/bot.example.cjs) for the
-explanation on all the required environment variables.
-
-## GitHub App Settings <a name="configuration-github-app-settings"></a>
+Configuration is done at `https://github.com/settings/apps/${APP}/permissions`.
 
 ### Repository permissions
 
@@ -179,7 +160,7 @@ explanation on all the required environment variables.
 ### Organization permissions
 
 - Members: Read-only
-  - Related to [`$ALLOWED_ORGANIZATIONS`](#configuration-environment-variables):
+  - Related to [`$ALLOWED_ORGANIZATIONS`](#setup-environment-variables):
     this permission enables the bot to request the organization membership of
     the command's requester even if their membership is private
 
@@ -187,3 +168,120 @@ explanation on all the required environment variables.
 
 - Issue comment
   - Allows for receiving events for pull request comments
+
+## Installation <a name="github-app-installation"></a>
+
+Having [created](#github-app) and [configured](#github-app-configuration) the
+GitHub App, install it in a repository through
+`https://github.com/settings/apps/${APP}/installations`.
+
+# Setup <a name="setup"></a>
+
+## Requirements <a name="setup-requirements"></a>
+
+- Node.js for running the application
+- `yarn` for installing packages and running scripts
+  - If it's not already be bundled with Node.js, install with
+    `npm install -g yarn`
+- `git` for cloning branches before executing try-runtime-cli
+- Rust for being able to build the try-runtime-cli
+  - [rustup](https://rustup.rs/) is the recommended way of setting up a Rust
+    toolchain
+- try-runtime-cli's build requirements
+  - Please check the [generateDockerfile](./scripts/generateDockerfile) for the
+    relevant packages
+- RocksDB's build requirements
+  - Please check the [generateDockerfile](./scripts/generateDockerfile) for the
+    relevant packages
+
+## Environment variables <a name="setup-environment-variables"></a>
+
+All environment variables are documented in the
+[env/bot.example.cjs](./env/bot.example.cjs) file. For development you're
+welcome to copy that file to `env/bot.cjs` so that all values will be loaded
+automatically once the application starts.
+
+# Development <a name="development"></a>
+
+## Run the application <a name="development-run"></a>
+
+1. [Set up the GitHub App](#github-app)
+2. [Set up the application](#setup)
+
+    During development it's handy to use a [smee.io](https://smee.io/) proxy,
+    through the `WEBHOOK_PROXY_URL` environment variable, for receiving GitHub
+    Webhook Events in your local server instance.
+
+3. Set up the blockchain nodes
+
+    The following command can be used to set up a blockchain node locally (for usage
+    in [`${NAME}_WEBSOCKET_ADDRESS`](#setup-environment-variables)):
+
+    `docker run -p 9944:9944 parity/polkadot:latest --base-path /polkadot --unsafe-rpc-external --unsafe-ws-external --rpc-cors all --chain kusama`
+
+    Note the `--chain` argument as it should be set to the specific runtime you're
+    targetting.
+
+4. Run `yarn` to install the dependencies
+5. Run `yarn dev` to start a development server or `yarn watch` for a
+  development server which automatically restarts when you make changes to the
+  source files
+6. Trigger the [commands](#pull-request-commands) in the repositories where
+  you've installed the GitHub App (Step 2) and check if it works
+
+# Deployment <a name="deployment"></a>
+
+## Logs <a name="deployment-logs"></a>
+
+See <https://gitlab.parity.io/groups/parity/opstooling/-/wikis>
+
+## Production <a name="deployment-production"></a>
+
+To build **and** deploy: Either push a tag with the pattern `/^v-[0-9]+\.[0-9]+.*$/` or
+[trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
+with `BUILD` set to `production`.
+
+To only deploy (an existing tag):
+[trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
+with `DEPLOY` set to `production`.
+
+# Implementation <a name="implementation"></a>
+
+**Step 1**: Create a Task for a command request
+
+A request is turned into a
+[task](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/types.ts#L47)
+either
+[via API](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/api.ts#L135) or
+[through a pull request Webhook event](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/webhook.ts#L269)
+(which are delivered from GitHub
+[as HTTP `POST` requests](https://probot.github.io/docs/webhooks/)).
+
+**Step 2**: Queue the task
+
+The task is
+[saved to the database](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L551)
+so that
+[it will be retried later in case it can't be finished](https://github.com/paritytech/try-runtime-bot/blob/06a2d872c752f216dc890596e633112de99b6699/src/executor.ts#L640)
+(e.g. due to a container restart or crash).
+
+After being saved to the database, the task is
+[queued through `mutex.runExclusive`](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L554).
+
+Note: since execution of the task entails compiling the
+[try-runtime cli](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/),
+which in turn entails compiling Substrate (or some other project based on
+Substrate, such as Polkadot), the bot needs quite a lot of disk space since
+those projects consume upwards of dozens of gigabytes per build. In this sense
+the application also deeply cares about having enough space for running the
+commands, as discussed in
+https://github.com/paritytech/try-runtime-bot/issues/24#issuecomment-920737773.
+
+**Step 3**: Get the result
+
+[Take the result](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L615)
+from the
+[command's execution](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L94) and
+[post it as a pull request comment](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/github.ts#L151)
+if it originated from a pull request comment or
+[send it to a Matrix room](https://github.com/paritytech/try-runtime-bot/blob/412e82d728798db0505f6f9dd622805a4ca43829/src/utils.ts#L187) if it originated from an API request.
