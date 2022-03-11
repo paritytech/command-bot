@@ -26,7 +26,7 @@ Before starting to work on this project, we recommend reading the
   - [Run the application](#development-run)
 - [Deployment](#deployment)
   - [Logs](#deployment-logs)
-  - [Production](#deployment-production)
+  - [Environments](#deployment-environments)
 - [Implementation](#implementation)
 
 # Pull request commands <a name="pull-request-commands"></a>
@@ -235,15 +235,24 @@ automatically once the application starts.
 
 See <https://gitlab.parity.io/groups/parity/opstooling/-/wikis>
 
-## Production <a name="deployment-production"></a>
+## Environments <a name="deployment-environments"></a>
 
-To build **and** deploy: Either push a tag with the pattern `/^v-[0-9]+\.[0-9]+.*$/` or
-[trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
-with `BUILD` set to `production`.
+When you push a deployment tag to GitHub, it will be
+[mirrored to GitLab](https://gitlab.parity.io/parity/opstooling/try-runtime-bot)
+and then its [CI pipeline](./.gitlab-ci.yml) will be run for deploying the app.
 
-To only deploy (an existing tag):
-[trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
-with `DEPLOY` set to `production`.
+The application can be deployed to the following environments:
+
+- Production
+
+  To build **and** deploy: Either push a tag with the pattern
+  `/^v-[0-9]+\.[0-9]+.*$/` or
+  [trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
+  with `BUILD` set to `production`.
+
+  To only deploy (an existing tag):
+  [trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
+  with `DEPLOY` set to `production`.
 
 # Implementation <a name="implementation"></a>
 
