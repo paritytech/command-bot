@@ -26,8 +26,7 @@ Before starting to work on this project, we recommend reading the
   - [Run the application](#development-run)
 - [Deployment](#deployment)
   - [Logs](#deployment-logs)
-  - [Build and deploy](#deployment-build-and-deploy)
-  - [Only deploy](#deployment-only-deploy)
+  - [Production](#deployment-production)
 - [Implementation](#implementation)
 
 # Pull request commands <a name="pull-request-commands"></a>
@@ -235,15 +234,14 @@ automatically once the application starts.
 
 See <https://gitlab.parity.io/groups/parity/opstooling/-/wikis>
 
-## Build and deploy <a name="deployment-build-and-deploy"></a>
+## Production <a name="deployment-production"></a>
 
-Either push a tag with the pattern `/^v-[0-9]+\.[0-9]+.*$/` or
+To build **and** deploy: Either push a tag with the pattern `/^v-[0-9]+\.[0-9]+.*$/` or
 [trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
 with `BUILD` set to `production`.
 
-## Only deploy <a name="deployment-only-deploy"></a>
-
-[Trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
+To only deploy (an existing tag):
+[trigger a new pipeline](https://gitlab.parity.io/parity/opstooling/try-runtime-bot/-/pipelines/new)
 with `DEPLOY` set to `production`.
 
 # Implementation <a name="implementation"></a>
