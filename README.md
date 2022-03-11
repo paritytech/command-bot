@@ -174,7 +174,8 @@ Configuration is done at `https://github.com/settings/apps/${APP}/permissions`.
 Having [created](#github-app) and [configured](#github-app-configuration) the
 GitHub App, install it in a repository through
 `https://github.com/settings/apps/${APP}/installations`.
-# Deploying <a name="deploying"></a>
+
+# Setup <a name="setup"></a>
 
 ## Requirements <a name="setup-requirements"></a>
 
