@@ -9,6 +9,7 @@ Before starting to work on this project, we recommend reading the
 
 # TOC
 
+- [How it works](#how-it-works)
 - [Pull request commands](#pull-request-commands)
   - [Queue](#pull-request-command-queue)
   - [Cancel](#pull-request-command-cancel)
@@ -28,6 +29,14 @@ Before starting to work on this project, we recommend reading the
   - [Logs](#deployment-logs)
   - [Environments](#deployment-environments)
 - [Implementation](#implementation)
+
+# How it works <a name="how-it-works"></a>
+
+This bot executes the
+[try-runtime CLI](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli)
+from [commands in pull request comments](#pull-request-commands) (the
+[GitHub App](#github-app) has to be installed in the repository) and from
+[API requests](#api).
 
 # Pull request commands <a name="pull-request-commands"></a>
 
