@@ -273,7 +273,7 @@ export const getWebhooksHandlers = function (state: State) {
                 requester,
                 execPath,
                 args,
-                env: command.env,
+                env: { ...command.env, CARGO_TERM_COLOR: "never" },
                 commentId,
                 installationId,
                 gitRef: { owner, repo, contributor, branch },

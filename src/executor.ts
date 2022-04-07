@@ -66,6 +66,7 @@ export type ShellExecutor = (
     testAllowedErrorMessage?: (stderr: string) => boolean
     secretsToHide?: string[]
     shouldTrackProgress?: boolean
+    shouldCaptureAllStreams?: boolean
   },
 ) => Promise<CommandOutput>
 const getShellExecutor = function ({
@@ -88,6 +89,7 @@ const getShellExecutor = function ({
       testAllowedErrorMessage,
       secretsToHide,
       shouldTrackProgress,
+      shouldCaptureAllStreams,
     } = {},
   ) {
     return new Promise(function (resolve) {
@@ -119,8 +121,7 @@ const getShellExecutor = function ({
             resolve(error)
           })
 
-          let stdoutBuf = ""
-          let stderrBuf = ""
+          const commandOutputBuffer: Array<["stdout" | "stderr", string]> = []
           const getStreamHandler = function (channel: "stdout" | "stderr") {
             return function (data: { toString: () => string }) {
               const str = redactSecrets(data.toString(), secretsToHide)
@@ -130,23 +131,9 @@ const getShellExecutor = function ({
                 logger.info(strTrim, channel)
               }
 
-              switch (channel) {
-                case "stdout": {
-                  stdoutBuf += str
-                  break
-                }
-                case "stderr": {
-                  stderrBuf += str
-                  break
-                }
-                default: {
-                  const exhaustivenessCheck: never = channel
-                  throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
-                }
-              }
+              commandOutputBuffer.push([channel, str])
             }
           }
-
           child.stdout.on("data", getStreamHandler("stdout"))
           child.stderr.on("data", getStreamHandler("stderr"))
 
@@ -155,9 +142,20 @@ const getShellExecutor = function ({
           ) {
             child.on("close", async function (exitCode) {
               try {
-                const stderr = redactSecrets(stderrBuf.trim(), secretsToHide)
-
                 if (exitCode) {
+                  const stderr = redactSecrets(
+                    commandOutputBuffer
+                      .reduce((acc, [stream, value]) => {
+                        if (stream === "stderr") {
+                          return `${acc}${value}`
+                        } else {
+                          return acc
+                        }
+                      }, "")
+                      .trim(),
+                    secretsToHide,
+                  )
+
                   // https://github.com/rust-lang/rust/issues/51309
                   // Could happen due to lacking system constraints (we saw it
                   // happen due to out-of-memory)
@@ -290,8 +288,20 @@ const getShellExecutor = function ({
                   }
                 }
 
-                const stdout = redactSecrets(stdoutBuf.trim(), secretsToHide)
-                resolve(stdout || stderr)
+                const outputBuf = shouldCaptureAllStreams
+                  ? commandOutputBuffer.reduce(
+                      (acc, [_, value]) => `${acc}${value}`,
+                      "",
+                    )
+                  : commandOutputBuffer.reduce((acc, [stream, value]) => {
+                      if (stream === "stdout") {
+                        return `${acc}${value}`
+                      } else {
+                        return acc
+                      }
+                    }, "")
+                const output = redactSecrets(outputBuf.trim(), secretsToHide)
+                resolve(output)
               } catch (error) {
                 resolve(error)
               }
@@ -615,6 +625,7 @@ export const queue = async function ({
         const result = await run(execPath, args, {
           options: { env: { ...process.env, ...taskData.env }, cwd: repoPath },
           shouldTrackProgress: true,
+          shouldCaptureAllStreams: true,
         })
         const endTime = new Date()
 
