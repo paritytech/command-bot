@@ -226,10 +226,7 @@ automatically once the application starts.
     The following command can be used to set up a blockchain node locally (for usage
     in [`${NAME}_WEBSOCKET_ADDRESS`](#setup-environment-variables)):
 
-    `docker run -p 9944:9944 parity/polkadot:latest --base-path /polkadot --unsafe-rpc-external --unsafe-ws-external --rpc-cors all --chain kusama`
-
-    Note the `--chain` argument as it should be set to the specific runtime you're
-    targetting.
+    `docker run -p 9944:9944 parity/polkadot:latest --unsafe-rpc-external --unsafe-ws-external --ws-port 9944 --rpc-cors all --dev --tmp`
 
 4. Run `yarn` to install the dependencies
 5. Run `yarn dev` to start a development server or `yarn watch` for a
