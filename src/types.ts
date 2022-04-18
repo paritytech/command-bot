@@ -1,58 +1,19 @@
-import { EmitterWebhookEventName } from "@octokit/webhooks/dist-types/types"
+import cp from "child_process"
 import { MatrixClient } from "matrix-bot-sdk"
-import { Probot } from "probot"
 
 import type { AccessDB, TaskDB } from "./db"
 import { Logger } from "./logger"
 
-export type PullRequestParams = {
-  owner: string
-  repo: string
-  pull_number: number
-}
-
-type GitRef = {
+export type GitRef = {
   contributor: string
   owner: string
   repo: string
   branch: string
 }
 
-type TaskBase<T> = {
-  tag: T
-  handleId: string
-  version: string
-  timesRequeued: number
-  timesRequeuedSnapshotBeforeExecution: number
-  timesExecuted: number
-  commandDisplay: string
-  execPath: string
-  args: string[]
-  env: Record<string, string>
-  gitRef: GitRef
-  repoPath: string
-}
-
-export type PullRequestTask = TaskBase<"PullRequestTask"> &
-  PullRequestParams & {
-    commentId: number
-    installationId: number
-    requester: string
-  }
-
-export type ApiTask = TaskBase<"ApiTask"> & {
-  matrixRoom: string
-}
-
-export type Task = PullRequestTask | ApiTask
-
-export type CommandOutput = Error | string
-
-type TaskIdParseResult = { date: Date; suffix?: string } | Error
-export type State = {
+export type Context = {
   appName: string
-  version: string
-  bot: Probot
+  startDate: Date
   taskDb: TaskDB
   accessDb: AccessDB
   getFetchEndpoint: (
@@ -65,15 +26,17 @@ export type State = {
   deployment: { environment: string; container: string } | undefined
   matrix: MatrixClient | null
   masterToken: string | null
-  getUniqueId: () => string
-  getTaskId: () => string
-  parseTaskId: (id: string) => TaskIdParseResult
   nodesAddresses: Record<string, string>
+  shouldPostPullRequestComment: boolean
 }
 
 export class PullRequestError {
   constructor(
-    public params: PullRequestParams,
+    public pr: {
+      owner: string
+      repo: string
+      number: number
+    },
     public comment: {
       body: string
       commentId?: number
@@ -82,11 +45,18 @@ export class PullRequestError {
   ) {}
 }
 
-export type GetCommandOptions = { baseEnv: Record<string, string> }
+export type ToString = { toString: () => string }
 
-export type Octokit = Awaited<ReturnType<Probot["auth"]>>
-
-export type WebhookEvents = Extract<
-  EmitterWebhookEventName,
-  "issue_comment.created"
->
+export type CommandOutput = Error | string
+export type CommandExecutor = (
+  execPath: string,
+  args: string[],
+  opts?: {
+    allowedErrorCodes?: number[]
+    options?: cp.SpawnOptionsWithoutStdio & { cwd?: string }
+    testAllowedErrorMessage?: (stderr: string) => boolean
+    secretsToHide?: string[]
+    shouldTrackProgress?: boolean
+    shouldCaptureAllStreams?: boolean
+  },
+) => Promise<CommandOutput>

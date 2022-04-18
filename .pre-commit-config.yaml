@@ -11,7 +11,7 @@ repos:
         entry: node_modules/.bin/eslint
         language: node
         files: \.[^\.]*(t|j)s$
-        exclude: env/bot\.cjs
+        exclude: env.cjs
         args: ["--quiet"]
       - id: prettier
         name: prettier

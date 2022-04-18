@@ -206,9 +206,9 @@ GitHub App, install it in a repository through
 ## Environment variables <a name="setup-environment-variables"></a>
 
 All environment variables are documented in the
-[env/bot.example.cjs](./env/bot.example.cjs) file. For development you're
-welcome to copy that file to `env/bot.cjs` so that all values will be loaded
-automatically once the application starts.
+[env.example.cjs](./env.example.cjs) file. For development you're welcome to
+copy that file to `env.cjs` so that all values will be loaded automatically
+once the application starts.
 
 # Development <a name="development"></a>
 
@@ -281,7 +281,9 @@ so that
 (e.g. due to a container restart or crash).
 
 After being saved to the database, the task is
-[queued through `mutex.runExclusive`](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L554).
+[queued through `mutex.runExclusive`](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L554)
+so that we'll execute one task at a time, in order (it is a fair mutex), without
+risking conflicts due to parallel task execution.
 
 Note: since execution of the task entails compiling the
 [try-runtime cli](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/),

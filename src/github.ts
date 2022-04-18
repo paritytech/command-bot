@@ -1,22 +1,22 @@
+import { OctokitResponse } from "@octokit/plugin-paginate-rest/dist-types/types"
 import { RequestError } from "@octokit/request-error"
 import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types"
+import { Mutex } from "async-mutex"
+import { Probot } from "probot"
 
-import { Logger } from "./logger"
-import {
-  CommandOutput,
-  Octokit,
-  PullRequestParams,
-  PullRequestTask,
-  State,
-} from "./types"
-import {
-  displayError,
-  getDeploymentLogsMessage,
-  millisecondsDelay,
-} from "./utils"
+import { getDeploymentsLogsMessage } from "./core"
+import { PullRequestTask } from "./task"
+import { CommandOutput, Context } from "./types"
+import { displayError, Err, millisecondsDelay, Ok } from "./utils"
 
-// The actual limit should be 65532 but we're a bit conservative here
-// https://github.community/t/maximum-length-for-the-comment-body-in-issues-and-pr/148867/2
+type Octokit = Awaited<ReturnType<Probot["auth"]>>
+
+const wasOctokitExtendedByApplication = Symbol()
+
+/*
+  The actual limit should be 65532 but we're a bit conservative here
+  https://github.community/t/maximum-length-for-the-comment-body-in-issues-and-pr/148867/2
+*/
 const githubCommentCharacterLimit = 65500
 
 export type ExtendedOctokit = Octokit & {
@@ -31,11 +31,26 @@ export type ExtendedOctokit = Octokit & {
       }>
     }
   }
-  extendedByTryRuntimeBot: boolean
+  [wasOctokitExtendedByApplication]: boolean
 }
 
-export const getOctokit = function (octokit: Octokit): ExtendedOctokit {
-  if ((octokit as ExtendedOctokit).extendedByTryRuntimeBot) {
+// Funnel all GitHub requests through a Mutex in order to avoid rate limits
+const requestMutex = new Mutex()
+let requestDelay = Promise.resolve()
+
+const rateLimitRemainingHeader = "x-ratelimit-remaining"
+const rateLimitResetHeader = "x-ratelimit-reset"
+const retryAfterHeader = "retry-after"
+export const getOctokit = (
+  { logger }: Context,
+  octokit: Octokit,
+): ExtendedOctokit => {
+  /*
+    Check that this Octokit instance has not been augmented before because
+    side-effects of this function should not be stacked; e.g. registering
+    request wrappers more than once will break the application
+  */
+  if ((octokit as ExtendedOctokit)[wasOctokitExtendedByApplication]) {
     return octokit as ExtendedOctokit
   }
 
@@ -46,76 +61,201 @@ export const getOctokit = function (octokit: Octokit): ExtendedOctokit {
     }),
   })
 
-  octokit.hook.wrap("request", async function (request, options) {
-    let result: any
+  octokit.hook.wrap("request", async (request, options) => {
+    logger.info(
+      { request, options },
+      "Preparing to send a request to the GitHub API",
+    )
 
-    // throttle requests in order to avoid abuse limit
-    await millisecondsDelay(500)
+    let triesCount = 0
+    const result: Ok<OctokitResponse<any>> | Err<any> | undefined =
+      await requestMutex.runExclusive(async () => {
+        try {
+          await requestDelay
 
-    for (let tryCount = 1; tryCount < 4; tryCount++) {
-      try {
-        result = await request(options)
-      } catch (error) {
-        result = error
-      }
+          for (; triesCount < 3; triesCount++) {
+            if (triesCount) {
+              logger.info(
+                `Retrying Octokit request (tries so far: ${triesCount})`,
+              )
+            }
 
-      if (
-        !(result instanceof RequestError) ||
-        [400, 401, 403, 404, 422].includes(result.status)
-      ) {
-        break
-      }
+            try {
+              return new Ok(await request(options))
+            } catch (error) {
+              if (!(error instanceof RequestError)) {
+                return new Err(error)
+              }
 
-      await millisecondsDelay(tryCount * 1000)
+              const { status, message } = error
+              const isApiRateLimitResponse = message.startsWith(
+                "You have exceeded a secondary rate limit.",
+              )
+              /*
+              4XX status codes indicates a "client error", thus we assume the
+              request is invalid and therefore there's no point in retrying it
+              */
+              if (!isApiRateLimitResponse && status >= 400 && status < 500) {
+                return new Err(error)
+              }
+
+              const { response } = error
+              const fallbackWaitDuration = 1000
+              const waitDuration =
+                response === undefined
+                  ? /*
+                    We don't know what to make of this error since its response is
+                    empty, so just use a fallback wait duration
+                  */ fallbackWaitDuration
+                  : (() => {
+                      const { headers } = response
+                      if (
+                        parseInt(headers[rateLimitRemainingHeader] ?? "") === 0
+                      ) {
+                        // https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limit-http-headers
+                        logger.warn(
+                          `GitHub API limits were hit! The "${rateLimitResetHeader}" response header will be read to figure out until when we're supposed to wait...`,
+                        )
+                        const rateLimitResetHeaderValue =
+                          headers[rateLimitResetHeader]
+                        const resetEpoch =
+                          parseInt(rateLimitResetHeaderValue ?? "") * 1000
+                        if (Number.isNaN(resetEpoch)) {
+                          logger.error(
+                            {
+                              rateLimitResetHeaderValue,
+                              rateLimitResetHeader,
+                              headers,
+                            },
+                            `GitHub response header "${rateLimitResetHeader}" could not be parsed as epoch`,
+                          )
+                        } else {
+                          const currentEpoch = Date.now()
+                          const duration = resetEpoch - currentEpoch
+                          if (duration < 0) {
+                            logger.error(
+                              {
+                                rateLimitResetHeaderValue,
+                                resetEpoch,
+                                currentEpoch,
+                                headers,
+                              },
+                              `Parsed epoch value for GitHub response header "${rateLimitResetHeader}" is smaller than the current date`,
+                            )
+                          } else {
+                            return duration
+                          }
+                        }
+                      } else if (headers[retryAfterHeader] !== undefined) {
+                        // https://docs.github.com/en/rest/guides/best-practices-for-integrators#dealing-with-secondary-rate-limits
+                        const retryAfterHeaderValue = headers[retryAfterHeader]
+                        const duration =
+                          parseInt(String(retryAfterHeaderValue)) * 1000
+                        if (Number.isNaN(duration)) {
+                          logger.error(
+                            {
+                              retryAfterHeader,
+                              retryAfterHeaderValue,
+                              headers,
+                            },
+                            `GitHub response header "${retryAfterHeader}" could not be parsed as seconds`,
+                          )
+                        } else {
+                          return duration
+                        }
+                      } else if (
+                        /*
+                        If this is an API Rate Limit response error and we
+                        haven't been able to parse the precise required wait
+                        duration, it's not sane to try to recover from this
+                        error by using a fallback wait duration because it might
+                        be imprecise
+                      */
+                        !isApiRateLimitResponse
+                      ) {
+                        logger.info(
+                          { headers, fallbackWaitDuration, message },
+                          "Falling back to default wait duration since other heuristics were not fulfilled",
+                        )
+                        return fallbackWaitDuration
+                      }
+                    })()
+
+              if (waitDuration === undefined) {
+                return new Err(error)
+              }
+
+              logger.info(
+                `Waiting for ${waitDuration}ms until requests can be made again...`,
+              )
+              await millisecondsDelay(waitDuration)
+            }
+          }
+        } catch (error) {
+          return new Err(error)
+        }
+      })
+
+    /*
+      3600 (seconds in an hour) / 5000 (requests limit) = 0.72, or 720
+      milliseconds, which is the minimum value we can use for this delay
+    */
+    requestDelay = millisecondsDelay(768)
+
+    if (result instanceof Err) {
+      throw result.value
+    } else if (result === undefined) {
+      throw new Error(
+        `Unable to fetch GitHub response within ${triesCount} tries`,
+      )
     }
 
-    if (result instanceof Error) {
-      throw result
-    }
-
-    return result
+    return result.value
   })
 
   const extendedOctokit = octokit as ExtendedOctokit
-  extendedOctokit.extendedByTryRuntimeBot = true
+  extendedOctokit[wasOctokitExtendedByApplication] = true
   return extendedOctokit
 }
 
-export const createComment = async function (
+export const createComment = async (
+  { shouldPostPullRequestComment, logger }: Context,
   octokit: Octokit,
   ...args: Parameters<typeof octokit.issues.createComment>
-): Promise<{ status: number; id: number; data: any }> {
-  if (process.env.POST_COMMENT === "false") {
-    console.log({ call: "createComment", args })
-    return { status: 201, id: 0, data: null }
-  } else {
+) => {
+  if (shouldPostPullRequestComment) {
     const { data, status } = await octokit.issues.createComment(...args)
     return { status, id: data.id, data }
+  } else {
+    logger.info({ call: "createComment", args })
+    return { status: 201, id: 0, data: null }
   }
 }
 
-export const updateComment = async function (
+export const updateComment = async (
+  { shouldPostPullRequestComment, logger }: Context,
   octokit: Octokit,
   ...args: Parameters<typeof octokit.issues.updateComment>
-) {
-  if (process.env.POST_COMMENT === "false") {
-    console.log({ call: "updateComment", args })
-  } else {
+) => {
+  if (shouldPostPullRequestComment) {
     await octokit.issues.updateComment(...args)
+  } else {
+    logger.info({ call: "updateComment", args })
   }
 }
 
-export const isOrganizationMember = async function ({
-  organizationId,
-  username,
-  octokit,
-  logger,
-}: {
-  organizationId: number
-  username: string
-  octokit: ExtendedOctokit
-  logger: Logger
-}) {
+export const isOrganizationMember = async (
+  { logger }: Context,
+  {
+    organizationId,
+    username,
+    octokit,
+  }: {
+    organizationId: number
+    username: string
+    octokit: ExtendedOctokit
+  },
+) => {
   try {
     const response = await octokit.orgs.userMembershipByOrganizationId({
       organization_id: organizationId,
@@ -123,34 +263,42 @@ export const isOrganizationMember = async function ({
     })
     return (response.status as number) === 204
   } catch (error) {
-    // error class is expected to be of RequestError or some variant which
-    // includes the failed HTTP status
-    // 404 is one of the expected responses for this endpoint so this scenario
-    // doesn't need to be flagged as an error
-    if (error?.status !== 404) {
-      logger.fatal(
-        error,
-        "Organization membership API call responded with unexpected status code",
-      )
+    if (error instanceof RequestError) {
+      /*
+        error class is expected to be of RequestError or some variant which
+        includes the failed HTTP status
+        404 is one of the expected responses for this endpoint so this scenario
+        doesn't need to be flagged as an error
+      */
+      if (error?.status !== 404) {
+        logger.fatal(
+          error,
+          "Organization membership API call responded with unexpected status code",
+        )
+      }
+    } else {
+      logger.fatal(error, "Caught unexpected error in isOrganizationMember")
     }
     return false
   }
 }
 
-export const getPostPullRequestResult = function ({
-  taskData,
-  octokit,
-  state: { logger, deployment },
-}: {
-  taskData: PullRequestTask
-  octokit: Octokit
-  state: Pick<State, "deployment" | "logger">
-}) {
-  return async function (result: CommandOutput) {
-    try {
-      logger.info({ result, taskData }, "Posting pull request result")
+export const getPostPullRequestResult = (
+  ctx: Context,
+  octokit: Octokit,
+  task: PullRequestTask,
+) => {
+  const { logger } = ctx
 
-      const { owner, repo, requester, pull_number, commandDisplay } = taskData
+  return async (result: CommandOutput) => {
+    try {
+      logger.info({ result, task }, "Posting pull request result")
+
+      const {
+        gitRef: { owner, repo, prNumber: prNumber },
+        requester,
+        commandDisplay,
+      } = task
 
       const before = `
 @${requester} Results are ready for:\n\n  \`${commandDisplay}\`
@@ -175,8 +323,8 @@ export const getPostPullRequestResult = function ({
         before.length + resultDisplay.length + after.length >
         githubCommentCharacterLimit
       ) {
-        truncateMessageWarning = `\n---\nThe command's output was too big to be fully displayed. ${getDeploymentLogsMessage(
-          deployment,
+        truncateMessageWarning = `\n---\nThe command's output was too big to be fully displayed. ${getDeploymentsLogsMessage(
+          ctx,
         )}.`
         const truncationIndicator = "[truncated]..."
         resultDisplay = `${resultDisplay.slice(
@@ -191,25 +339,17 @@ export const getPostPullRequestResult = function ({
         truncateMessageWarning = ""
       }
 
-      await createComment(octokit, {
+      await createComment(ctx, octokit, {
         owner,
         repo,
-        issue_number: pull_number,
+        issue_number: prNumber,
         body: `${before}${resultDisplay}${after}${truncateMessageWarning}`,
       })
     } catch (error) {
-      logger.fatal(
-        { error, result, taskData },
+      logger.error(
+        { error, result, task },
         "Caught error while trying to post pull request result",
       )
     }
   }
-}
-
-export const getPullRequestHandleId = function ({
-  owner,
-  repo,
-  pull_number,
-}: PullRequestParams) {
-  return `owner: ${owner}, repo: ${repo}, pull: ${pull_number}`
 }

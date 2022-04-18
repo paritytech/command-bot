@@ -1,84 +1,34 @@
 import assert from "assert"
 import { differenceInMilliseconds } from "date-fns"
-import fs from "fs"
-import { MatrixClient } from "matrix-bot-sdk"
-import path from "path"
-import { promisify } from "util"
 
-import { ShellExecutor } from "./executor"
-import { Logger } from "./logger"
-import { ApiTask, CommandOutput, State } from "./types"
+export const envVar = (name: string) => {
+  const val = process.env[name]
+  if (typeof val !== "string") {
+    throw new Error(`${name} was not found in the environment variables`)
+  }
+  return val
+}
 
-const fsExists = promisify(fs.exists)
-const fsRmdir = promisify(fs.rmdir)
-const fsMkdir = promisify(fs.mkdir)
-const fsUnlink = promisify(fs.unlink)
+export const envNumberVar = (name: string) => {
+  const val = process.env[name]
+  assert(val, `${name} was not found in the environment variables`)
+  const valNumber = parseInt(val)
+  assert(valNumber, `${name} is not a number`)
+  return valNumber
+}
 
-export const getLines = function (str: string) {
+export const getLines = (str: string) => {
   return str
     .split("\n")
-    .map(function (line) {
+    .map((line) => {
       return line.trim()
     })
-    .filter(function (line) {
+    .filter((line) => {
       return !!line
     })
 }
 
-export const getCommand = function (
-  commandLine: string,
-  { baseEnv }: { baseEnv: Record<string, string> },
-) {
-  const tokens = commandLine.split(" ").filter(function (value) {
-    return !!value
-  })
-
-  const envVars: { name: string; value: string }[] = []
-  const command: string[] = []
-  // envArgs are only collected at the start of the command line
-  let isCollectingEnvVars = true
-  while (true) {
-    const token = tokens.shift()
-    if (token === undefined) {
-      break
-    }
-
-    if (isCollectingEnvVars) {
-      const matches = token.match(/^([A-Za-z_]+)=(.*)/)
-      if (matches === null) {
-        isCollectingEnvVars = false
-      } else {
-        const [, name, value] = matches
-        assert(name)
-        envVars.push({ name, value })
-        continue
-      }
-    }
-
-    command.push(token)
-  }
-
-  const env: Record<string, string> = { ...baseEnv }
-  for (const { name, value } of envVars) {
-    env[name] = value
-  }
-
-  const [execPath, ...args] = command
-
-  return { execPath, args, env }
-}
-
-export const redactSecrets = function (str: string, secrets: string[] = []) {
-  for (const secret of secrets) {
-    if (!secret) {
-      continue
-    }
-    str = str.replace(secret, "{SECRET}")
-  }
-  return str
-}
-
-export const displayCommand = function ({
+export const displayCommand = ({
   execPath,
   args,
   secretsToHide,
@@ -86,119 +36,29 @@ export const displayCommand = function ({
   execPath: string
   args: string[]
   secretsToHide: string[]
-}) {
-  return redactSecrets(`${execPath} ${args.join(" ")}`, secretsToHide)
+}) => {
+  return redact(`${execPath} ${args.join(" ")}`, secretsToHide, "{SECRET}")
 }
 
-export const millisecondsDelay = function (milliseconds: number) {
-  return new Promise<void>(function (resolve) {
+export const millisecondsDelay = (milliseconds: number) => {
+  return new Promise<void>((resolve) => {
     setTimeout(resolve, milliseconds)
   })
 }
 
-export const ensureDir = async function (dir: string) {
-  if (!(await fsExists(dir))) {
-    await fsMkdir(dir, { recursive: true })
+export const intoError = (value: unknown) => {
+  if (value instanceof Error) {
+    return value
   }
-  return dir
+  return new Error(String(value))
 }
 
-export const removeDir = async function (dir: string) {
-  if (!(await fsExists(dir))) {
-    await fsRmdir(dir, { recursive: true })
-  }
-  return dir
+export const displayError = (value: unknown) => {
+  const error = intoError(value)
+  return `${error.toString()}${error.stack ? `\n${error.stack}` : ""}`
 }
 
-export const initDatabaseDir = async function (dir: string) {
-  dir = await ensureDir(dir)
-  const lockPath = path.join(dir, "LOCK")
-  if (await fsExists(lockPath)) {
-    await fsUnlink(lockPath)
-  }
-  return dir
-}
-
-export const getDeploymentLogsMessage = function (
-  deployment: State["deployment"],
-) {
-  if (deployment === undefined) {
-    return ""
-  }
-
-  return `The logs for this command should be available on Grafana for the data source \`loki.${deployment.environment}\` and query \`{container=~"${deployment.container}"}\``
-}
-
-export class Retry {
-  context: string
-  motive: string
-  stderr: string
-
-  constructor(options: {
-    context: "compilation error"
-    motive: string
-    stderr: string
-  }) {
-    this.context = options.context
-    this.motive = options.motive
-    this.stderr = options.stderr
-  }
-}
-
-export const displayError = function (e: Error) {
-  return `${e.toString()}\n${e.stack}`
-}
-
-export const getSendMatrixResult = function (
-  matrix: MatrixClient,
-  logger: Logger,
-  {
-    matrixRoom,
-    handleId,
-    commandDisplay,
-  }: Pick<ApiTask, "matrixRoom" | "handleId" | "commandDisplay">,
-) {
-  return async function (message: CommandOutput) {
-    try {
-      const fileName = `${handleId}-log.txt`
-      const buf = message instanceof Error ? displayError(message) : message
-      const messagePrefix = `Handle ID ${handleId} has finished.`
-
-      const lineCount = (buf.match(/\n/g) || "").length + 1
-      if (lineCount < 128) {
-        await matrix.sendHtmlText(
-          matrixRoom,
-          `${messagePrefix} Results will be displayed inline for <code>${escapeHtml(
-            commandDisplay,
-          )}</code>\n<hr>${escapeHtml(buf)}`,
-        )
-        return
-      }
-
-      const url = await matrix.uploadContent(
-        Buffer.from(message instanceof Error ? displayError(message) : message),
-        "text/plain",
-        fileName,
-      )
-      await matrix.sendText(
-        matrixRoom,
-        `${messagePrefix} Results were uploaded as ${fileName} for ${commandDisplay}.`,
-      )
-      await matrix.sendMessage(matrixRoom, {
-        msgtype: "m.file",
-        body: fileName,
-        url,
-      })
-    } catch (error) {
-      logger.fatal(
-        error?.body?.error,
-        "Caught error when sending matrix message",
-      )
-    }
-  }
-}
-
-export const displayDuration = function (start: Date, finish: Date) {
+export const displayDuration = (start: Date, finish: Date) => {
   const delta = Math.abs(differenceInMilliseconds(finish, start))
 
   const days = Math.floor(delta / 1000 / 60 / 60 / 24)
@@ -231,7 +91,7 @@ export const displayDuration = function (start: Date, finish: Date) {
   return buf.slice(separator.length)
 }
 
-const escapeHtml = function (str: string) {
+export const escapeHtml = (str: string) => {
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -240,161 +100,119 @@ const escapeHtml = function (str: string) {
     .replace(/'/g, "&#039;")
 }
 
-// This expression catches the following forms: --foo, -foo, -foo=, --foo=
-const optionPrefixExpression = /^-[^=\s]+[=\s]*/
-
-// This expression catches the following forms: ws://foo, wss://foo, etc.
-const uriPrefixExpression = /^ws\w*:\/\//
-
-export const getParsedArgs = function (
-  nodesAddresses: State["nodesAddresses"],
-  args: string[],
-) {
-  const nodeOptionsDisplay = `Available names are: ${Object.keys(
-    nodesAddresses,
-  ).join(", ")}.`
-
-  const parsedArgs = []
-  for (const rawArg of args) {
-    const optionPrefix = optionPrefixExpression.exec(rawArg)
-    const { argPrefix, arg } =
-      optionPrefix === null
-        ? { argPrefix: "", arg: rawArg }
-        : {
-            argPrefix: optionPrefix[0],
-            arg: rawArg.slice(optionPrefix[0].length),
-          }
-
-    const uriPrefixMatch = uriPrefixExpression.exec(arg)
-    if (uriPrefixMatch === null) {
-      parsedArgs.push(rawArg)
-      continue
-    }
-    const [uriPrefix] = uriPrefixMatch
-
-    const invalidNodeAddressExplanation = `Argument "${arg}" started with ${uriPrefix} and therefore it was interpreted as a node address, but it is invalid`
-
-    const node = arg.slice(uriPrefix.length)
-    if (!node) {
-      return `${invalidNodeAddressExplanation}. Must specify one address in the form \`${uriPrefix}name\`. ${nodeOptionsDisplay}`
-    }
-
-    const nodeAddress = nodesAddresses[node]
-    if (!nodeAddress) {
-      return `${invalidNodeAddressExplanation}. Nodes are referred to by name. No node named "${node}" is available. ${nodeOptionsDisplay}`
-    }
-
-    parsedArgs.push(`${argPrefix}${nodeAddress}`)
-  }
-
-  return parsedArgs
+let lastIncrementalId = 0
+export const getNextUniqueIncrementalId = () => {
+  const nextIncrementalId = ++lastIncrementalId
+  assert(
+    Number.isSafeInteger(nextIncrementalId),
+    "getNextUniqueIncrementalId overflowed the next ID",
+  )
+  return nextIncrementalId
 }
 
-const walkDirs: (dir: string) => AsyncGenerator<string> = async function* (
-  dir,
-) {
-  for await (const d of await fs.promises.opendir(dir)) {
-    if (!d.isDirectory()) {
-      continue
-    }
-
-    const fullPath = path.join(dir, d.name)
-    yield fullPath
-
-    yield* walkDirs(fullPath)
+export const redact = (str: string, items: string[], replacement: string) => {
+  for (const item of items) {
+    str = str.replaceAll(item, replacement)
   }
+  return str
 }
 
-export const cleanupProjects = async function (
-  executor: ShellExecutor,
-  projectsRoot: string,
-  {
-    includeDirs,
-    excludeDirs = [],
-  }: { includeDirs?: string[]; excludeDirs?: string[] } = {},
-) {
-  const results: CommandOutput[] = []
+export class Ok<T> {
+  constructor(public value: T) {}
+}
+export class Err<T> {
+  constructor(public value: T) {}
+}
 
-  toNextProject: for await (const p of walkDirs(projectsRoot)) {
-    if (!(await fsExists(path.join(p, ".git")))) {
-      continue
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+const normalizers = {
+  symbol: (value: any) => {
+    return value.toString()
+  },
+  bigint: (value: any) => {
+    return value.toString()
+  },
+  undefined: () => {
+    return undefined
+  },
+  function: () => {
+    return undefined
+  },
+  boolean: (value: any) => {
+    return value
+  },
+  number: (value: any) => {
+    return value
+  },
+  string: (value: any) => {
+    return value
+  },
+  object: (value: any, previousObjects: unknown[] = []) => {
+    if (value === null) {
+      return
     }
 
-    if (includeDirs !== undefined) {
-      if (
-        includeDirs.filter(function (includeDir) {
-          return isDirectoryOrSubdirectory(includeDir, p)
-        }).length === 0
-      ) {
-        continue toNextProject
+    previousObjects = previousObjects.concat([value])
+
+    const isArray = Array.isArray(value)
+    const isIterable = !isArray && Symbol.iterator in value
+    const objAsArray = isArray
+      ? value
+      : isIterable
+      ? Array.from(value as Iterable<unknown>)
+      : undefined
+
+    if (objAsArray === undefined && !(value instanceof Error)) {
+      const asString =
+        typeof value.toString === "function" && value.toString.length === 0
+          ? value.toString()
+          : undefined
+      if (typeof asString === "string" && asString !== "[object Object]") {
+        return asString
       }
     }
 
-    for (const excludeDir of excludeDirs) {
-      if (isDirectoryOrSubdirectory(excludeDir, p)) {
-        continue toNextProject
+    const { container, output } = (() => {
+      if (isIterable) {
+        const iteratorContainer = { type: value.constructor.name, items: [] }
+        return { container: iteratorContainer, output: iteratorContainer.items }
       }
+      const outputObj = objAsArray === undefined ? {} : []
+      return { container: outputObj, output: outputObj }
+    })()
+
+    const sourceObj = objAsArray ?? value
+    for (const key of Object.getOwnPropertyNames(sourceObj)) {
+      setNormalizedKeyValue(sourceObj, output, key, previousObjects)
     }
 
-    const projectDir = path.dirname(p)
-
-    // The project's directory might have been deleted as a result of a previous
-    // cleanup step
-    if (!(await fsExists(projectDir))) {
-      continue
+    if (Object.keys(output).length > 0) {
+      return container
     }
-
-    try {
-      results.push(
-        await executor(
-          "sh",
-          ["-c", "git add . && git reset --hard && git clean -xdf"],
-          { options: { cwd: projectDir } },
-        ),
-      )
-    } catch (error) {
-      results.push(error)
-    }
-  }
-
-  return results
+  },
 }
 
-const isDirectoryOrSubdirectory = function (parent: string, child: string) {
-  if (arePathsEqual(parent, child)) {
-    return true
+const setNormalizedKeyValue = (
+  source: any,
+  output: any,
+  key: any,
+  previousObjects: unknown[],
+) => {
+  if (previousObjects.indexOf(source[key]) !== -1) {
+    return "[Circular]"
   }
 
-  const relativePath = path.relative(parent, child)
-  if (
-    relativePath &&
-    !relativePath.startsWith("..") &&
-    !path.isAbsolute(relativePath)
-  ) {
-    return true
+  const value = normalizeValue(source[key], previousObjects)
+  if (value === undefined) {
+    return
   }
 
-  return false
+  output[key] = value
 }
 
-const arePathsEqual = function (a: string, b: string) {
-  return a === b || normalizePath(a) === normalizePath(b)
-}
-
-const normalizePath = function normalizePath(v: string) {
-  for (const [pattern, replacement] of [
-    [/\\/g, "/"],
-    [/(\w):/, "/$1"],
-    [/(\w+)\/\.\.\/?/g, ""],
-    [/^\.\//, ""],
-    [/\/\.\//, "/"],
-    [/\/\.$/, ""],
-    [/\/$/, ""],
-  ] as const) {
-    while (pattern.test(v)) {
-      v = v.replace(pattern, replacement)
-    }
-  }
-
-  return v
+export const normalizeValue = (
+  value: unknown,
+  previousObjects: unknown[] = [],
+): unknown => {
+  return normalizers[typeof value](value, previousObjects)
 }
