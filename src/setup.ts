@@ -9,9 +9,9 @@ import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db"
 import { setupApi } from "./api"
 import { setupBot } from "./bot"
 import { Logger } from "./logger"
+import { ensureDir, initDatabaseDir, removeDir } from "./shell"
 import { requeueUnterminatedTasks } from "./task"
 import { Context } from "./types"
-import { ensureDir, initDatabaseDir, removeDir } from "./utils"
 
 export const setup = async (
   bot: Probot,

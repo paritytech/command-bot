@@ -1,17 +1,16 @@
 import cp from "child_process"
+import fs from "fs"
+import path from "path"
 import { promisify } from "util"
 
 import { Logger } from "./logger"
-import { CommandExecutor, ToString } from "./types"
-import {
-  cleanupProjects,
-  displayCommand,
-  ensureDir,
-  intoError,
-  redact,
-  removeDir,
-} from "./utils"
+import { CommandExecutor, CommandOutput, ToString } from "./types"
+import { displayCommand, intoError, redact } from "./utils"
 
+const fsExists = promisify(fs.exists)
+const fsRmdir = promisify(fs.rmdir)
+const fsMkdir = promisify(fs.mkdir)
+const fsUnlink = promisify(fs.unlink)
 const cpExec = promisify(cp.exec)
 
 enum RetryContext {
@@ -308,4 +307,137 @@ export const getShellCommandExecutor = ({
       void execute([])
     })
   }
+}
+
+const normalizePath = (v: string) => {
+  for (const [pattern, replacement] of [
+    [/\\/g, "/"],
+    [/(\w):/, "/$1"],
+    [/(\w+)\/\.\.\/?/g, ""],
+    [/^\.\//, ""],
+    [/\/\.\//, "/"],
+    [/\/\.$/, ""],
+    [/\/$/, ""],
+  ] as const) {
+    while (pattern.test(v)) {
+      v = v.replace(pattern, replacement)
+    }
+  }
+
+  return v
+}
+
+const walkDirs: (dir: string) => AsyncGenerator<string> = async function* (
+  dir,
+) {
+  for await (const d of await fs.promises.opendir(dir)) {
+    if (!d.isDirectory()) {
+      continue
+    }
+
+    const fullPath = path.join(dir, d.name)
+    yield fullPath
+
+    yield* walkDirs(fullPath)
+  }
+}
+
+const cleanupProjects = async (
+  executor: CommandExecutor,
+  projectsRoot: string,
+  {
+    includeDirs,
+    excludeDirs = [],
+  }: { includeDirs?: string[]; excludeDirs?: string[] } = {},
+) => {
+  const results: CommandOutput[] = []
+
+  toNextProject: for await (const projectRoot of walkDirs(projectsRoot)) {
+    if (!(await fsExists(path.join(projectRoot, ".git")))) {
+      continue
+    }
+
+    if (
+      includeDirs !== undefined &&
+      includeDirs.filter((includeDir) => {
+        return isDirectoryOrSubdirectory(includeDir, projectRoot)
+      }).length === 0
+    ) {
+      continue toNextProject
+    }
+
+    for (const excludeDir of excludeDirs) {
+      if (isDirectoryOrSubdirectory(excludeDir, projectRoot)) {
+        continue toNextProject
+      }
+    }
+
+    const projectDir = path.dirname(projectRoot)
+
+    /*
+      The project's directory might have been deleted as a result of a previous
+      cleanup step
+    */
+    if (!(await fsExists(projectDir))) {
+      continue
+    }
+
+    try {
+      results.push(
+        await executor(
+          "sh",
+          ["-c", "git add . && git reset --hard && git clean -xdf"],
+          { options: { cwd: projectDir } },
+        ),
+      )
+    } catch (error) {
+      results.push(error instanceof Error ? error : new Error(String(error)))
+    }
+  }
+
+  return results
+}
+
+const isDirectoryOrSubdirectory = (parent: string, child: string) => {
+  if (arePathsEqual(parent, child)) {
+    return true
+  }
+
+  const relativePath = path.relative(parent, child)
+  if (
+    relativePath &&
+    !relativePath.startsWith("..") &&
+    !path.isAbsolute(relativePath)
+  ) {
+    return true
+  }
+
+  return false
+}
+
+const arePathsEqual = (a: string, b: string) => {
+  return a === b || normalizePath(a) === normalizePath(b)
+}
+
+export const ensureDir = async (dir: string) => {
+  if (!(await fsExists(dir))) {
+    await fsMkdir(dir, { recursive: true })
+  }
+  return dir
+}
+
+export const removeDir = async (dir: string) => {
+  if (!(await fsExists(dir))) {
+    await fsRmdir(dir, { recursive: true })
+  }
+  return dir
+}
+
+export const initDatabaseDir = async (dir: string) => {
+  dir = await ensureDir(dir)
+  const lockPath = path.join(dir, "LOCK")
+  if (await fsExists(lockPath)) {
+    await fsUnlink(lockPath)
+  }
+  return dir
 }
