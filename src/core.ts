@@ -51,23 +51,23 @@ export const parseTryRuntimeBotCommand = (
   return { execPath, args, env }
 }
 
-// This expression catches the following forms: --foo, -foo, -foo=, --foo=
-const optionPrefixExpression = /^-[^=\s]+[=\s]*/
-
-// This expression catches the following forms: ws://foo, wss://foo, etc.
-const uriPrefixExpression = /^ws\w*:\/\//
-
 export const parseTryRuntimeBotCommandArgs = (
   { nodesAddresses }: Context,
   args: string[],
 ) => {
+  // This expression catches the following forms: -foo=, --foo=
+  const commandOptionExpression = /^-[^=\s]+=/
+
+  // This expression catches the following forms: ws://foo, wss://foo, etc.
+  const uriPrefixExpression = /^ws\w*:\/\//
+
   const nodeOptionsDisplay = `Available names are: ${Object.keys(
     nodesAddresses,
   ).join(", ")}.`
 
   const parsedArgs = []
   for (const rawArg of args) {
-    const optionPrefix = optionPrefixExpression.exec(rawArg)
+    const optionPrefix = commandOptionExpression.exec(rawArg)
     const { argPrefix, arg } =
       optionPrefix === null
         ? { argPrefix: "", arg: rawArg }

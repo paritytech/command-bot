@@ -40,7 +40,7 @@ type WebhookHandler<E extends WebhookEvents> = (
 ) => Promise<PullRequestError | undefined>
 
 const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
-  ctx: Context,
+  ctx,
   octokit,
   payload,
 ) => {
