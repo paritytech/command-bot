@@ -301,7 +301,6 @@ export const getShellCommandExecutor = ({
             resolveExecution(result)
           }
         } catch (error) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
           resolveExecution(intoError(error))
         }
       }

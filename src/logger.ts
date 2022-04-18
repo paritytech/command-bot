@@ -84,7 +84,6 @@ export class Logger {
             level,
             name: this.options.name,
             context: this.options.context,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             msg: normalizeValue(item),
             description,
             extra,

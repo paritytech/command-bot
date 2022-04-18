@@ -347,7 +347,6 @@ export const getPostPullRequestResult = (
       })
     } catch (error) {
       logger.error(
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         { error, result, task },
         "Caught error while trying to post pull request result",
       )
