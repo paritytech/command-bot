@@ -112,7 +112,7 @@ export const setupApi = (ctx: Context, server: Server) => {
     try {
       matrixRoom = await accessDb.db.get(token)
       if (!matrixRoom) {
-        throw new LevelErrors.NotFoundError("Not found")
+        return errorResponse(res, next, 404)
       }
     } catch (error) {
       if (error instanceof LevelErrors.NotFoundError) {
@@ -262,7 +262,7 @@ export const setupApi = (ctx: Context, server: Server) => {
     try {
       const value = await accessDb.db.get(token)
       if (!value) {
-        throw new LevelErrors.NotFoundError("Not found")
+        return errorResponse(res, next, 404)
       }
     } catch (error) {
       if (error instanceof LevelErrors.NotFoundError) {
@@ -280,7 +280,7 @@ export const setupApi = (ctx: Context, server: Server) => {
     try {
       const value = await accessDb.db.get(token)
       if (!value) {
-        throw new LevelErrors.NotFoundError("Not found")
+        return errorResponse(res, next, 404)
       }
     } catch (error) {
       if (error instanceof LevelErrors.NotFoundError) {
