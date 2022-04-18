@@ -284,7 +284,9 @@ so that
 (e.g. due to a container restart or crash).
 
 After being saved to the database, the task is
-[queued through `mutex.runExclusive`](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L554).
+[queued through `mutex.runExclusive`](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L554)
+so that we'll execute one task at a time, in order (it is a fair mutex), without
+risking conflicts due to parallel task execution.
 
 Note: since execution of the task entails compiling the
 [try-runtime cli](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/),
