@@ -1,7 +1,12 @@
 import assert from "assert"
 
 import { ExtendedOctokit, isOrganizationMember } from "./github"
-import { Context } from "./types"
+import { Task } from "./task"
+import { CommandExecutor, Context } from "./types"
+
+export const defaultParseTryRuntimeBotCommandOptions = {
+  baseEnv: { RUST_LOG: "remote-ext=info" },
+}
 
 export const parseTryRuntimeBotCommand = (
   commandLine: string,
@@ -118,4 +123,86 @@ export const isRequesterAllowed = async (
   }
 
   return false
+}
+
+export const prepareBranch = async function* (
+  { repoPath, gitRef: { contributor, owner, repo, branch } }: Task,
+  {
+    run,
+    getFetchEndpoint,
+  }: {
+    run: CommandExecutor
+    getFetchEndpoint: () => Promise<{ token: string; url: string }>
+  },
+) {
+  yield run("mkdir", ["-p", repoPath])
+
+  const { token, url } = await getFetchEndpoint()
+
+  const runInRepo = (...[execPath, args, options]: Parameters<typeof run>) => {
+    return run(execPath, args, {
+      ...options,
+      secretsToHide: [token, ...(options?.secretsToHide ?? [])],
+      options: { cwd: repoPath, ...options?.options },
+    })
+  }
+
+  // Clone the repository if it does not exist
+  yield runInRepo(
+    "git",
+    ["clone", "--quiet", `${url}/${owner}/${repo}`, repoPath],
+    {
+      testAllowedErrorMessage: (err) => {
+        return err.endsWith("already exists and is not an empty directory.")
+      },
+    },
+  )
+
+  // Clean up garbage files before checkout
+  yield runInRepo("git", ["add", "."])
+  yield runInRepo("git", ["reset", "--hard"])
+
+  // Check out to the detached head so that any branch can be deleted
+  const out = await runInRepo("git", ["rev-parse", "HEAD"], {
+    options: { cwd: repoPath },
+  })
+  if (out instanceof Error) {
+    return out
+  }
+  const detachedHead = out.trim()
+  yield runInRepo("git", ["checkout", "--quiet", detachedHead], {
+    testAllowedErrorMessage: (err) => {
+      // Why the hell is this not printed to stdout?
+      return err.startsWith("HEAD is now at")
+    },
+  })
+
+  const prRemote = "pr"
+  yield runInRepo("git", ["remote", "remove", prRemote], {
+    testAllowedErrorMessage: (err) => {
+      return err.includes("No such remote:")
+    },
+  })
+
+  yield runInRepo("git", [
+    "remote",
+    "add",
+    prRemote,
+    `${url}/${contributor}/${repo}.git`,
+  ])
+
+  yield runInRepo("git", ["fetch", "--quiet", prRemote, branch])
+
+  yield runInRepo("git", ["branch", "-D", branch], {
+    testAllowedErrorMessage: (err) => {
+      return err.endsWith("not found.")
+    },
+  })
+
+  yield runInRepo("git", [
+    "checkout",
+    "--quiet",
+    "--track",
+    `${prRemote}/${branch}`,
+  ])
 }

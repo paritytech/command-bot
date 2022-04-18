@@ -5,7 +5,8 @@ import { isBefore, isValid, parseISO } from "date-fns"
 import getLevelDb from "level-rocksdb"
 import type { LevelUp } from "levelup"
 
-import { Context, Task, ToString } from "./types"
+import { queuedTasks, Task } from "./task"
+import { Context, ToString } from "./types"
 
 type DbKey = string
 type DbValue = string
@@ -26,21 +27,17 @@ export class AccessDB {
 }
 
 export const getSortedTasks = async (
+  { taskDb: { db }, logger }: Pick<Context, "taskDb" | "startDate" | "logger">,
   {
-    taskDb: { db },
-    serverInfo,
-    logger,
-  }: Pick<Context, "taskDb" | "startDate" | "serverInfo" | "logger">,
-  {
-    fromOtherServerInstances,
+    onlyNotAlive,
   }: {
-    fromOtherServerInstances?: boolean
+    onlyNotAlive?: boolean
   } = {},
 ) => {
   type Item = {
     id: DbKey
     queuedDate: Date
-    taskData: Task
+    task: Task
   }
 
   const items = await new Promise<Item[]>((resolve, reject) => {
@@ -61,15 +58,11 @@ export const getSortedTasks = async (
             const value = rawValue.toString()
 
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            const taskData: Task = JSON.parse(value)
-            if (
-              (taskData.serverId === serverInfo.id &&
-                !fromOtherServerInstances) ||
-              (taskData.serverId !== serverInfo.id && fromOtherServerInstances)
-            ) {
-              const queuedDate = parseISO(taskData.queuedDate)
+            const task: Task = JSON.parse(value)
+            if (!onlyNotAlive || !queuedTasks.has(task.id)) {
+              const queuedDate = parseISO(task.queuedDate)
               if (isValid(queuedDate)) {
-                databaseItems.push({ id: key, queuedDate, taskData })
+                databaseItems.push({ id: key, queuedDate, task })
               } else {
                 logger.error(
                   { key, value },
@@ -91,14 +84,23 @@ export const getSortedTasks = async (
       })
   })
 
-  items.sort(({ queuedDate: dateA }, { queuedDate: dateB }) => {
-    if (isBefore(dateA, dateB)) {
-      return -1
-    } else if (isBefore(dateB, dateA)) {
-      return 1
-    }
-    return 0
-  })
+  items.sort(
+    (
+      { queuedDate: dateA, task: taskA },
+      { queuedDate: dateB, task: taskB },
+    ) => {
+      if (isBefore(dateA, dateB)) {
+        return -1
+      } else if (isBefore(dateB, dateA)) {
+        return 1
+      } else if (taskA.id < taskB.id) {
+        return -1
+      } else if (taskB.id < taskA.id) {
+        return 1
+      }
+      return 0
+    },
+  )
 
   return items
 }

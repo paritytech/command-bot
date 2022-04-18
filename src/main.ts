@@ -1,5 +1,4 @@
 import assert from "assert"
-import { randomUUID } from "crypto"
 import http from "http"
 import { Logger as ProbotLogger, Probot, Server } from "probot"
 import { getLog } from "probot/lib/helpers/get-log"
@@ -76,6 +75,7 @@ const main = async () => {
           container: process.env.DEPLOYMENT_CONTAINER,
         }
       }
+      case undefined:
       case "false": {
         return
       }
@@ -155,7 +155,6 @@ const main = async () => {
       deployment,
       logger,
       startDate,
-      serverInfo: { id: randomUUID() },
       shouldPostPullRequestComment,
     })
   })

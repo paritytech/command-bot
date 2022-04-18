@@ -1,13 +1,10 @@
 import assert from "assert"
 import { differenceInMilliseconds } from "date-fns"
 import fs from "fs"
-import { extractRequestError, MatrixClient } from "matrix-bot-sdk"
 import path from "path"
 import { promisify } from "util"
 
-import { ShellExecutor } from "./executor"
-import { Logger } from "./logger"
-import { ApiTask, CommandOutput } from "./types"
+import { CommandExecutor, CommandOutput } from "./types"
 
 const fsExists = promisify(fs.exists)
 const fsRmdir = promisify(fs.rmdir)
@@ -94,52 +91,6 @@ export const displayError = (value: unknown) => {
   return `${error.toString()}${error.stack ? `\n${error.stack}` : ""}`
 }
 
-export const getSendMatrixResult = (
-  matrix: MatrixClient,
-  logger: Logger,
-  { id: taskId, matrixRoom, commandDisplay }: ApiTask,
-) => {
-  return async (message: CommandOutput) => {
-    try {
-      const fileName = `${taskId}-log.txt`
-      const buf = message instanceof Error ? displayError(message) : message
-      const messagePrefix = `Task ID ${taskId} has finished.`
-
-      const lineCount = (buf.match(/\n/g) || "").length + 1
-      if (lineCount < 128) {
-        await matrix.sendHtmlText(
-          matrixRoom,
-          `${messagePrefix} Results will be displayed inline for <code>${escapeHtml(
-            commandDisplay,
-          )}</code>\n<hr>${escapeHtml(buf)}`,
-        )
-        return
-      }
-
-      const url = await matrix.uploadContent(
-        Buffer.from(message instanceof Error ? displayError(message) : message),
-        "text/plain",
-        fileName,
-      )
-      await matrix.sendText(
-        matrixRoom,
-        `${messagePrefix} Results were uploaded as ${fileName} for ${commandDisplay}.`,
-      )
-      await matrix.sendMessage(matrixRoom, {
-        msgtype: "m.file",
-        body: fileName,
-        url,
-      })
-    } catch (rawError) {
-      const error = intoError(rawError)
-      logger.error(
-        extractRequestError(error),
-        "Caught error when sending Matrix message",
-      )
-    }
-  }
-}
-
 export const displayDuration = (start: Date, finish: Date) => {
   const delta = Math.abs(differenceInMilliseconds(finish, start))
 
@@ -173,7 +124,7 @@ export const displayDuration = (start: Date, finish: Date) => {
   return buf.slice(separator.length)
 }
 
-const escapeHtml = (str: string) => {
+export const escapeHtml = (str: string) => {
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -198,7 +149,7 @@ const walkDirs: (dir: string) => AsyncGenerator<string> = async function* (
 }
 
 export const cleanupProjects = async (
-  executor: ShellExecutor,
+  executor: CommandExecutor,
   projectsRoot: string,
   {
     includeDirs,

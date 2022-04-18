@@ -6,10 +6,16 @@ import path from "path"
 import { Server } from "probot"
 
 import { parseTryRuntimeBotCommandArgs } from "./core"
-import { queueTask } from "./executor"
-import { getNextTaskId, queuedTasks, serializeTaskQueuedDate } from "./task"
-import { ApiTask, Context } from "./types"
-import { displayCommand, getSendMatrixResult } from "./utils"
+import {
+  ApiTask,
+  getNextTaskId,
+  getSendTaskMatrixResult,
+  queuedTasks,
+  queueTask,
+  serializeTaskQueuedDate,
+} from "./task"
+import { Context } from "./types"
+import { displayCommand } from "./utils"
 
 const getApiRoute = (route: string) => {
   return `/api${route}`
@@ -43,7 +49,7 @@ const errorResponse = <T>(
 const jsonParserMiddleware = bodyParser.json()
 
 export const setupApi = (ctx: Context, server: Server) => {
-  const { accessDb, matrix, repositoryCloneDirectory, logger, serverInfo } = ctx
+  const { accessDb, matrix, repositoryCloneDirectory, logger } = ctx
 
   const apiError = (res: Response, next: NextFunction, error: unknown) => {
     const msg = "Failed to handle errors in API endpoint"
@@ -181,12 +187,11 @@ export const setupApi = (ctx: Context, server: Server) => {
       matrixRoom,
       repoPath: path.join(repositoryCloneDirectory, gitRef.repo),
       queuedDate: serializeTaskQueuedDate(queuedDate),
-      serverId: serverInfo.id,
       requester: matrixRoom,
     }
 
     const message = await queueTask(ctx, task, {
-      onResult: getSendMatrixResult(matrix, logger, task),
+      onResult: getSendTaskMatrixResult(matrix, logger, task),
     })
 
     response(res, next, 201, {

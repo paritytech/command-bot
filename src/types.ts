@@ -1,52 +1,15 @@
+import cp from "child_process"
 import { MatrixClient } from "matrix-bot-sdk"
-import { Probot } from "probot"
 
 import type { AccessDB, TaskDB } from "./db"
 import { Logger } from "./logger"
 
-export type PullRequestParams = {
-  owner: string
-  repo: string
-  pull_number: number
-}
-
-type GitRef = {
+export type GitRef = {
   contributor: string
   owner: string
   repo: string
   branch: string
 }
-
-export type TaskBase<T> = {
-  tag: T
-  id: string
-  serverId: string
-  queuedDate: string
-  timesRequeued: number
-  timesRequeuedSnapshotBeforeExecution: number
-  timesExecuted: number
-  commandDisplay: string
-  execPath: string
-  args: string[]
-  env: Record<string, string>
-  gitRef: GitRef
-  repoPath: string
-  requester: string
-}
-
-export type PullRequestTask = TaskBase<"PullRequestTask"> & {
-  commentId: number
-  installationId: number
-  gitRef: GitRef & { number: number }
-}
-
-export type ApiTask = TaskBase<"ApiTask"> & {
-  matrixRoom: string
-}
-
-export type Task = PullRequestTask | ApiTask
-
-export type CommandOutput = Error | string
 
 export type Context = {
   appName: string
@@ -64,15 +27,16 @@ export type Context = {
   matrix: MatrixClient | null
   masterToken: string | null
   nodesAddresses: Record<string, string>
-  serverInfo: {
-    id: string
-  }
   shouldPostPullRequestComment: boolean
 }
 
 export class PullRequestError {
   constructor(
-    public params: PullRequestParams,
+    public pr: {
+      owner: string
+      repo: string
+      number: number
+    },
     public comment: {
       body: string
       commentId?: number
@@ -81,8 +45,18 @@ export class PullRequestError {
   ) {}
 }
 
-export type GetCommandOptions = { baseEnv: Record<string, string> }
-
-export type Octokit = Awaited<ReturnType<Probot["auth"]>>
-
 export type ToString = { toString: () => string }
+
+export type CommandOutput = Error | string
+export type CommandExecutor = (
+  execPath: string,
+  args: string[],
+  opts?: {
+    allowedErrorCodes?: number[]
+    options?: cp.SpawnOptionsWithoutStdio & { cwd?: string }
+    testAllowedErrorMessage?: (stderr: string) => boolean
+    secretsToHide?: string[]
+    shouldTrackProgress?: boolean
+    shouldCaptureAllStreams?: boolean
+  },
+) => Promise<CommandOutput>

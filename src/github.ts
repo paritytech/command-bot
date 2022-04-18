@@ -2,10 +2,14 @@ import { OctokitResponse } from "@octokit/plugin-paginate-rest/dist-types/types"
 import { RequestError } from "@octokit/request-error"
 import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types"
 import { Mutex } from "async-mutex"
+import { Probot } from "probot"
 
 import { getDeploymentsLogsMessage } from "./core"
-import { CommandOutput, Context, Octokit, PullRequestTask } from "./types"
+import { PullRequestTask } from "./task"
+import { CommandOutput, Context } from "./types"
 import { displayError, Err, millisecondsDelay, Ok } from "./utils"
+
+type Octokit = Awaited<ReturnType<Probot["auth"]>>
 
 export const wasOctokitExtendedByApplication = Symbol()
 
@@ -291,7 +295,7 @@ export const getPostPullRequestResult = (
       logger.info({ result, task }, "Posting pull request result")
 
       const {
-        gitRef: { owner, repo, number: prNumber },
+        gitRef: { owner, repo, prNumber: prNumber },
         requester,
         commandDisplay,
       } = task

@@ -4,15 +4,11 @@ import path from "path"
 import { Probot } from "probot"
 
 import {
-  botMentionPrefix,
-  defaultTryRuntimeGetCommandOptions,
-} from "./constants"
-import {
+  defaultParseTryRuntimeBotCommandOptions,
   isRequesterAllowed,
   parseTryRuntimeBotCommand,
   parseTryRuntimeBotCommandArgs,
 } from "./core"
-import { queueTask } from "./executor"
 import {
   createComment,
   ExtendedOctokit,
@@ -20,9 +16,11 @@ import {
   getPostPullRequestResult,
   updateComment,
 } from "./github"
-import { getNextTaskId, queuedTasks } from "./task"
-import { Context, PullRequestError, PullRequestTask } from "./types"
+import { getNextTaskId, PullRequestTask, queuedTasks, queueTask } from "./task"
+import { Context, PullRequestError } from "./types"
 import { displayCommand, displayError, getLines } from "./utils"
+
+const botMentionPrefix = "/try-runtime"
 
 export type WebhookEvents = Extract<
   EmitterWebhookEventName,
@@ -43,7 +41,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
   octokit,
   payload,
 ) => {
-  const { logger, serverInfo, repositoryCloneDirectory } = ctx
+  const { logger, repositoryCloneDirectory } = ctx
 
   const { issue, comment, repository, installation } = payload
 
@@ -78,36 +76,20 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
     return
   }
 
-  const repo = repository.name
-  const owner = repository.owner.login
-  const pullNumber = issue.number
-  const prParams = { owner, repo, pull_number: pullNumber }
-  const commentParams = { owner, repo, issue_number: pullNumber }
+  const pr = {
+    owner: repository.name,
+    repo: repository.owner.login,
+    number: issue.number,
+  }
+  const commentParams = {
+    owner: pr.owner,
+    repo: pr.repo,
+    issue_number: pr.number,
+  }
   let commentId: number | undefined = undefined
 
   const getError = (body: string) => {
-    return new PullRequestError(prParams, { body, requester, commentId })
-  }
-
-  const cancelPullRequestTasks = () => {
-    const commentIds: number[] = []
-
-    for (const { task, cancel } of queuedTasks.values()) {
-      if (task.tag !== "PullRequestTask") {
-        continue
-      }
-      const { gitRef } = task
-      if (
-        gitRef.owner === owner &&
-        gitRef.repo === repo &&
-        gitRef.number === prParams.pull_number
-      ) {
-        void cancel()
-        commentIds.push(task.commentId)
-      }
-    }
-
-    return commentIds
+    return new PullRequestError(pr, { body, requester, commentId })
   }
 
   try {
@@ -126,7 +108,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
 
     const { execPath: botMention, ...command } = parseTryRuntimeBotCommand(
       commandLine,
-      defaultTryRuntimeGetCommandOptions,
+      defaultParseTryRuntimeBotCommandOptions,
     )
     if (botMention !== botMentionPrefix) {
       return
@@ -149,9 +131,9 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           }
           const { gitRef } = task
           if (
-            gitRef.owner === owner &&
-            gitRef.repo === repo &&
-            gitRef.number === prParams.pull_number
+            gitRef.owner === pr.owner &&
+            gitRef.repo === pr.repo &&
+            gitRef.prNumber === pr.number
           ) {
             return getError(
               "try-runtime is already being executed for this pull request",
@@ -159,7 +141,11 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           }
         }
 
-        const prResponse = await octokit.pulls.get(prParams)
+        const prResponse = await octokit.pulls.get({
+          owner: pr.owner,
+          repo: pr.repo,
+          pull_number: pr.number,
+        })
 
         const contributor = prResponse.data.head?.user?.login
         if (!contributor) {
@@ -213,7 +199,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
         ]
 
         const task: PullRequestTask = {
-          ...prParams,
+          ...pr,
           id: getNextTaskId(),
           tag: "PullRequestTask",
           requester,
@@ -223,18 +209,17 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           commentId,
           installationId,
           gitRef: {
-            owner,
-            repo,
+            owner: pr.owner,
+            repo: pr.repo,
             contributor,
             branch,
-            number: prParams.pull_number,
+            prNumber: pr.number,
           },
           commandDisplay: displayCommand({ execPath, args, secretsToHide: [] }),
           timesRequeued: 0,
           timesRequeuedSnapshotBeforeExecution: 0,
           timesExecuted: 0,
-          repoPath: path.join(repositoryCloneDirectory, repo),
-          serverId: serverInfo.id,
+          repoPath: path.join(repositoryCloneDirectory, pr.repo),
           queuedDate: queuedDate.toISOString(),
         }
 
@@ -250,7 +235,22 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
         break
       }
       case "cancel": {
-        const commentIdsToCancel: number[] = cancelPullRequestTasks()
+        const commentIdsToCancel: number[] = []
+
+        for (const { task, cancel } of queuedTasks.values()) {
+          if (task.tag !== "PullRequestTask") {
+            continue
+          }
+          const { gitRef } = task
+          if (
+            gitRef.owner === pr.owner &&
+            gitRef.repo === pr.repo &&
+            gitRef.prNumber === pr.number
+          ) {
+            void cancel()
+            commentIdsToCancel.push(task.commentId)
+          }
+        }
 
         if (commentIdsToCancel.length === 0) {
           return getError(
@@ -273,7 +273,6 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
       }
     }
   } catch (rawError) {
-    cancelPullRequestTasks()
     return getError(
       `Exception caught in webhook handler\n${displayError(rawError)}`,
     )
@@ -306,20 +305,21 @@ export const setupEvent = <E extends WebhookEvents>(
         event.payload as WebhookEventPayload<E>,
       )
       if (result instanceof PullRequestError) {
-        const {
-          params: { pull_number, ...params },
-          comment: { body, commentId, requester },
-        } = result
+        const { pr, comment } = result
+
         const sharedCommentParams = {
-          ...params,
-          issue_number: pull_number,
-          body: `${requester ? `@${requester} ` : ""}${body}`,
+          owner: pr.owner,
+          repo: pr.repo,
+          issue_number: pr.number,
+          body: `${comment.requester ? `@${comment.requester} ` : ""}${
+            comment.body
+          }`,
         }
 
-        if (commentId) {
+        if (comment.commentId) {
           await updateComment(ctx, octokit, {
             ...sharedCommentParams,
-            comment_id: commentId,
+            comment_id: comment.commentId,
           })
         } else {
           await createComment(ctx, octokit, sharedCommentParams)

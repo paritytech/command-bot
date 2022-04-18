@@ -8,8 +8,8 @@ import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db"
 
 import { setupApi } from "./api"
 import { setupBot } from "./bot"
-import { requeueUnterminated } from "./executor"
 import { Logger } from "./logger"
+import { requeueUnterminatedTasks } from "./task"
 import { Context } from "./types"
 import { ensureDir, initDatabaseDir, removeDir } from "./utils"
 
@@ -24,12 +24,8 @@ export const setup = async (
     deployment,
     startDate,
     logger,
-    serverInfo,
     shouldPostPullRequestComment,
-  }: Pick<
-    Context,
-    "deployment" | "serverInfo" | "shouldPostPullRequestComment"
-  > & {
+  }: Pick<Context, "deployment" | "shouldPostPullRequestComment"> & {
     appId: number
     clientId: string
     clientSecret: string
@@ -83,10 +79,7 @@ export const setup = async (
 
   if (process.env.CLEAR_DB_ON_START === "true") {
     logger.info("Clearing the database before starting")
-    for (const { id } of await getSortedTasks(
-      { taskDb, startDate, serverInfo, logger },
-      { fromOtherServerInstances: true },
-    )) {
+    for (const { id } of await getSortedTasks({ taskDb, startDate, logger })) {
       await taskDb.db.del(id)
     }
   }
@@ -176,11 +169,10 @@ export const setup = async (
     masterToken: process.env.MASTER_TOKEN || null,
     nodesAddresses,
     startDate,
-    serverInfo,
     shouldPostPullRequestComment,
   }
 
-  void requeueUnterminated(ctx, bot)
+  void requeueUnterminatedTasks(ctx, bot)
 
   setupBot(ctx, bot)
 
