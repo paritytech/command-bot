@@ -1,5 +1,5 @@
 node_modules/
-env/bot.cjs
+env.cjs
 *.pem
 build/
 git/

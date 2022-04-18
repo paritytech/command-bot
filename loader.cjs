@@ -8,7 +8,7 @@ const {
   transformSource,
 } = esm.registerAndCreateEsmHooks()
 
-const resolve = function (specifier, ...args) {
+const resolve = (specifier, ...args) => {
   if (specifier.startsWith("src/")) {
     const parsed = parsePath(specifier)
     return tsNodeResolve(

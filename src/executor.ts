@@ -1,60 +1,50 @@
+import assert from "assert"
 import { Mutex } from "async-mutex"
 import cp from "child_process"
 import fs from "fs"
 import path from "path"
+import { Probot } from "probot"
 import { promisify } from "util"
 
 import { getSortedTasks } from "src/db"
 
+import { getDeploymentsLogsMessage } from "./core"
 import { getPostPullRequestResult, updateComment } from "./github"
 import { Logger } from "./logger"
-import {
-  ApiTask,
-  CommandOutput,
-  Octokit,
-  PullRequestTask,
-  State,
-  Task,
-} from "./types"
+import { queuedTasks } from "./task"
+import { CommandOutput, Context, Octokit, Task, ToString } from "./types"
 import {
   cleanupProjects,
   displayCommand,
   displayDuration,
+  displayError,
   ensureDir,
-  getDeploymentLogsMessage,
   getSendMatrixResult,
-  redactSecrets,
+  intoError,
+  redact,
   removeDir,
-  Retry,
 } from "./utils"
 
 const cpExec = promisify(cp.exec)
 
-type RegisterHandleOptions = { terminate: () => Promise<void> }
-type RegisterHandle = (options: RegisterHandleOptions) => void
-type CancelHandles<T> = Map<string, { cancel: () => Promise<void>; task: T }>
+export enum RetryContext {
+  CompilationError = "compilation error",
+}
+export class Retry {
+  context: RetryContext
+  motive: string
+  stderr: string
 
-const handlesGetter = function <T>(handles: CancelHandles<T>) {
-  return function (handleId: string) {
-    return handles.get(handleId)
+  constructor(options: {
+    context: RetryContext
+    motive: string
+    stderr: string
+  }) {
+    this.context = options.context
+    this.motive = options.motive
+    this.stderr = options.stderr
   }
 }
-
-const pullRequestTaskHandles: CancelHandles<PullRequestTask> = new Map()
-export const getRegisterPullRequestHandle = function (task: PullRequestTask) {
-  return function ({ terminate }: RegisterHandleOptions) {
-    pullRequestTaskHandles.set(task.handleId, { cancel: terminate, task })
-  }
-}
-export const getPullRequestTaskHandle = handlesGetter(pullRequestTaskHandles)
-
-const apiTaskHandles: CancelHandles<ApiTask> = new Map()
-export const getRegisterApiTaskHandle = function (task: ApiTask) {
-  return function ({ terminate }: RegisterHandleOptions) {
-    apiTaskHandles.set(task.handleId, { cancel: terminate, task })
-  }
-}
-export const getApiTaskHandle = handlesGetter(apiTaskHandles)
 
 const cleanupMotiveForCargoTargetDir = "Freeing disk space for CARGO_TARGET_DIR"
 export type ShellExecutor = (
@@ -69,7 +59,7 @@ export type ShellExecutor = (
     shouldCaptureAllStreams?: boolean
   },
 ) => Promise<CommandOutput>
-const getShellExecutor = function ({
+const getShellExecutor = ({
   logger,
   projectsRoot,
   onChild,
@@ -79,8 +69,8 @@ const getShellExecutor = function ({
   projectsRoot: string
   onChild?: (child: cp.ChildProcess) => void
   isDeployed: boolean
-}): ShellExecutor {
-  return function (
+}): ShellExecutor => {
+  return (
     execPath,
     args,
     {
@@ -91,9 +81,9 @@ const getShellExecutor = function ({
       shouldTrackProgress,
       shouldCaptureAllStreams,
     } = {},
-  ) {
-    return new Promise(function (resolve) {
-      const execute = async function (retries: Retry[]) {
+  ) => {
+    return new Promise((resolveExecution) => {
+      const execute = async (retries: Retry[]) => {
         try {
           const cwd = options?.cwd ?? process.cwd()
           const commandDisplayed = displayCommand({
@@ -117,14 +107,17 @@ const getShellExecutor = function ({
           if (onChild) {
             onChild(child)
           }
-          child.on("error", function (error) {
-            resolve(error)
+          child.on("error", (error) => {
+            resolveExecution(error)
           })
 
-          const commandOutputBuffer: Array<["stdout" | "stderr", string]> = []
-          const getStreamHandler = function (channel: "stdout" | "stderr") {
-            return function (data: { toString: () => string }) {
-              const str = redactSecrets(data.toString(), secretsToHide)
+          const commandOutputBuffer: ["stdout" | "stderr", string][] = []
+          const getStreamHandler = (channel: "stdout" | "stderr") => {
+            return (data: ToString) => {
+              const str =
+                secretsToHide === undefined
+                  ? data.toString()
+                  : redact(data.toString(), secretsToHide, "{SECRET}")
               const strTrim = str.trim()
 
               if (shouldTrackProgress && strTrim) {
@@ -137,14 +130,13 @@ const getShellExecutor = function ({
           child.stdout.on("data", getStreamHandler("stdout"))
           child.stderr.on("data", getStreamHandler("stderr"))
 
-          const result = await new Promise<Retry | Error | string>(function (
-            resolve,
-          ) {
-            child.on("close", async function (exitCode) {
-              try {
-                if (exitCode) {
-                  const stderr = redactSecrets(
-                    commandOutputBuffer
+          const result = await new Promise<Retry | Error | string>(
+            (resolve) => {
+              // eslint-disable-next-line @typescript-eslint/no-misused-promises
+              child.on("close", async (exitCode) => {
+                try {
+                  if (exitCode) {
+                    const rawStderr = commandOutputBuffer
                       .reduce((acc, [stream, value]) => {
                         if (stream === "stderr") {
                           return `${acc}${value}`
@@ -152,166 +144,176 @@ const getShellExecutor = function ({
                           return acc
                         }
                       }, "")
-                      .trim(),
-                    secretsToHide,
-                  )
+                      .trim()
+                    const stderr =
+                      secretsToHide === undefined
+                        ? rawStderr
+                        : redact(rawStderr, secretsToHide, "{SECRET}")
 
-                  // https://github.com/rust-lang/rust/issues/51309
-                  // Could happen due to lacking system constraints (we saw it
-                  // happen due to out-of-memory)
-                  if (stderr.includes("SIGKILL")) {
-                    logger.fatal(
-                      "Compilation was terminated due to SIGKILL (might have something to do with system resource constraints)",
-                    )
-                  } else if (stderr.includes("No space left on device")) {
-                    if (
-                      isDeployed &&
-                      process.env.CARGO_TARGET_DIR &&
-                      retries.find(function ({ motive }) {
-                        return motive === cleanupMotiveForCargoTargetDir
-                      }) === undefined
-                    ) {
-                      await removeDir(process.env.CARGO_TARGET_DIR)
-                      await ensureDir(process.env.CARGO_TARGET_DIR)
-                      return resolve(
-                        new Retry({
-                          context: "compilation error",
-                          motive: cleanupMotiveForCargoTargetDir,
-                          stderr,
-                        }),
+                    /*
+                      https://github.com/rust-lang/rust/issues/51309
+                      Could happen due to lacking system constraints (we saw it
+                      happen due to out-of-memory)
+                   */
+                    if (stderr.includes("SIGKILL")) {
+                      logger.fatal(
+                        "Compilation was terminated due to SIGKILL (might have something to do with system resource constraints)",
                       )
-                    }
-
-                    if (cwd.startsWith(projectsRoot)) {
-                      const cleanupMotiveForOtherDirectories = `Freeing disk space while excluding "${cwd}" from "${projectsRoot}" root`
-                      const cleanupMotiveForThisDirectory = `Freeing disk space while including only "${cwd}" from "${projectsRoot}" root`
-
-                      const hasAttemptedCleanupForOtherDirectories =
-                        retries.find(function ({ motive }) {
-                          return motive === cleanupMotiveForOtherDirectories
-                        }) === undefined
-                      const hasAttemptedCleanupForThisDirectory =
-                        retries.find(function ({ motive }) {
-                          return motive === cleanupMotiveForThisDirectory
-                        }) === undefined
-
+                    } else if (stderr.includes("No space left on device")) {
                       if (
-                        hasAttemptedCleanupForOtherDirectories &&
-                        hasAttemptedCleanupForThisDirectory
+                        isDeployed &&
+                        process.env.CARGO_TARGET_DIR &&
+                        retries.find(({ motive }) => {
+                          return motive === cleanupMotiveForCargoTargetDir
+                        }) === undefined
                       ) {
-                        logger.fatal(
-                          { previousRetries, retry },
-                          "Already tried and failed to recover from lack of disk space",
+                        await removeDir(process.env.CARGO_TARGET_DIR)
+                        await ensureDir(process.env.CARGO_TARGET_DIR)
+                        return resolve(
+                          new Retry({
+                            context: RetryContext.CompilationError,
+                            motive: cleanupMotiveForCargoTargetDir,
+                            stderr,
+                          }),
                         )
-                      } else {
-                        logger.info(
-                          `Running disk cleanup before retrying the command "${commandDisplayed}" in "${cwd}" due to lack of space in the device.`,
-                        )
+                      }
 
-                        const executor = getShellExecutor({
-                          logger,
-                          projectsRoot,
-                          isDeployed,
-                        })
+                      if (cwd.startsWith(projectsRoot)) {
+                        const cleanupMotiveForOtherDirectories = `Freeing disk space while excluding "${cwd}" from "${projectsRoot}" root`
+                        const cleanupMotiveForThisDirectory = `Freeing disk space while including only "${cwd}" from "${projectsRoot}" root`
 
-                        if (!hasAttemptedCleanupForOtherDirectories) {
-                          const otherDirectoriesResults = await cleanupProjects(
+                        const hasAttemptedCleanupForOtherDirectories =
+                          retries.find(({ motive }) => {
+                            return motive === cleanupMotiveForOtherDirectories
+                          }) === undefined
+                        const hasAttemptedCleanupForThisDirectory =
+                          retries.find(({ motive }) => {
+                            return motive === cleanupMotiveForThisDirectory
+                          }) === undefined
+
+                        if (
+                          hasAttemptedCleanupForOtherDirectories &&
+                          hasAttemptedCleanupForThisDirectory
+                        ) {
+                          logger.fatal(
+                            { previousRetries, retry },
+                            "Already tried and failed to recover from lack of disk space",
+                          )
+                        } else {
+                          logger.info(
+                            `Running disk cleanup before retrying the command "${commandDisplayed}" in "${cwd}" due to lack of space in the device.`,
+                          )
+
+                          const executor = getShellExecutor({
+                            logger,
+                            projectsRoot,
+                            isDeployed,
+                          })
+
+                          if (!hasAttemptedCleanupForOtherDirectories) {
+                            const otherDirectoriesResults =
+                              await cleanupProjects(executor, projectsRoot, {
+                                excludeDirs: [cwd],
+                              })
+                            /*
+                              Relevant check because the current project might be
+                              the only one we have available in this application.
+                            */
+                            if (otherDirectoriesResults.length) {
+                              return resolve(
+                                new Retry({
+                                  context: RetryContext.CompilationError,
+                                  motive: cleanupMotiveForOtherDirectories,
+                                  stderr,
+                                }),
+                              )
+                            }
+                          }
+
+                          const directoryResults = await cleanupProjects(
                             executor,
                             projectsRoot,
-                            { excludeDirs: [cwd] },
+                            { includeDirs: [cwd] },
                           )
-                          // Relevant check because the current project might be
-                          // the only one we have available in this application.
-                          if (otherDirectoriesResults.length) {
+                          if (directoryResults.length) {
                             return resolve(
                               new Retry({
-                                context: "compilation error",
-                                motive: cleanupMotiveForOtherDirectories,
+                                context: RetryContext.CompilationError,
+                                motive: cleanupMotiveForThisDirectory,
                                 stderr,
                               }),
                             )
+                          } else {
+                            logger.fatal(
+                              `Expected to have found a project for "${cwd}" during cleanup for disk space`,
+                            )
                           }
                         }
-
-                        const directoryResults = await cleanupProjects(
-                          executor,
-                          projectsRoot,
-                          { includeDirs: [cwd] },
+                      } else {
+                        logger.fatal(
+                          `Unable to recover from lack of disk space because the directory "${cwd}" is not included in the projects root "${projectsRoot}"`,
                         )
-                        if (directoryResults.length) {
-                          return resolve(
-                            new Retry({
-                              context: "compilation error",
-                              motive: cleanupMotiveForThisDirectory,
-                              stderr,
-                            }),
-                          )
-                        } else {
-                          logger.fatal(
-                            `Expected to have found a project for "${cwd}" during cleanup for disk space`,
-                          )
-                        }
                       }
                     } else {
-                      logger.fatal(
-                        `Unable to recover from lack of disk space because the directory "${cwd}" is not included in the projects root "${projectsRoot}"`,
+                      const retryForCompilerIssue = stderr.match(
+                        /This is a known issue with the compiler. Run `([^`]+)`/,
                       )
-                    }
-                  } else {
-                    const retryForCompilerIssue = stderr.match(
-                      /This is a known issue with the compiler. Run `([^`]+)`/,
-                    )
-                    if (retryForCompilerIssue !== null) {
-                      const retryCargoCleanCmd =
-                        retryForCompilerIssue[1].replace(/_/g, "-")
-                      logger.info(
-                        `Running ${retryCargoCleanCmd} in "${cwd}" before retrying the command due to a compiler error.`,
-                      )
-                      await cpExec(retryCargoCleanCmd, { cwd })
-                      return resolve(
-                        new Retry({
-                          context: "compilation error",
-                          motive: retryCargoCleanCmd,
-                          stderr,
-                        }),
-                      )
-                    }
-                  }
-
-                  if (
-                    (allowedErrorCodes === undefined ||
-                      !allowedErrorCodes.includes(exitCode)) &&
-                    (testAllowedErrorMessage === undefined ||
-                      !testAllowedErrorMessage(stderr))
-                  ) {
-                    return resolve(new Error(stderr))
-                  }
-                }
-
-                const outputBuf = shouldCaptureAllStreams
-                  ? commandOutputBuffer.reduce(
-                      (acc, [_, value]) => `${acc}${value}`,
-                      "",
-                    )
-                  : commandOutputBuffer.reduce((acc, [stream, value]) => {
-                      if (stream === "stdout") {
-                        return `${acc}${value}`
-                      } else {
-                        return acc
+                      if (retryForCompilerIssue !== null) {
+                        const retryCargoCleanCmd =
+                          retryForCompilerIssue[1].replace(/_/g, "-")
+                        logger.info(
+                          `Running ${retryCargoCleanCmd} in "${cwd}" before retrying the command due to a compiler error.`,
+                        )
+                        await cpExec(retryCargoCleanCmd, { cwd })
+                        return resolve(
+                          new Retry({
+                            context: RetryContext.CompilationError,
+                            motive: retryCargoCleanCmd,
+                            stderr,
+                          }),
+                        )
                       }
-                    }, "")
-                const output = redactSecrets(outputBuf.trim(), secretsToHide)
-                resolve(output)
-              } catch (error) {
-                resolve(error)
-              }
-            })
-          })
+                    }
+
+                    if (
+                      (allowedErrorCodes === undefined ||
+                        !allowedErrorCodes.includes(exitCode)) &&
+                      (testAllowedErrorMessage === undefined ||
+                        !testAllowedErrorMessage(stderr))
+                    ) {
+                      return resolve(new Error(stderr))
+                    }
+                  }
+
+                  const outputBuf = shouldCaptureAllStreams
+                    ? commandOutputBuffer.reduce((acc, [_, value]) => {
+                        return `${acc}${value}`
+                      }, "")
+                    : commandOutputBuffer.reduce((acc, [stream, value]) => {
+                        if (stream === "stdout") {
+                          return `${acc}${value}`
+                        } else {
+                          return acc
+                        }
+                      }, "")
+                  const rawOutput = outputBuf.trim()
+                  const output =
+                    secretsToHide === undefined
+                      ? rawOutput
+                      : redact(rawOutput, secretsToHide, "{SECRET}")
+
+                  resolve(output)
+                } catch (error) {
+                  resolve(intoError(error))
+                }
+              })
+            },
+          )
 
           if (result instanceof Retry) {
             // Avoid recursion if it failed with the same error as before
             if (retry?.motive === result.motive) {
-              resolve(
+              resolveExecution(
                 new Error(
                   `Failed to recover from ${result.context}; stderr: ${result.stderr}`,
                 ),
@@ -320,10 +322,11 @@ const getShellExecutor = function ({
               void execute(retries.concat(result))
             }
           } else {
-            resolve(result)
+            resolveExecution(result)
           }
         } catch (error) {
-          resolve(error)
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+          resolveExecution(intoError(error))
         }
       }
 
@@ -350,9 +353,7 @@ const prepareBranch = async function* (
 
   const { token, url } = await getFetchEndpoint()
 
-  const repoCmd = function (
-    ...[execPath, args, options]: Parameters<typeof run>
-  ) {
+  const runInRepo = (...[execPath, args, options]: Parameters<typeof run>) => {
     return run(execPath, args, {
       ...options,
       secretsToHide: [token, ...(options?.secretsToHide ?? [])],
@@ -361,58 +362,58 @@ const prepareBranch = async function* (
   }
 
   // Clone the repository if it does not exist
-  yield repoCmd(
+  yield runInRepo(
     "git",
     ["clone", "--quiet", `${url}/${owner}/${repo}`, repoPath],
     {
-      testAllowedErrorMessage: function (err) {
+      testAllowedErrorMessage: (err) => {
         return err.endsWith("already exists and is not an empty directory.")
       },
     },
   )
 
   // Clean up garbage files before checkout
-  yield repoCmd("git", ["add", "."])
-  yield repoCmd("git", ["reset", "--hard"])
+  yield runInRepo("git", ["add", "."])
+  yield runInRepo("git", ["reset", "--hard"])
 
   // Check out to the detached head so that any branch can be deleted
-  let out = await repoCmd("git", ["rev-parse", "HEAD"], {
+  const out = await runInRepo("git", ["rev-parse", "HEAD"], {
     options: { cwd: repoPath },
   })
   if (out instanceof Error) {
     return out
   }
   const detachedHead = out.trim()
-  yield repoCmd("git", ["checkout", "--quiet", detachedHead], {
-    testAllowedErrorMessage: function (err) {
+  yield runInRepo("git", ["checkout", "--quiet", detachedHead], {
+    testAllowedErrorMessage: (err) => {
       // Why the hell is this not printed to stdout?
       return err.startsWith("HEAD is now at")
     },
   })
 
   const prRemote = "pr"
-  yield repoCmd("git", ["remote", "remove", prRemote], {
-    testAllowedErrorMessage: function (err) {
+  yield runInRepo("git", ["remote", "remove", prRemote], {
+    testAllowedErrorMessage: (err) => {
       return err.includes("No such remote:")
     },
   })
 
-  yield repoCmd("git", [
+  yield runInRepo("git", [
     "remote",
     "add",
     prRemote,
     `${url}/${contributor}/${repo}.git`,
   ])
 
-  yield repoCmd("git", ["fetch", "--quiet", prRemote, branch])
+  yield runInRepo("git", ["fetch", "--quiet", prRemote, branch])
 
-  yield repoCmd("git", ["branch", "-D", branch], {
-    testAllowedErrorMessage: function (err) {
+  yield runInRepo("git", ["branch", "-D", branch], {
+    testAllowedErrorMessage: (err) => {
       return err.endsWith("not found.")
     },
   })
 
-  yield repoCmd("git", [
+  yield runInRepo("git", [
     "checkout",
     "--quiet",
     "--track",
@@ -420,23 +421,19 @@ const prepareBranch = async function* (
   ])
 }
 
-const getQueueMessage = async function (
+const getTaskQueueMessage = async (
   state: Parameters<typeof getSortedTasks>[0],
   commandDisplay: string,
-  version: string,
-) {
-  const items = await getSortedTasks(state, { match: { version } })
+) => {
+  const items = await getSortedTasks(state)
 
   if (items.length) {
     return `
 Queued ${commandDisplay}
 
-There are other items ahead of it in the queue: ${items.reduce(function (
-      acc,
-      value,
-      i,
-    ) {
-      return `
+There are other items ahead of it in the queue: ${items.reduce(
+      (acc, value, i) => {
+        return `
 
 ${i + 1}:
 
@@ -445,50 +442,69 @@ ${JSON.stringify(value, null, 2)}
 \`\`\`
 
 `
-    },
-    "")}`
+      },
+      "",
+    )}`
   }
 
   return `\nExecuting:\n\n\`${commandDisplay}\``
 }
 
 const mutex = new Mutex()
-export const queue = async function ({
-  taskData,
-  onResult,
-  state,
-  registerHandle,
-}: {
-  taskData: Task
-  onResult: (result: CommandOutput) => Promise<unknown>
-  state: Pick<
-    State,
-    | "taskDb"
-    | "logger"
-    | "getFetchEndpoint"
-    | "deployment"
-    | "getTaskId"
-    | "parseTaskId"
-    | "appName"
-    | "repositoryCloneDirectory"
-  >
-  registerHandle: RegisterHandle
-}) {
-  let child: cp.ChildProcess | undefined = undefined
-  let isAlive = true
-  const { execPath, args, commandDisplay, repoPath } = taskData
+export const queueTask = async (
+  ctx: Context,
+  task: Task,
+  {
+    onResult,
+  }: {
+    onResult: (result: CommandOutput) => Promise<unknown>
+  },
+) => {
+  assert(
+    queuedTasks.get(task.id) === undefined,
+    `Attempted to queue task ${task.id} when it's already registered in the taskMap`,
+  )
+
+  let taskProcess: cp.ChildProcess | undefined = undefined
+  let taskIsAlive = true
+  const terminate = async () => {
+    taskIsAlive = false
+
+    queuedTasks.delete(task.id)
+
+    await db.del(task.id)
+
+    logger.info(
+      { task, queue: await getSortedTasks(ctx) },
+      "Queue state after termination of task",
+    )
+
+    if (taskProcess === undefined) {
+      return
+    }
+
+    taskProcess.kill()
+    logger.info(
+      `Killed child with PID ${taskProcess.pid ?? "?"} (${commandDisplay})`,
+    )
+
+    taskProcess = undefined
+  }
+
+  queuedTasks.set(task.id, { task, cancel: terminate })
+
+  const { execPath, args, commandDisplay, repoPath } = task
   const {
     deployment,
     logger,
     taskDb,
     getFetchEndpoint,
-    getTaskId,
     appName,
     repositoryCloneDirectory,
-  } = state
+  } = ctx
   const { db } = taskDb
 
-  let suffixMessage = getDeploymentLogsMessage(deployment)
+  let suffixMessage = getDeploymentsLogsMessage(ctx)
   if (!fs.existsSync(repoPath)) {
     suffixMessage +=
       "\n**Note:** project will be cloned for the first time, so all dependencies will be compiled from scratch; this might take a long time"
@@ -501,55 +517,11 @@ export const queue = async function ({
       '\n**Note:** "target" directory does not exist, so all dependencies will be compiled from scratch; this might take a long time'
   }
 
-  const taskId = getTaskId()
-  const message = await getQueueMessage(state, commandDisplay, taskData.version)
+  const message = await getTaskQueueMessage(ctx, commandDisplay)
   const cancelledMessage = "Command was cancelled"
 
-  const terminate = async function () {
-    isAlive = false
-
-    switch (taskData.tag) {
-      case "PullRequestTask": {
-        pullRequestTaskHandles.delete(taskData.handleId)
-        break
-      }
-      case "ApiTask": {
-        apiTaskHandles.delete(taskData.handleId)
-        break
-      }
-      default: {
-        const exhaustivenessCheck: never = taskData
-        throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
-      }
-    }
-
-    await db.del(taskId)
-
-    logger.info(
-      await getSortedTasks(state, { match: { version: taskData.version } }),
-      `Queue after termination of task ${taskId}`,
-    )
-
-    if (child === undefined) {
-      return
-    }
-
-    try {
-      child.kill()
-    } catch (error) {
-      logger.fatal(
-        error,
-        `Failed to kill child with PID ${child.pid} (${commandDisplay})`,
-      )
-      return
-    }
-
-    logger.info(`Killed child with PID ${child.pid} (${commandDisplay})`)
-    child = undefined
-  }
-
-  const afterExecution = async function (result: CommandOutput) {
-    const wasAlive = isAlive
+  const afterExecution = async (result: CommandOutput) => {
+    const wasAlive = taskIsAlive
 
     await terminate()
 
@@ -558,33 +530,27 @@ export const queue = async function ({
     }
   }
 
-  await db.put(taskId, JSON.stringify(taskData))
+  await db.put(task.id, JSON.stringify(task))
 
   mutex
-    .runExclusive(async function () {
+    .runExclusive(async () => {
       try {
         await db.put(
-          taskId,
+          task.id,
           JSON.stringify({
-            ...taskData,
-            timesRequeuedSnapshotBeforeExecution: taskData.timesRequeued,
-            timesExecuted: taskData.timesExecuted + 1,
+            ...task,
+            timesRequeuedSnapshotBeforeExecution: task.timesRequeued,
+            timesExecuted: task.timesExecuted + 1,
           }),
         )
 
-        if (isAlive) {
+        if (taskIsAlive) {
           logger.info(
-            { handleId: taskData.handleId, taskId, commandDisplay },
+            { task, currentTaskQueue: await getSortedTasks(ctx) },
             `Starting task of ${commandDisplay}`,
           )
-          logger.info(
-            await getSortedTasks(state, {
-              match: { version: taskData.version },
-            }),
-            "Current task queue",
-          )
         } else {
-          logger.info(`taskId ${taskId} was cancelled before it could start`)
+          logger.info(task, "Task was cancelled before it could start")
           return cancelledMessage
         }
 
@@ -592,70 +558,73 @@ export const queue = async function ({
           logger,
           projectsRoot: repositoryCloneDirectory,
           isDeployed: deployment !== undefined,
-          onChild: function (newChild) {
-            child = newChild
+          onChild: (createdChild) => {
+            taskProcess = createdChild
           },
         })
 
-        const prepare = prepareBranch(taskData, {
+        const prepare = prepareBranch(task, {
           run,
-          getFetchEndpoint: function () {
+          getFetchEndpoint: () => {
             return getFetchEndpoint(
-              "installationId" in taskData ? taskData.installationId : null,
+              "installationId" in task ? task.installationId : null,
             )
           },
         })
-        while (isAlive) {
+        while (taskIsAlive) {
           const next = await prepare.next()
           if (next.done) {
             break
           }
 
-          child = undefined
+          taskProcess = undefined
 
           if (typeof next.value !== "string") {
             return next.value
           }
         }
-        if (!isAlive) {
+        if (!taskIsAlive) {
           return cancelledMessage
         }
 
         const startTime = new Date()
         const result = await run(execPath, args, {
-          options: { env: { ...process.env, ...taskData.env }, cwd: repoPath },
+          options: { env: { ...process.env, ...task.env }, cwd: repoPath },
           shouldTrackProgress: true,
           shouldCaptureAllStreams: true,
         })
         const endTime = new Date()
 
-        return isAlive
+        const resultDisplay =
+          result instanceof Error ? displayError(result) : result
+
+        return taskIsAlive
           ? `${appName} took ${displayDuration(
               startTime,
               endTime,
             )} (from ${startTime.toISOString()} to ${endTime.toISOString()} server time) for ${commandDisplay}
-            ${result}`
+            ${resultDisplay}`
           : cancelledMessage
       } catch (error) {
-        return error
+        return intoError(error)
       }
     })
     .then(afterExecution)
     .catch(afterExecution)
 
-  registerHandle({ terminate })
-
   return `${message}\n${suffixMessage}`
 }
 
-export const requeueUnterminated = async function (state: State) {
-  const { taskDb, version, logger, bot, matrix } = state
+export const requeueUnterminated = async (ctx: Context, bot: Probot) => {
+  const { taskDb, logger, matrix } = ctx
   const { db } = taskDb
 
-  // Items which are not from this version still remaining in the database are
-  // deemed unterminated.
-  const unterminatedItems = await getSortedTasks(state, {
-    match: { version, isInverseMatch: true },
+  /*
+    Items left over from previous server instances which were not finished properly
+    for some reason (e.g. the server was restarted).
+  */
+  const unterminatedItems = await getSortedTasks(ctx, {
+    fromOtherServerInstances: true,
   })
 
   for (const {
@@ -664,48 +633,43 @@ export const requeueUnterminated = async function (state: State) {
   } of unterminatedItems) {
     await db.del(id)
 
-    const prepareRequeue = function <T>(taskData: T) {
-      logger.info(taskData, "Prepare requeue")
-      return { ...taskData, timesRequeued: timesRequeued + 1 }
+    const prepareRequeuedTask = <T>(task: T) => {
+      logger.info(task, "Prepare requeue")
+      return { ...task, timesRequeued: timesRequeued + 1 }
     }
 
     type RequeueComponent = {
-      requeue: () => Promise<unknown>
-      announceCancel: (msg: string) => Promise<unknown>
+      requeue: () => Promise<unknown> | unknown
+      announceCancel: (msg: string) => Promise<unknown> | unknown
     }
-    const getRequeueResult = async function (): Promise<
-      RequeueComponent | Error
-    > {
+    const getRequeueResult = async (): Promise<RequeueComponent | Error> => {
       try {
         switch (taskData.tag) {
           case "PullRequestTask": {
-            const { owner, repo, pull_number, commentId, requester } = taskData
+            const {
+              gitRef: { owner, repo, number: prNumber },
+              commentId,
+              requester,
+            } = taskData
 
             const octokit = await (
               bot.auth as (installationId?: number) => Promise<Octokit>
             )(taskData.installationId)
 
-            const announceCancel = function (message: string) {
-              return updateComment(octokit, {
+            const announceCancel = (message: string) => {
+              return updateComment(ctx, octokit, {
                 owner,
                 repo,
-                pull_number,
+                pull_number: prNumber,
                 comment_id: commentId,
                 body: `@${requester} ${message}`,
               })
             }
 
-            const nextTaskData = prepareRequeue(taskData)
-            const requeue = async function () {
-              await queue({
-                taskData: nextTaskData,
-                onResult: getPostPullRequestResult({
-                  taskData: nextTaskData,
-                  octokit,
-                  state,
-                }),
-                state,
-                registerHandle: getRegisterPullRequestHandle(nextTaskData),
+            const requeuedTask = prepareRequeuedTask(taskData)
+            const requeue = () => {
+              return queueTask(ctx, requeuedTask, {
+                onResult: getPostPullRequestResult(ctx, octokit, requeuedTask),
               })
             }
 
@@ -714,42 +678,39 @@ export const requeueUnterminated = async function (state: State) {
           case "ApiTask": {
             if (matrix === null) {
               return {
-                announceCancel: async function () {
-                  logger.fatal(
+                announceCancel: () => {
+                  logger.warn(
                     taskData,
                     "ApiTask cannot be requeued because Matrix client is missing",
                   )
                 },
-                requeue: async function () {},
+                requeue: () => {},
               }
             }
 
             const { matrixRoom } = taskData
-            const sendMatrixMessage = function (message: string) {
-              return matrix.sendText(matrixRoom, message)
+            const sendMatrixMessage = (msg: string) => {
+              return matrix.sendText(matrixRoom, msg)
             }
 
-            const nextTaskData = prepareRequeue(taskData)
+            const requeuedTask = prepareRequeuedTask(taskData)
             return {
               announceCancel: sendMatrixMessage,
-              requeue: function () {
-                return queue({
-                  taskData: nextTaskData,
-                  onResult: getSendMatrixResult(matrix, logger, taskData),
-                  state,
-                  registerHandle: getRegisterApiTaskHandle(nextTaskData),
+              requeue: () => {
+                return queueTask(ctx, requeuedTask, {
+                  onResult: getSendMatrixResult(matrix, logger, requeuedTask),
                 })
               },
             }
           }
           default: {
             const exhaustivenessCheck: never = taskData
-            const error = new Error(`Not exhaustive: ${exhaustivenessCheck}`)
-            throw error
+            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+            throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
           }
         }
       } catch (error) {
-        return error
+        return intoError(error)
       }
     }
     const requeueResult = await getRequeueResult()
@@ -761,24 +722,23 @@ export const requeueUnterminated = async function (state: State) {
     const { announceCancel, requeue } = requeueResult
     if (
       timesRequeued &&
-      // Check if the task was requeued and got to execute, but it failed for
-      // some reason, in which case it will not be retried further; in
-      // comparison, it might have been requeued and not had a chance to execute
-      // due to other crash-inducing command being in front of it, thus it's not
-      // reasonable to avoid rescheduling this command if it's not his fault
+      /*
+        Check if the task was requeued and got to execute, but it failed for
+        some reason, in which case it will not be retried further; in
+        comparison, it might have been requeued and not had a chance to execute
+        due to other crash-inducing command being in front of it, thus it's not
+        reasonable to avoid rescheduling this command if it's not his fault
+      */
       timesRequeued === taskData.timesRequeuedSnapshotBeforeExecution
     ) {
       await announceCancel(
-        `Command was rescheduled and failed to finish (check for taskId ${id} in the logs); execution will not automatically be restarted further.`,
+        `Command was rescheduled and failed to finish (check for task.id ${id} in the logs); execution will not automatically be restarted further.`,
       )
     } else {
       try {
         await requeue()
       } catch (error) {
-        let errorMessage = error.toString()
-        if (errorMessage.endsWith(".") === false) {
-          errorMessage = `${errorMessage}.`
-        }
+        const errorMessage = displayError(error)
         await announceCancel(
           `Caught exception while trying to reschedule the command; it will not be rescheduled further. Error message: ${errorMessage}.`,
         )

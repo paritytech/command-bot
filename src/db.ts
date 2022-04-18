@@ -1,10 +1,11 @@
 import type { AbstractIterator, AbstractLevelDOWN } from "abstract-leveldown"
-import { isBefore } from "date-fns"
+import { isBefore, isValid, parseISO } from "date-fns"
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore because level-rocksdb is not typed
 import getLevelDb from "level-rocksdb"
 import type { LevelUp } from "levelup"
 
-import { State, Task } from "./types"
+import { Context, Task, ToString } from "./types"
 
 type DbKey = string
 type DbValue = string
@@ -24,54 +25,73 @@ export class AccessDB {
   constructor(public db: DB) {}
 }
 
-export class KeyAlreadyExists {}
-
-export const getSortedTasks = async function (
-  { taskDb: { db }, parseTaskId }: Pick<State, "parseTaskId" | "taskDb">,
+export const getSortedTasks = async (
   {
-    match: { version, isInverseMatch },
+    taskDb: { db },
+    serverInfo,
+    logger,
+  }: Pick<Context, "taskDb" | "startDate" | "serverInfo" | "logger">,
+  {
+    fromOtherServerInstances,
   }: {
-    match: { version: string; isInverseMatch?: boolean }
-  },
-) {
+    fromOtherServerInstances?: boolean
+  } = {},
+) => {
   type Item = {
     id: DbKey
-    startDate: Date
+    queuedDate: Date
     taskData: Task
   }
 
-  const items = await new Promise<Item[]>(function (resolve, reject) {
-    const items: Item[] = []
+  const items = await new Promise<Item[]>((resolve, reject) => {
+    const databaseItems: Item[] = []
 
     db.createReadStream()
-      .on("data", function ({ key, value }) {
-        try {
-          const parsedId = parseTaskId(key)
-          if (parsedId instanceof Error) {
-            throw parsedId
-          }
+      .on(
+        "data",
+        ({
+          key: rawKey,
+          value: rawValue,
+        }: {
+          key: ToString
+          value: ToString
+        }) => {
+          try {
+            const key = rawKey.toString()
+            const value = rawValue.toString()
 
-          const { date: startDate } = parsedId
-          const taskData = JSON.parse(value.toString())
-          if (
-            (taskData.version === version && !isInverseMatch) ||
-            (taskData.version !== version && isInverseMatch)
-          ) {
-            items.push({ id: key, startDate, taskData })
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            const taskData: Task = JSON.parse(value)
+            if (
+              (taskData.serverId === serverInfo.id &&
+                !fromOtherServerInstances) ||
+              (taskData.serverId !== serverInfo.id && fromOtherServerInstances)
+            ) {
+              const queuedDate = parseISO(taskData.queuedDate)
+              if (isValid(queuedDate)) {
+                databaseItems.push({ id: key, queuedDate, taskData })
+              } else {
+                logger.error(
+                  { key, value },
+                  "Found key with invalid date in the database",
+                )
+                void db.del(key)
+              }
+            }
+          } catch (error) {
+            reject(error)
           }
-        } catch (error) {
-          reject(error)
-        }
-      })
-      .on("error", function (error) {
+        },
+      )
+      .on("error", (error) => {
         reject(error)
       })
-      .on("end", function () {
-        resolve(items)
+      .on("end", () => {
+        resolve(databaseItems)
       })
   })
 
-  items.sort(function ({ startDate: dateA }, { startDate: dateB }) {
+  items.sort(({ queuedDate: dateA }, { queuedDate: dateB }) => {
     if (isBefore(dateA, dateB)) {
       return -1
     } else if (isBefore(dateB, dateA)) {

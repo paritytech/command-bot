@@ -1,4 +1,3 @@
-import { EmitterWebhookEventName } from "@octokit/webhooks/dist-types/types"
 import { MatrixClient } from "matrix-bot-sdk"
 import { Probot } from "probot"
 
@@ -18,10 +17,11 @@ type GitRef = {
   branch: string
 }
 
-type TaskBase<T> = {
+export type TaskBase<T> = {
   tag: T
-  handleId: string
-  version: string
+  id: string
+  serverId: string
+  queuedDate: string
   timesRequeued: number
   timesRequeuedSnapshotBeforeExecution: number
   timesExecuted: number
@@ -31,14 +31,14 @@ type TaskBase<T> = {
   env: Record<string, string>
   gitRef: GitRef
   repoPath: string
+  requester: string
 }
 
-export type PullRequestTask = TaskBase<"PullRequestTask"> &
-  PullRequestParams & {
-    commentId: number
-    installationId: number
-    requester: string
-  }
+export type PullRequestTask = TaskBase<"PullRequestTask"> & {
+  commentId: number
+  installationId: number
+  gitRef: GitRef & { number: number }
+}
 
 export type ApiTask = TaskBase<"ApiTask"> & {
   matrixRoom: string
@@ -48,11 +48,9 @@ export type Task = PullRequestTask | ApiTask
 
 export type CommandOutput = Error | string
 
-type TaskIdParseResult = { date: Date; suffix?: string } | Error
-export type State = {
+export type Context = {
   appName: string
-  version: string
-  bot: Probot
+  startDate: Date
   taskDb: TaskDB
   accessDb: AccessDB
   getFetchEndpoint: (
@@ -65,10 +63,11 @@ export type State = {
   deployment: { environment: string; container: string } | undefined
   matrix: MatrixClient | null
   masterToken: string | null
-  getUniqueId: () => string
-  getTaskId: () => string
-  parseTaskId: (id: string) => TaskIdParseResult
   nodesAddresses: Record<string, string>
+  serverInfo: {
+    id: string
+  }
+  shouldPostPullRequestComment: boolean
 }
 
 export class PullRequestError {
@@ -86,7 +85,4 @@ export type GetCommandOptions = { baseEnv: Record<string, string> }
 
 export type Octokit = Awaited<ReturnType<Probot["auth"]>>
 
-export type WebhookEvents = Extract<
-  EmitterWebhookEventName,
-  "issue_comment.created"
->
+export type ToString = { toString: () => string }

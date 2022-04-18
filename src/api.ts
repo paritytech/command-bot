@@ -1,300 +1,291 @@
 import Ajv from "ajv"
 import bodyParser from "body-parser"
-import { NextFunction, Response } from "express"
+import { NextFunction, RequestHandler, Response } from "express"
 import LevelErrors from "level-errors"
 import path from "path"
 import { Server } from "probot"
 
-import { KeyAlreadyExists } from "./db"
-import { getApiTaskHandle, getRegisterApiTaskHandle, queue } from "./executor"
-import { ApiTask, State } from "./types"
-import { displayCommand, getParsedArgs, getSendMatrixResult } from "./utils"
+import { parseTryRuntimeBotCommandArgs } from "./core"
+import { queueTask } from "./executor"
+import { getNextTaskId, queuedTasks, serializeTaskQueuedDate } from "./task"
+import { ApiTask, Context } from "./types"
+import { displayCommand, getSendMatrixResult } from "./utils"
 
-const getApiRoute = function (route: string) {
+const getApiRoute = (route: string) => {
   return `/api${route}`
 }
 
-export const setupApi = function (server: Server, state: State) {
-  const {
-    accessDb,
-    matrix,
-    repositoryCloneDirectory,
-    logger,
-    getUniqueId,
-    version,
-    nodesAddresses,
-  } = state
+const taskRoute = "/task/:task_id"
 
-  const respond = function <T>(
-    res: Response,
-    next: NextFunction,
-    code: number,
-    body?: T,
-  ) {
-    if (body === undefined) {
-      res.status(code).send()
-    } else {
-      res.status(code).json(body)
-    }
-    next()
+const response = <T>(
+  res: Response,
+  next: NextFunction,
+  code: number,
+  body?: T,
+) => {
+  if (body === undefined) {
+    res.status(code).send()
+  } else {
+    res.status(code).json(body)
+  }
+  next()
+}
+
+const errorResponse = <T>(
+  res: Response,
+  next: NextFunction,
+  code: number,
+  body?: T,
+) => {
+  response(res, next, code, body === undefined ? undefined : { error: body })
+}
+
+const jsonParserMiddleware = bodyParser.json()
+
+export const setupApi = (ctx: Context, server: Server) => {
+  const { accessDb, matrix, repositoryCloneDirectory, logger, serverInfo } = ctx
+
+  const apiError = (res: Response, next: NextFunction, error: unknown) => {
+    const msg = "Failed to handle errors in API endpoint"
+    logger.fatal(error, msg)
+    errorResponse(res, next, 500, msg)
   }
 
-  const serverError = function (res: Response, next: NextFunction, error: any) {
-    logger.fatal(error, "Failed to handle errors in API endpoint")
-    respond(res, next, 500)
-  }
-
-  const err = function <T>(
-    res: Response,
-    next: NextFunction,
-    code: number,
-    body?: T,
-  ) {
-    respond(res, next, code, body === undefined ? undefined : { error: body })
-  }
-
-  server.expressApp.use(bodyParser.json())
-
-  server.expressApp.post(
-    getApiRoute("/queue"),
-    async function (req, res, next) {
-      try {
-        const token = req.headers["x-auth"]
-        if (typeof token !== "string" || !token) {
-          return err(res, next, 400, "Invalid auth token")
-        }
-
-        if (matrix === null) {
-          return err(res, next, 400, "Matrix is not configured for this server")
-        }
-
-        let matrixRoom: string
+  type JsonRequestHandlerParams = Parameters<
+    RequestHandler<Record<string, unknown>, unknown, Record<string, unknown>>
+  >
+  const setupRoute = <T extends "post" | "get" | "delete" | "patch">(
+    method: T,
+    routePath: string,
+    handler: (args: {
+      req: JsonRequestHandlerParams[0]
+      res: JsonRequestHandlerParams[1]
+      next: JsonRequestHandlerParams[2]
+      token: string
+    }) => void | Promise<void>,
+    { checkMasterToken }: { checkMasterToken?: boolean } = {},
+  ) => {
+    server.expressApp[method](
+      getApiRoute(routePath),
+      jsonParserMiddleware,
+      async (req, res, next) => {
         try {
-          matrixRoom = await accessDb.db.get(token)
-          if (!matrixRoom) {
-            throw new LevelErrors.NotFoundError("Not found")
+          const token = req.headers["x-auth"]
+          if (typeof token !== "string" || !token) {
+            return errorResponse(res, next, 400, "Invalid auth token")
           }
-        } catch (error) {
-          if (error instanceof LevelErrors.NotFoundError) {
-            return err(res, next, 404)
-          } else {
-            logger.fatal(error, "Unhandled error for database get")
-            return err(res, next, 500)
-          }
-        }
 
-        const ajv = new Ajv()
-        const validateQueueEndpointInput = ajv.compile({
+          if (checkMasterToken && token !== ctx.masterToken) {
+            return errorResponse(
+              res,
+              next,
+              422,
+              `Invalid ${token} for master token`,
+            )
+          }
+
+          await handler({ req, res, next, token })
+        } catch (error) {
+          apiError(res, next, error)
+        }
+      },
+    )
+  }
+
+  setupRoute("post", "/queue", async ({ req, res, next, token }) => {
+    if (matrix === null) {
+      return errorResponse(
+        res,
+        next,
+        400,
+        "Matrix is not configured for this server",
+      )
+    }
+
+    let matrixRoom: string
+    try {
+      matrixRoom = await accessDb.db.get(token)
+      if (!matrixRoom) {
+        throw new LevelErrors.NotFoundError("Not found")
+      }
+    } catch (error) {
+      if (error instanceof LevelErrors.NotFoundError) {
+        return errorResponse(res, next, 404)
+      } else {
+        return apiError(res, next, error)
+      }
+    }
+
+    const ajv = new Ajv()
+    const validateQueueEndpointInput = ajv.compile({
+      type: "object",
+      properties: {
+        execPath: { type: "string" },
+        args: { type: "array", items: { type: "string" } },
+        env: {
+          type: "object",
+          patternProperties: { ".*": { type: "string" } },
+        },
+        gitRef: {
           type: "object",
           properties: {
-            execPath: { type: "string" },
-            args: { type: "array", items: { type: "string" } },
-            env: {
-              type: "object",
-              patternProperties: { ".*": { type: "string" } },
-            },
-            gitRef: {
-              type: "object",
-              properties: {
-                contributor: { type: "string" },
-                owner: { type: "string" },
-                repo: { type: "string" },
-                branch: { type: "string" },
-              },
-              required: ["contributor", "owner", "repo", "branch"],
-            },
-            secretsToHide: { type: "array", items: { type: "string" } },
+            contributor: { type: "string" },
+            owner: { type: "string" },
+            repo: { type: "string" },
+            branch: { type: "string" },
           },
-          required: ["execPath", "args", "gitRef"],
-          additionalProperties: false,
-        })
-        const isInputValid = validateQueueEndpointInput(req.body)
-        if (!isInputValid) {
-          return err(res, next, 400, validateQueueEndpointInput.errors)
-        }
+          required: ["contributor", "owner", "repo", "branch"],
+        },
+        secretsToHide: { type: "array", items: { type: "string" } },
+      },
+      required: ["execPath", "args", "gitRef"],
+      additionalProperties: false,
+    })
+    const isInputValid = (await validateQueueEndpointInput(req.body)) as boolean
+    if (!isInputValid) {
+      return errorResponse(res, next, 400, validateQueueEndpointInput.errors)
+    }
 
-        const {
-          execPath,
-          args: inputArgs,
-          gitRef,
-          secretsToHide = [],
-          env = {},
-        }: Pick<ApiTask, "execPath" | "args" | "gitRef"> & {
-          env?: ApiTask["env"]
-          secretsToHide?: string[]
-        } = req.body
+    type Payload = Pick<ApiTask, "execPath" | "args" | "gitRef"> & {
+      env?: ApiTask["env"]
+      secretsToHide?: string[]
+    }
+    const {
+      execPath,
+      args: inputArgs,
+      gitRef,
+      secretsToHide = [],
+      env = {},
+    } = req.body as Payload
 
-        const args = getParsedArgs(nodesAddresses, inputArgs)
-        if (typeof args === "string") {
-          return err(res, next, 422, args)
-        }
+    const args = parseTryRuntimeBotCommandArgs(ctx, inputArgs)
+    if (typeof args === "string") {
+      return errorResponse(res, next, 422, args)
+    }
 
-        const commandDisplay = displayCommand({ execPath, args, secretsToHide })
-        const handleId = getUniqueId()
+    const commandDisplay = displayCommand({ execPath, args, secretsToHide })
+    const taskId = getNextTaskId()
+    const queuedDate = new Date()
 
-        const taskData: ApiTask = {
-          tag: "ApiTask",
-          version,
-          handleId,
-          timesRequeued: 0,
-          timesRequeuedSnapshotBeforeExecution: 0,
-          timesExecuted: 0,
-          commandDisplay,
-          execPath,
-          args,
-          env,
-          gitRef,
-          matrixRoom,
-          repoPath: path.join(repositoryCloneDirectory, gitRef.repo),
-        }
+    const task: ApiTask = {
+      id: taskId,
+      tag: "ApiTask",
+      timesRequeued: 0,
+      timesRequeuedSnapshotBeforeExecution: 0,
+      timesExecuted: 0,
+      commandDisplay,
+      execPath,
+      args,
+      env,
+      gitRef,
+      matrixRoom,
+      repoPath: path.join(repositoryCloneDirectory, gitRef.repo),
+      queuedDate: serializeTaskQueuedDate(queuedDate),
+      serverId: serverInfo.id,
+      requester: matrixRoom,
+    }
 
-        const message = await queue({
-          state,
-          taskData,
-          onResult: getSendMatrixResult(matrix, logger, taskData),
-          registerHandle: getRegisterApiTaskHandle(taskData),
-        })
+    const message = await queueTask(ctx, task, {
+      onResult: getSendMatrixResult(matrix, logger, task),
+    })
 
-        respond(res, next, 201, {
-          message,
-          handleId,
-          info: "Send a JSON POST request to /api/cancel with '{ handleId }' for cancelling",
-        })
-      } catch (error) {
-        return serverError(res, next, error)
+    response(res, next, 201, {
+      message,
+      task_id: taskId,
+      info: `Send a DELETE request to ${getApiRoute(taskRoute)} for cancelling`,
+    })
+  })
+
+  setupRoute("delete", taskRoute, ({ req, res, next }) => {
+    const { task_id: taskId } = req.params
+    if (typeof taskId !== "string" || !taskId) {
+      return errorResponse(res, next, 403, "Invalid task_id")
+    }
+
+    const queuedTask = queuedTasks.get(taskId)
+    if (queuedTask === undefined) {
+      return errorResponse(res, next, 404)
+    }
+
+    void queuedTask.cancel()
+    response(res, next, 200, queuedTask.task)
+  })
+
+  setupRoute(
+    "post",
+    "/access",
+    async ({ req, res, next, token }) => {
+      if (token !== ctx.masterToken) {
+        return errorResponse(
+          res,
+          next,
+          422,
+          `Invalid ${token} for master token`,
+        )
       }
-    },
-  )
 
-  server.expressApp.post(
-    getApiRoute("/cancel"),
-    async function (req, res, next) {
+      const { token: requesterToken, matrixRoom } = req.body
+      if (typeof requesterToken !== "string" || !requesterToken) {
+        return errorResponse(res, next, 400, "Invalid requesterToken")
+      }
+      if (typeof matrixRoom !== "string" || !matrixRoom) {
+        return errorResponse(res, next, 400, "Invalid matrixRoom")
+      }
+
       try {
-        const { handleId } = req.body
-        if (typeof handleId !== "string" || !handleId) {
-          return err(res, next, 403, "Invalid handleId")
+        if (await accessDb.db.get(requesterToken)) {
+          return errorResponse(res, next, 422, "requesterToken already exists")
         }
-
-        const cancelHandle = getApiTaskHandle(handleId)
-        if (cancelHandle === undefined) {
-          return err(res, next, 404)
-        }
-
-        const { cancel, task } = cancelHandle
-        await cancel()
-
-        respond(res, next, 200, task)
       } catch (error) {
-        return serverError(res, next, error)
+        if (!(error instanceof LevelErrors.NotFoundError)) {
+          return apiError(res, next, error)
+        }
       }
+
+      await accessDb.db.put(requesterToken, matrixRoom)
+      response(res, next, 201)
     },
+    { checkMasterToken: true },
   )
 
-  server.expressApp.post(
-    getApiRoute("/access"),
-    async function (req, res, next) {
-      try {
-        const token = req.headers["x-auth"]
-        if (typeof token !== "string" || !token) {
-          return err(res, next, 400, "Invalid auth token")
-        }
-        if (token !== state.masterToken) {
-          return err(res, next, 422, `Invalid ${token} for master token`)
-        }
+  setupRoute("patch", "/access", async ({ req, res, next, token }) => {
+    const { matrixRoom } = req.body
+    if (typeof matrixRoom !== "string" || !matrixRoom) {
+      return errorResponse(res, next, 400, "Invalid matrixRoom")
+    }
 
-        const { token: requesterToken, matrixRoom } = req.body
-        if (typeof requesterToken !== "string" || !requesterToken) {
-          return err(res, next, 400, "Invalid requesterToken")
-        }
-        if (typeof matrixRoom !== "string" || !matrixRoom) {
-          return err(res, next, 400, "Invalid matrixRoom")
-        }
-
-        try {
-          if (await accessDb.db.get(requesterToken)) {
-            throw new KeyAlreadyExists()
-          }
-        } catch (error) {
-          if (error instanceof KeyAlreadyExists) {
-            return err(res, next, 422, "requesterToken already exists")
-          } else if (!(error instanceof LevelErrors.NotFoundError)) {
-            logger.fatal(error, "Unhandled error for database get")
-            return err(res, next, 500)
-          }
-        }
-
-        await accessDb.db.put(requesterToken, matrixRoom)
-        respond(res, next, 201)
-      } catch (error) {
-        return serverError(res, next, error)
+    try {
+      const value = await accessDb.db.get(token)
+      if (!value) {
+        throw new LevelErrors.NotFoundError("Not found")
       }
-    },
-  )
-
-  server.expressApp.patch(
-    getApiRoute("/access"),
-    async function (req, res, next) {
-      try {
-        const token = req.headers["x-auth"]
-        if (typeof token !== "string" || !token) {
-          return err(res, next, 400, "Invalid auth token")
-        }
-
-        const { matrixRoom } = req.body
-        if (typeof matrixRoom !== "string" || !matrixRoom) {
-          return err(res, next, 400, "Invalid matrixRoom")
-        }
-
-        try {
-          const value = await accessDb.db.get(token)
-          if (!value) {
-            throw new LevelErrors.NotFoundError("Not found")
-          }
-        } catch (error) {
-          if (error instanceof LevelErrors.NotFoundError) {
-            return err(res, next, 404)
-          } else {
-            logger.fatal(error, "Unhandled error for database get")
-            return err(res, next, 500)
-          }
-        }
-
-        await accessDb.db.put(token, matrixRoom)
-        respond(res, next, 204)
-      } catch (error) {
-        return serverError(res, next, error)
+    } catch (error) {
+      if (error instanceof LevelErrors.NotFoundError) {
+        return errorResponse(res, next, 404)
+      } else {
+        return apiError(res, next, error)
       }
-    },
-  )
+    }
 
-  server.expressApp.delete(
-    getApiRoute("/access"),
-    async function (req, res, next) {
-      try {
-        const token = req.headers["x-auth"]
-        if (typeof token !== "string" || !token) {
-          return err(res, next, 400, "Invalid auth token")
-        }
+    await accessDb.db.put(token, matrixRoom)
+    response(res, next, 204)
+  })
 
-        try {
-          const value = await accessDb.db.get(token)
-          if (!value) {
-            throw new LevelErrors.NotFoundError("Not found")
-          }
-        } catch (error) {
-          if (error instanceof LevelErrors.NotFoundError) {
-            return err(res, next, 404)
-          } else {
-            logger.fatal(error, "Unhandled error for database get")
-            return err(res, next, 500)
-          }
-        }
-
-        await accessDb.db.put(token, "")
-        respond(res, next, 204)
-      } catch (error) {
-        return serverError(res, next, error)
+  setupRoute("delete", "/access", async ({ res, next, token }) => {
+    try {
+      const value = await accessDb.db.get(token)
+      if (!value) {
+        throw new LevelErrors.NotFoundError("Not found")
       }
-    },
-  )
+    } catch (error) {
+      if (error instanceof LevelErrors.NotFoundError) {
+        return errorResponse(res, next, 404)
+      } else {
+        return apiError(res, next, error)
+      }
+    }
+
+    await accessDb.db.put(token, "")
+    response(res, next, 204)
+  })
 }
