@@ -1,11 +1,11 @@
 import type { AbstractIterator, AbstractLevelDOWN } from "abstract-leveldown"
-import { isBefore, isValid, parseISO } from "date-fns"
+import { isBefore, isValid } from "date-fns"
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore because level-rocksdb is not typed
 import getLevelDb from "level-rocksdb"
 import type { LevelUp } from "levelup"
 
-import { queuedTasks, Task } from "./task"
+import { parseTaskQueuedDate, queuedTasks, Task } from "./task"
 import { Context, ToString } from "./types"
 
 type DbKey = string
@@ -60,7 +60,7 @@ export const getSortedTasks = async (
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const task: Task = JSON.parse(value)
             if (!onlyNotAlive || !queuedTasks.has(task.id)) {
-              const queuedDate = parseISO(task.queuedDate)
+              const queuedDate = parseTaskQueuedDate(task.queuedDate)
               if (isValid(queuedDate)) {
                 databaseItems.push({ id: key, queuedDate, task })
               } else {

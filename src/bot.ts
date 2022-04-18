@@ -16,16 +16,19 @@ import {
   getPostPullRequestResult,
   updateComment,
 } from "./github"
-import { getNextTaskId, PullRequestTask, queuedTasks, queueTask } from "./task"
+import {
+  getNextTaskId,
+  PullRequestTask,
+  queuedTasks,
+  queueTask,
+  serializeTaskQueuedDate,
+} from "./task"
 import { Context, PullRequestError } from "./types"
 import { displayCommand, displayError, getLines } from "./utils"
 
 const botMentionPrefix = "/try-runtime"
 
-export type WebhookEvents = Extract<
-  EmitterWebhookEventName,
-  "issue_comment.created"
->
+type WebhookEvents = Extract<EmitterWebhookEventName, "issue_comment.created">
 
 type WebhookEventPayload<E extends WebhookEvents> =
   E extends "issue_comment.created" ? IssueCommentCreatedEvent : never
@@ -220,7 +223,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           timesRequeuedSnapshotBeforeExecution: 0,
           timesExecuted: 0,
           repoPath: path.join(repositoryCloneDirectory, pr.repo),
-          queuedDate: queuedDate.toISOString(),
+          queuedDate: serializeTaskQueuedDate(queuedDate),
         }
 
         const message = await queueTask(ctx, task, {
@@ -279,7 +282,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
   }
 }
 
-export const setupEvent = <E extends WebhookEvents>(
+const setupEvent = <E extends WebhookEvents>(
   parentCtx: Context,
   bot: Probot,
   eventName: E,

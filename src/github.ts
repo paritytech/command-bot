@@ -11,7 +11,7 @@ import { displayError, Err, millisecondsDelay, Ok } from "./utils"
 
 type Octokit = Awaited<ReturnType<Probot["auth"]>>
 
-export const wasOctokitExtendedByApplication = Symbol()
+const wasOctokitExtendedByApplication = Symbol()
 
 /*
   The actual limit should be 65532 but we're a bit conservative here

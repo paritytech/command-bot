@@ -23,7 +23,7 @@ import {
   intoError,
 } from "./utils"
 
-export type TaskBase<T> = {
+type TaskBase<T> = {
   tag: T
   id: string
   queuedDate: string
@@ -393,52 +393,6 @@ ${JSON.stringify(value, null, 2)}
   }
 
   return `\nExecuting:\n\n\`${commandDisplay}\``
-}
-
-export const getSendMatrixResult = (
-  matrix: MatrixClient,
-  logger: Logger,
-  { id: taskId, matrixRoom, commandDisplay }: ApiTask,
-) => {
-  return async (message: CommandOutput) => {
-    try {
-      const fileName = `${taskId}-log.txt`
-      const buf = message instanceof Error ? displayError(message) : message
-      const messagePrefix = `Task ID ${taskId} has finished.`
-
-      const lineCount = (buf.match(/\n/g) || "").length + 1
-      if (lineCount < 128) {
-        await matrix.sendHtmlText(
-          matrixRoom,
-          `${messagePrefix} Results will be displayed inline for <code>${escapeHtml(
-            commandDisplay,
-          )}</code>\n<hr>${escapeHtml(buf)}`,
-        )
-        return
-      }
-
-      const url = await matrix.uploadContent(
-        Buffer.from(message instanceof Error ? displayError(message) : message),
-        "text/plain",
-        fileName,
-      )
-      await matrix.sendText(
-        matrixRoom,
-        `${messagePrefix} Results were uploaded as ${fileName} for ${commandDisplay}.`,
-      )
-      await matrix.sendMessage(matrixRoom, {
-        msgtype: "m.file",
-        body: fileName,
-        url,
-      })
-    } catch (rawError) {
-      const error = intoError(rawError)
-      logger.error(
-        extractRequestError(error),
-        "Caught error when sending Matrix message",
-      )
-    }
-  }
 }
 
 export const getSendTaskMatrixResult = (

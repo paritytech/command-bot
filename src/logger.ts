@@ -13,13 +13,11 @@ enum LoggingLevel {
 }
 type LoggingLevels = keyof typeof LoggingLevel
 
-export type LogFormat = "json" | null
-
 export class Logger {
   constructor(
     public options: {
       name: string
-      logFormat: LogFormat
+      logFormat: "json" | null
       minLogLevel: LoggingLevels
       impl: LoggingImplementation
       context?: Record<string, any>
