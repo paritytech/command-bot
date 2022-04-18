@@ -80,7 +80,7 @@ RUN $APT_INSTALL $ROCKSDB_BUILD_DEPS && apt-mark auto $ROCKSDB_BUILD_DEPS
 RUN mkdir $APP_DIR && \
   chown $NODE_USER:$NODE_USER $APP_DIR && \
   cd "\$REPO" && \
-  yarn --ignore-optional --frozen-lockfile && \
+  yarn --ignore-optional --immutable && \
   mv * $APP_DIR && \
   chown -R $NODE_USER:$NODE_USER $APP_DIR
 
