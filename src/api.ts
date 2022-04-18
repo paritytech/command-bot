@@ -46,7 +46,7 @@ const errorResponse = <T>(
   response(res, next, code, body === undefined ? undefined : { error: body })
 }
 
-const jsonParserMiddleware = bodyParser.json()
+const jsonBodyParserMiddleware = bodyParser.json()
 
 export const setupApi = (ctx: Context, server: Server) => {
   const { accessDb, matrix, repositoryCloneDirectory, logger } = ctx
@@ -73,7 +73,7 @@ export const setupApi = (ctx: Context, server: Server) => {
   ) => {
     server.expressApp[method](
       getApiRoute(routePath),
-      jsonParserMiddleware,
+      jsonBodyParserMiddleware,
       async (req, res, next) => {
         try {
           const token = req.headers["x-auth"]
