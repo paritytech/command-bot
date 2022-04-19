@@ -42,18 +42,23 @@ from [commands in pull request comments](#pull-request-commands) (the
 
 ## Queue <a name="pull-request-command-queue"></a>
 
+*Note*: the try-runtime CLI arguments showed in the examples might be
+outdated. Consult the
+[try-runtime CLI](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)'s
+source code from your pull request for the actual options.
+
 Comment in a pull request:
 
-`/try-runtime queue [env-vars] --url ws://[kusama | westend | polkadot] [try-runtime-cli-args]`
+`/try-runtime queue [env-vars] --uri ws://[kusama | westend | polkadot] [try-runtime-cli-args]`
 
 For instance:
 
-`/try-runtime queue RUST_LOG=debug --url ws://kusama --block-at "0x0" on-runtime-upgrade live`
+`/try-runtime queue RUST_LOG=debug --uri ws://kusama --block-at "0x0" on-runtime-upgrade live`
 
 The `[try-runtime-cli-args]` form accepts the same arguments as the
 [try-runtime CLI](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)
-except that you **need to** refer to the nodes by their name e.g.
-`ws://polkadot` instead of using arbitrary addresses.
+from your pull request, except that you **need to** refer to the nodes by their
+name e.g. `ws://polkadot` instead of using arbitrary addresses.
 
 Upon receiving the event for that comment, try-runtime-bot will queue the
 execution of the try-runtime CLI using the pull request's branch and post the

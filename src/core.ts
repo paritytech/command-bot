@@ -1,5 +1,6 @@
 import assert from "assert"
 
+import { botPullRequestCommentMention } from "./bot"
 import { ExtendedOctokit, isOrganizationMember } from "./github"
 import { Task } from "./task"
 import { CommandExecutor, Context } from "./types"
@@ -8,50 +9,45 @@ export const defaultParseTryRuntimeBotCommandOptions = {
   baseEnv: { RUST_LOG: "remote-ext=info" },
 }
 
-export const parseTryRuntimeBotCommand = (
+export const parsePullRequestBotCommand = (
   commandLine: string,
   { baseEnv }: { baseEnv: Record<string, string> },
 ) => {
-  const tokens = commandLine.split(" ").filter((value) => {
+  const allTokens = commandLine.split(" ").filter((value) => {
     return !!value
   })
 
-  const envVars: { name: string; value: string }[] = []
-  const command: string[] = []
+  const [firstToken, ...tokens] = allTokens
+
+  if (firstToken !== botPullRequestCommentMention) {
+    return
+  }
+
+  const args: string[] = []
+
+  const env: Record<string, string> = { ...baseEnv }
   // envArgs are only collected at the start of the command line
   let isCollectingEnvVars = true
-  while (true) {
-    const token = tokens.shift()
-    if (token === undefined) {
-      break
-    }
 
+  for (const tok of tokens) {
     if (isCollectingEnvVars) {
-      const matches = token.match(/^([A-Za-z_]+)=(.*)/)
+      const matches = tok.match(/^([A-Za-z_]+)=(.*)/)
       if (matches === null) {
         isCollectingEnvVars = false
       } else {
         const [, name, value] = matches
         assert(name)
-        envVars.push({ name, value })
+        env[name] = value
         continue
       }
     }
-
-    command.push(token)
+    args.push(tok)
   }
 
-  const env: Record<string, string> = { ...baseEnv }
-  for (const { name, value } of envVars) {
-    env[name] = value
-  }
-
-  const [execPath, ...args] = command
-
-  return { execPath, args, env }
+  return { args, env }
 }
 
-export const parseTryRuntimeBotCommandArgs = (
+export const parsePullRequestBotCommandArgs = (
   { nodesAddresses }: Context,
   args: string[],
 ) => {
