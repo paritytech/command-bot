@@ -5,7 +5,7 @@ import LevelErrors from "level-errors"
 import path from "path"
 import { Server } from "probot"
 
-import { parseTryRuntimeBotCommandArgs } from "./core"
+import { parsePullRequestBotCommandArgs } from "./core"
 import {
   ApiTask,
   getNextTaskId,
@@ -164,7 +164,7 @@ export const setupApi = (ctx: Context, server: Server) => {
       env = {},
     } = req.body as Payload
 
-    const args = parseTryRuntimeBotCommandArgs(ctx, inputArgs)
+    const args = parsePullRequestBotCommandArgs(ctx, inputArgs)
     if (typeof args === "string") {
       return errorResponse(res, next, 422, args)
     }

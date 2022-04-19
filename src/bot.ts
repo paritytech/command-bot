@@ -6,8 +6,8 @@ import { Probot } from "probot"
 import {
   defaultParseTryRuntimeBotCommandOptions,
   isRequesterAllowed,
-  parseTryRuntimeBotCommand,
-  parseTryRuntimeBotCommandArgs,
+  parsePullRequestBotCommand,
+  parsePullRequestBotCommandArgs,
 } from "./core"
 import {
   createComment,
@@ -26,7 +26,7 @@ import {
 import { Context, PullRequestError } from "./types"
 import { displayCommand, displayError, getLines } from "./utils"
 
-const botMentionPrefix = "/try-runtime"
+export const botPullRequestCommentMention = "/try-runtime"
 
 type WebhookEvents = Extract<EmitterWebhookEventName, "issue_comment.created">
 
@@ -96,25 +96,30 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
   }
 
   try {
-    const commandLine = getLines(comment.body).find((line) => {
-      return line.includes(botMentionPrefix)
-    })
-    if (!commandLine) {
+    const commandLines = getLines(comment.body)
+      .map((line) => {
+        return parsePullRequestBotCommand(
+          line,
+          defaultParseTryRuntimeBotCommandOptions,
+        )
+      })
+      .filter((line) => {
+        return !!line
+      })
+
+    const command = commandLines[0]
+    if (command === undefined) {
       return
+    }
+
+    if (commandLines.length > 1) {
+      return getError("Only one try-runtime-bot command is allowed per comment")
     }
 
     if (!(await isRequesterAllowed(ctx, octokit, requester))) {
       return getError(
         "Requester could not be detected as a member of an allowed organization.",
       )
-    }
-
-    const { execPath: botMention, ...command } = parseTryRuntimeBotCommand(
-      commandLine,
-      defaultParseTryRuntimeBotCommandOptions,
-    )
-    if (botMention !== botMentionPrefix) {
-      return
     }
 
     const [subCommand, ...otherArgs] = command.args
@@ -175,7 +180,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
         }
         commentId = commentCreationResponse.id
 
-        const parsedArgs = parseTryRuntimeBotCommandArgs(ctx, otherArgs)
+        const parsedArgs = parsePullRequestBotCommandArgs(ctx, otherArgs)
         if (typeof parsedArgs === "string") {
           return getError(parsedArgs)
         }
