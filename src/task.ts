@@ -367,10 +367,10 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
 }
 
 const getTaskQueueMessage = async (
-  state: Parameters<typeof getSortedTasks>[0],
+  ctx: Parameters<typeof getSortedTasks>[0],
   commandDisplay: string,
 ) => {
-  const items = await getSortedTasks(state)
+  const items = await getSortedTasks(ctx)
 
   if (items.length) {
     return `

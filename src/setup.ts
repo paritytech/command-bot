@@ -3,7 +3,7 @@ import { MatrixClient, SimpleFsStorageProvider } from "matrix-bot-sdk"
 import path from "path"
 import { Probot, Server } from "probot"
 
-import { AccessDB, getDb, TaskDB } from "src/db"
+import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db"
 
 import { setupApi } from "./api"
 import { setupBot } from "./bot"
@@ -31,6 +31,7 @@ export const setup = async (
     cargoTargetDir,
     nodesAddresses,
     masterToken,
+    shouldClearTaskDatabaseOnStart,
   }: Pick<
     Context,
     | "deployment"
@@ -53,6 +54,7 @@ export const setup = async (
         }
       | undefined
     cargoTargetDir: string | undefined
+    shouldClearTaskDatabaseOnStart?: boolean
   },
 ) => {
   if (cargoTargetDir) {
@@ -64,6 +66,12 @@ export const setup = async (
 
   const taskDbPath = await initDatabaseDir(path.join(dataPath, "db"))
   const taskDb = new TaskDB(getDb(taskDbPath))
+  if (shouldClearTaskDatabaseOnStart) {
+    logger.info("Clearing the task database during setup")
+    for (const { id } of await getSortedTasks({ taskDb, logger })) {
+      await taskDb.db.del(id)
+    }
+  }
 
   const accessDbPath = await initDatabaseDir(path.join(dataPath, "access_db"))
   const accessDb = new AccessDB(getDb(accessDbPath))

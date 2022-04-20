@@ -7,7 +7,7 @@ variables:
   DEPLOYMENT_CONTAINER: try-runtime
   DATA_PATH: /data
   PING_PORT: 3001
-  APP_DB_VERSION: v1
+  TASK_DB_VERSION: v1
 
 default:
   image: $CI_IMAGE
@@ -111,7 +111,7 @@ lint:
       --set env.DEPLOYMENT_ENVIRONMENT="$CI_ENVIRONMENT_NAME"
       --set env.DEPLOYMENT_CONTAINER="$DEPLOYMENT_CONTAINER"
       --set env.TMPDIR="$DATA_PATH/tmp"
-      --set env.APP_DB_VERSION="$APP_DB_VERSION"
+      --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
       --set env.PING_PORT="$PING_PORT"
       --set env.MATRIX_HOMESERVER="$MATRIX_HOMESERVER"
       --set env.MATRIX_ACCESS_TOKEN="$MATRIX_ACCESS_TOKEN"

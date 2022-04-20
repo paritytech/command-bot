@@ -72,21 +72,19 @@ const main = async () => {
   await ensureDir(dataPath)
 
   const appDbVersionPath = path.join(dataPath, "db-version")
-  if (process.env.APP_DB_VERSION) {
-    const appDbVersion = process.env.APP_DB_VERSION.trim()
-    const currentDbVersion = await (async () => {
-      if (await fsExists(appDbVersionPath)) {
-        return (await fsReadFile(appDbVersionPath)).toString().trim()
-      }
-    })()
-    if (currentDbVersion !== appDbVersion) {
-      logger.info(
-        { appDbVersion, currentDbVersion },
-        "Clearing database for applying the new version",
-      )
-      await fsWriteFile(appDbVersionPath, appDbVersion)
-    }
-  }
+  const shouldClearTaskDatabaseOnStart = process.env.TASK_DB_VERSION
+    ? await (async (appDbVersion) => {
+        const currentDbVersion = await (async () => {
+          if (await fsExists(appDbVersionPath)) {
+            return (await fsReadFile(appDbVersionPath)).toString().trim()
+          }
+        })()
+        if (currentDbVersion !== appDbVersion) {
+          await fsWriteFile(appDbVersionPath, appDbVersion)
+          return true
+        }
+      })(process.env.TASK_DB_VERSION.trim())
+    : false
 
   const deployment = (() => {
     const value = process.env.IS_DEPLOYMENT
@@ -222,6 +220,7 @@ const main = async () => {
       cargoTargetDir: process.env.CARGO_TARGET_DIR,
       nodesAddresses,
       masterToken,
+      shouldClearTaskDatabaseOnStart,
     })
   })
 

@@ -27,7 +27,7 @@ export class AccessDB {
 }
 
 export const getSortedTasks = async (
-  { taskDb: { db }, logger }: Pick<Context, "taskDb" | "startDate" | "logger">,
+  { taskDb: { db }, logger }: Pick<Context, "taskDb" | "logger">,
   {
     onlyNotAlive,
   }: {
