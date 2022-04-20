@@ -110,6 +110,9 @@ export const setup = async (
           matrixClient
             .start()
             .then(() => {
+              logger.info(
+                `Connected to Matrix homeserver ${matrixConfiguration.homeServer}`,
+              )
               resolve(new Ok(matrixClient))
             })
             .catch((error) => {
