@@ -1,5 +1,4 @@
 import assert from "assert"
-import { Mutex } from "async-mutex"
 import cp from "child_process"
 import { randomUUID } from "crypto"
 import { parseISO } from "date-fns"
@@ -68,7 +67,6 @@ export const parseTaskQueuedDate = (str: string) => {
   return parseISO(str)
 }
 
-const taskMutex = new Mutex()
 export const queueTask = async (
   ctx: Context,
   task: Task,
@@ -138,7 +136,7 @@ export const queueTask = async (
   const message = await getTaskQueueMessage(ctx, commandDisplay)
   const cancelledMessage = "Command was cancelled"
 
-  const afterExecution = async (result: CommandOutput) => {
+  const afterTaskRun = async (result: CommandOutput) => {
     const wasAlive = taskIsAlive
 
     await terminate()
@@ -150,83 +148,81 @@ export const queueTask = async (
 
   await db.put(task.id, JSON.stringify(task))
 
-  taskMutex
-    .runExclusive(async () => {
-      try {
-        await db.put(
-          task.id,
-          JSON.stringify({
-            ...task,
-            timesRequeuedSnapshotBeforeExecution: task.timesRequeued,
-            timesExecuted: task.timesExecuted + 1,
-          }),
+  const runTask = async () => {
+    try {
+      await db.put(
+        task.id,
+        JSON.stringify({
+          ...task,
+          timesRequeuedSnapshotBeforeExecution: task.timesRequeued,
+          timesExecuted: task.timesExecuted + 1,
+        }),
+      )
+
+      if (taskIsAlive) {
+        logger.info(
+          { task, currentTaskQueue: await getSortedTasks(ctx) },
+          `Starting task of ${commandDisplay}`,
         )
-
-        if (taskIsAlive) {
-          logger.info(
-            { task, currentTaskQueue: await getSortedTasks(ctx) },
-            `Starting task of ${commandDisplay}`,
-          )
-        } else {
-          logger.info(task, "Task was cancelled before it could start")
-          return cancelledMessage
-        }
-
-        const run = getShellCommandExecutor(ctx, {
-          projectsRoot: repositoryCloneDirectory,
-          onChild: (createdChild) => {
-            taskProcess = createdChild
-          },
-        })
-
-        const prepare = prepareBranch(task, {
-          run,
-          getFetchEndpoint: () => {
-            return getFetchEndpoint(
-              "installationId" in task ? task.installationId : null,
-            )
-          },
-        })
-        while (taskIsAlive) {
-          const next = await prepare.next()
-          if (next.done) {
-            break
-          }
-
-          taskProcess = undefined
-
-          if (typeof next.value !== "string") {
-            return next.value
-          }
-        }
-        if (!taskIsAlive) {
-          return cancelledMessage
-        }
-
-        const startTime = new Date()
-        const result = await run(execPath, args, {
-          options: { env: { ...process.env, ...task.env }, cwd: repoPath },
-          shouldTrackProgress: true,
-          shouldCaptureAllStreams: true,
-        })
-        const endTime = new Date()
-
-        const resultDisplay =
-          result instanceof Error ? displayError(result) : result
-
-        return taskIsAlive
-          ? `${appName} took ${displayDuration(
-              startTime,
-              endTime,
-            )} (from ${startTime.toISOString()} to ${endTime.toISOString()} server time) for ${commandDisplay}
-            ${resultDisplay}`
-          : cancelledMessage
-      } catch (error) {
-        return intoError(error)
+      } else {
+        logger.info(task, "Task was cancelled before it could start")
+        return cancelledMessage
       }
-    })
-    .then(afterExecution)
-    .catch(afterExecution)
+
+      const run = getShellCommandExecutor(ctx, {
+        projectsRoot: repositoryCloneDirectory,
+        onChild: (createdChild) => {
+          taskProcess = createdChild
+        },
+      })
+
+      const prepare = prepareBranch(task, {
+        run,
+        getFetchEndpoint: () => {
+          return getFetchEndpoint(
+            "installationId" in task ? task.installationId : null,
+          )
+        },
+      })
+      while (taskIsAlive) {
+        const next = await prepare.next()
+        if (next.done) {
+          break
+        }
+
+        taskProcess = undefined
+
+        if (typeof next.value !== "string") {
+          return next.value
+        }
+      }
+      if (!taskIsAlive) {
+        return cancelledMessage
+      }
+
+      const startTime = new Date()
+      const result = await run(execPath, args, {
+        options: { env: { ...process.env, ...task.env }, cwd: repoPath },
+        shouldTrackProgress: true,
+        shouldCaptureAllStreams: true,
+      })
+      const endTime = new Date()
+
+      const resultDisplay =
+        result instanceof Error ? displayError(result) : result
+
+      return taskIsAlive
+        ? `${appName} took ${displayDuration(
+            startTime,
+            endTime,
+          )} (from ${startTime.toISOString()} to ${endTime.toISOString()} server time) for ${commandDisplay}
+              ${resultDisplay}`
+        : cancelledMessage
+    } catch (error) {
+      return intoError(error)
+    }
+  }
+  void runTask().then(afterTaskRun).catch(afterTaskRun)
 
   return `${message}\n${suffixMessage}`
 }
