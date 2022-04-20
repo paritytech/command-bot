@@ -40,7 +40,7 @@ process.env.PRIVATE_KEY_BASE64 ??= Buffer.from(
 ).toString("base64")
 
 // The 'data' directory in this location is already ignored on version control
-process.env.DATA_PATH ??= path.join(__dirname, "..", "data")
+process.env.DATA_PATH ??= path.join(__dirname, "data")
 
 /*
   Comma-separated organizations whose members will be able to run the commands.
