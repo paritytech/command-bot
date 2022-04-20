@@ -112,6 +112,9 @@ export const getShellCommandExecutor = (
               // eslint-disable-next-line @typescript-eslint/no-misused-promises
               child.on("close", async (exitCode) => {
                 try {
+                  logger.info(
+                    `Process finished with exit code ${exitCode ?? "??"}`,
+                  )
                   if (exitCode) {
                     const rawStderr = commandOutputBuffer
                       .reduce((acc, [stream, value]) => {
