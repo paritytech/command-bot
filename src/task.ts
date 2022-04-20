@@ -202,7 +202,15 @@ export const queueTask = async (
 
       const startTime = new Date()
       const result = await run(execPath, args, {
-        options: { env: { ...process.env, ...task.env }, cwd: repoPath },
+        options: {
+          env: {
+            ...process.env,
+            ...task.env,
+            // https://github.com/paritytech/substrate/commit/9247e150ca0f50841a60a213ad8b15efdbd616fa
+            WASM_BUILD_WORKSPACE_HINT: repoPath,
+          },
+          cwd: repoPath,
+        },
         shouldTrackProgress: true,
         shouldCaptureAllStreams: true,
       })
