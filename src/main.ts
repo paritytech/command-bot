@@ -71,7 +71,7 @@ const main = async () => {
   const dataPath = envVar("DATA_PATH")
   await ensureDir(dataPath)
 
-  const appDbVersionPath = path.join(dataPath, "db-version")
+  const appDbVersionPath = path.join(dataPath, "task-db-version")
   const shouldClearTaskDatabaseOnStart = process.env.TASK_DB_VERSION
     ? await (async (appDbVersion) => {
         const currentDbVersion = await (async () => {
