@@ -136,7 +136,7 @@ const main = async () => {
   switch (logFormat) {
     case "json": {
       probotLogger = getLog({
-        level: "info",
+        level: "error",
         logFormat: "json",
         logLevelInString: true,
         logMessageKey: "msg",
