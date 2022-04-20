@@ -40,14 +40,12 @@ export const getShellCommandExecutor = (
   {
     projectsRoot,
     onChild,
-    isDeployed,
   }: {
     projectsRoot: string
     onChild?: (child: cp.ChildProcess) => void
-    isDeployed: boolean
   },
 ): CommandExecutor => {
-  const { logger, cargoTargetDir } = ctx
+  const { logger, cargoTargetDir, deployment } = ctx
 
   return (
     execPath,
@@ -140,7 +138,7 @@ export const getShellCommandExecutor = (
                       )
                     } else if (stderr.includes("No space left on device")) {
                       if (
-                        isDeployed &&
+                        deployment !== undefined &&
                         cargoTargetDir &&
                         retries.find(({ motive }) => {
                           return motive === cleanupMotiveForCargoTargetDir
@@ -185,7 +183,6 @@ export const getShellCommandExecutor = (
 
                           const executor = getShellCommandExecutor(ctx, {
                             projectsRoot,
-                            isDeployed,
                           })
 
                           if (!hasAttemptedCleanupForOtherDirectories) {

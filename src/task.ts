@@ -113,7 +113,6 @@ export const queueTask = async (
 
   const { execPath, args, commandDisplay, repoPath } = task
   const {
-    deployment,
     logger,
     taskDb,
     getFetchEndpoint,
@@ -175,7 +174,6 @@ export const queueTask = async (
 
         const run = getShellCommandExecutor(ctx, {
           projectsRoot: repositoryCloneDirectory,
-          isDeployed: deployment !== undefined,
           onChild: (createdChild) => {
             taskProcess = createdChild
           },
