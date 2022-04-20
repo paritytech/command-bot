@@ -353,7 +353,7 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
       timesRequeued === task.timesRequeuedSnapshotBeforeExecution
     ) {
       await announceCancel(
-        `Command was rescheduled and failed to finish (check for task.id ${id} in the logs); execution will not automatically be restarted further.`,
+        `Command was rescheduled and failed to finish (check for task id ${id} in the logs); execution will not automatically be restarted further.`,
       )
     } else {
       try {
