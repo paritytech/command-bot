@@ -80,8 +80,8 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
   }
 
   const pr = {
-    owner: repository.name,
-    repo: repository.owner.login,
+    owner: repository.owner.login,
+    repo: repository.name,
     number: issue.number,
   }
   const commentParams = {

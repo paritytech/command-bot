@@ -123,9 +123,10 @@ const main = async () => {
   }
 
   const appId = envNumberVar("APP_ID")
-
-  const encodedPrivateKey = envVar("PRIVATE_KEY_BASE64")
-  const privateKey = Buffer.from(encodedPrivateKey, "base64").toString()
+  const privateKey = Buffer.from(
+    envVar("PRIVATE_KEY_BASE64"),
+    "base64",
+  ).toString()
 
   const clientId = envVar("CLIENT_ID")
   const clientSecret = envVar("CLIENT_SECRET")

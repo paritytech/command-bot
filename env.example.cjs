@@ -1,9 +1,6 @@
 /* eslint-disable multiline-comment-style */
 
-/*
-  Set the appropriate values and rename this file to env.cjs (it's already
-  .gitignore by default)
-*/
+// Set the appropriate values and copy this file to env.cjs
 
 const fs = require("fs")
 const path = require("path")
@@ -36,7 +33,7 @@ process.env.CLIENT_SECRET ??= "placeholder"
   with `base64 -w 0 private-key.pem`.
 */
 process.env.PRIVATE_KEY_BASE64 ??= Buffer.from(
-  fs.readFileSync(path.join(__dirname, "..", "githubPrivateKey.pem"), "utf-8"),
+  fs.readFileSync(path.join(__dirname, "githubPrivateKey.pem"), "utf-8"),
 ).toString("base64")
 
 // The 'data' directory in this location is already ignored on version control
