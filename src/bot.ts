@@ -214,9 +214,9 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           execPath,
           args,
           env: {
-            ...(cargoTargetDir ? { CARGO_TARGET_DIR: cargoTargetDir } : {}),
-            CARGO_TERM_COLOR: "never",
             ...command.env,
+            CARGO_TERM_COLOR: "never",
+            ...(cargoTargetDir ? { CARGO_TARGET_DIR: cargoTargetDir } : {}),
           },
           commentId,
           installationId,
