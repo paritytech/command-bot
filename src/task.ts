@@ -119,6 +119,7 @@ export const queueTask = async (
     getFetchEndpoint,
     appName,
     repositoryCloneDirectory,
+    cargoTargetDir,
   } = ctx
   const { db } = taskDb
 
@@ -127,8 +128,8 @@ export const queueTask = async (
     suffixMessage +=
       "\n**Note:** project will be cloned for the first time, so all dependencies will be compiled from scratch; this might take a long time"
   } else if (
-    process.env.CARGO_TARGET_DIR
-      ? !fs.existsSync(process.env.CARGO_TARGET_DIR)
+    cargoTargetDir
+      ? !fs.existsSync(cargoTargetDir)
       : !fs.existsSync(path.join(repoPath, "target"))
   ) {
     suffixMessage +=
@@ -172,8 +173,7 @@ export const queueTask = async (
           return cancelledMessage
         }
 
-        const run = getShellCommandExecutor({
-          logger,
+        const run = getShellCommandExecutor(ctx, {
           projectsRoot: repositoryCloneDirectory,
           isDeployed: deployment !== undefined,
           onChild: (createdChild) => {

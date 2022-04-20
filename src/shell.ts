@@ -3,11 +3,12 @@ import fs from "fs"
 import path from "path"
 import { promisify } from "util"
 
-import { Logger } from "./logger"
-import { CommandExecutor, CommandOutput, ToString } from "./types"
+import { CommandExecutor, CommandOutput, Context, ToString } from "./types"
 import { displayCommand, intoError, redact } from "./utils"
 
-const fsExists = promisify(fs.exists)
+export const fsExists = promisify(fs.exists)
+export const fsReadFile = promisify(fs.readFile)
+export const fsWriteFile = promisify(fs.writeFile)
 const fsRmdir = promisify(fs.rmdir)
 const fsMkdir = promisify(fs.mkdir)
 const fsUnlink = promisify(fs.unlink)
@@ -34,17 +35,20 @@ class Retry {
 
 const cleanupMotiveForCargoTargetDir = "Freeing disk space for CARGO_TARGET_DIR"
 
-export const getShellCommandExecutor = ({
-  logger,
-  projectsRoot,
-  onChild,
-  isDeployed,
-}: {
-  logger: Logger
-  projectsRoot: string
-  onChild?: (child: cp.ChildProcess) => void
-  isDeployed: boolean
-}): CommandExecutor => {
+export const getShellCommandExecutor = (
+  ctx: Context,
+  {
+    projectsRoot,
+    onChild,
+    isDeployed,
+  }: {
+    projectsRoot: string
+    onChild?: (child: cp.ChildProcess) => void
+    isDeployed: boolean
+  },
+): CommandExecutor => {
+  const { logger, cargoTargetDir } = ctx
+
   return (
     execPath,
     args,
@@ -137,13 +141,13 @@ export const getShellCommandExecutor = ({
                     } else if (stderr.includes("No space left on device")) {
                       if (
                         isDeployed &&
-                        process.env.CARGO_TARGET_DIR &&
+                        cargoTargetDir &&
                         retries.find(({ motive }) => {
                           return motive === cleanupMotiveForCargoTargetDir
                         }) === undefined
                       ) {
-                        await removeDir(process.env.CARGO_TARGET_DIR)
-                        await ensureDir(process.env.CARGO_TARGET_DIR)
+                        await removeDir(cargoTargetDir)
+                        await ensureDir(cargoTargetDir)
                         return resolve(
                           new Retry({
                             context: RetryContext.CompilationError,
@@ -179,8 +183,7 @@ export const getShellCommandExecutor = ({
                             `Running disk cleanup before retrying the command "${commandDisplayed}" in "${cwd}" due to lack of space in the device.`,
                           )
 
-                          const executor = getShellCommandExecutor({
-                            logger,
+                          const executor = getShellCommandExecutor(ctx, {
                             projectsRoot,
                             isDeployed,
                           })
@@ -426,7 +429,7 @@ export const ensureDir = async (dir: string) => {
   return dir
 }
 
-export const removeDir = async (dir: string) => {
+const removeDir = async (dir: string) => {
   if (!(await fsExists(dir))) {
     await fsRmdir(dir, { recursive: true })
   }

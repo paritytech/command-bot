@@ -52,6 +52,12 @@ process.env.DATA_PATH ??= path.join(__dirname, "data")
 process.env.ALLOWED_ORGANIZATIONS ??= "123,456"
 
 /*
+  $MASTER_TOKEN is the token for *managing* the API. It is able to create other
+  API tokens, but cannot be used as a normal token.
+*/
+process.env.MASTER_TOKEN ??= "placeholder"
+
+/*
   Any environment variable following the pattern `${NAME}_WEBSOCKET_ADDRESS`
   will be registered as a possible node target at the start of the application.
   For instance, if you define a `POLKADOT_WEBSOCKET_ADDRESS` it will be
@@ -69,7 +75,6 @@ process.env.ALLOWED_ORGANIZATIONS ??= "123,456"
 */
 // process.env.MATRIX_HOMESERVER ??= "https://matrix.parity.io"
 // process.env.MATRIX_ACCESS_TOKEN ??= "placeholder"
-// process.env.MASTER_TOKEN ??= "placeholder"
 
 /*
   NOT REQUIRED
