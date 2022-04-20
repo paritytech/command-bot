@@ -44,7 +44,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
   octokit,
   payload,
 ) => {
-  const { logger, repositoryCloneDirectory } = ctx
+  const { logger, repositoryCloneDirectory, cargoTargetDir } = ctx
 
   const { issue, comment, repository, installation } = payload
 
@@ -213,7 +213,11 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           requester,
           execPath,
           args,
-          env: { ...command.env, CARGO_TERM_COLOR: "never" },
+          env: {
+            ...command.env,
+            CARGO_TERM_COLOR: "never",
+            ...(cargoTargetDir ? { CARGO_TARGET_DIR: cargoTargetDir } : {}),
+          },
           commentId,
           installationId,
           gitRef: {

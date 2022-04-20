@@ -1,5 +1,4 @@
 import { createAppAuth } from "@octokit/auth-app"
-import assert from "assert"
 import { MatrixClient, SimpleFsStorageProvider } from "matrix-bot-sdk"
 import path from "path"
 import { Probot, Server } from "probot"
@@ -9,9 +8,10 @@ import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db"
 import { setupApi } from "./api"
 import { setupBot } from "./bot"
 import { Logger } from "./logger"
-import { ensureDir, initDatabaseDir, removeDir } from "./shell"
+import { ensureDir, initDatabaseDir } from "./shell"
 import { requeueUnterminatedTasks } from "./task"
 import { Context } from "./types"
+import { Err, Ok } from "./utils"
 
 export const setup = async (
   bot: Probot,
@@ -25,64 +25,56 @@ export const setup = async (
     startDate,
     logger,
     shouldPostPullRequestComment,
-  }: Pick<Context, "deployment" | "shouldPostPullRequestComment"> & {
+    allowedOrganizations,
+    dataPath,
+    matrix: matrixConfiguration,
+    cargoTargetDir,
+    nodesAddresses,
+    masterToken,
+    shouldClearTaskDatabaseOnStart,
+  }: Pick<
+    Context,
+    | "deployment"
+    | "shouldPostPullRequestComment"
+    | "allowedOrganizations"
+    | "nodesAddresses"
+    | "masterToken"
+  > & {
     appId: number
     clientId: string
     clientSecret: string
     privateKey: string
     startDate: Date
     logger: Logger
+    dataPath: string
+    matrix:
+      | {
+          homeServer: string
+          accessToken: string
+        }
+      | undefined
+    cargoTargetDir: string | undefined
+    shouldClearTaskDatabaseOnStart?: boolean
   },
 ) => {
-  const allowedOrganizations = (process.env.ALLOWED_ORGANIZATIONS ?? "")
-    .split(",")
-    .filter((value) => {
-      return value.length !== 0
-    })
-    .map((value) => {
-      const parsedValue = parseInt(value)
-      assert(parsedValue)
-      return parsedValue
-    })
-  assert(allowedOrganizations.length)
-
-  const dataPath = process.env.DATA_PATH
-  assert(dataPath)
-
-  if (process.env.CARGO_TARGET_DIR) {
-    await ensureDir(process.env.CARGO_TARGET_DIR)
-  }
-
-  /*
-    For the deployment this should always happen because TMPDIR targets a
-    location on the persistent volume (ephemeral storage on Kubernetes cluster
-    is too low for building Substrate)
-  */
-  if (process.env.CLEAR_TMPDIR_ON_START === "true") {
-    assert(process.env.TMPDIR)
-    await removeDir(process.env.TMPDIR)
-    await ensureDir(process.env.TMPDIR)
+  if (cargoTargetDir) {
+    await ensureDir(cargoTargetDir)
   }
 
   const repositoryCloneDirectoryPath = path.join(dataPath, "repositories")
-  if (process.env.CLEAR_REPOSITORIES_ON_START === "true") {
-    logger.info("Clearing the repositories before starting")
-    await removeDir(repositoryCloneDirectoryPath)
-  }
   const repositoryCloneDirectory = await ensureDir(repositoryCloneDirectoryPath)
 
   const taskDbPath = await initDatabaseDir(path.join(dataPath, "db"))
   const taskDb = new TaskDB(getDb(taskDbPath))
-
-  const accessDbPath = await initDatabaseDir(path.join(dataPath, "access_db"))
-  const accessDb = new AccessDB(getDb(accessDbPath))
-
-  if (process.env.CLEAR_DB_ON_START === "true") {
-    logger.info("Clearing the database before starting")
-    for (const { id } of await getSortedTasks({ taskDb, startDate, logger })) {
+  if (shouldClearTaskDatabaseOnStart) {
+    logger.info("Clearing the task database during setup")
+    for (const { id } of await getSortedTasks({ taskDb, logger })) {
       await taskDb.db.del(id)
     }
   }
+
+  const accessDbPath = await initDatabaseDir(path.join(dataPath, "access_db"))
+  const accessDb = new AccessDB(getDb(accessDbPath))
 
   const authInstallation = createAppAuth({
     appId,
@@ -106,53 +98,35 @@ export const setup = async (
     return { url, token }
   }
 
-  const matrixClientPreStart: MatrixClient | Error | undefined = process.env
-    .MATRIX_HOMESERVER
-    ? process.env.MATRIX_ACCESS_TOKEN
-      ? new MatrixClient(
-          process.env.MATRIX_HOMESERVER,
-          process.env.MATRIX_ACCESS_TOKEN,
-          new SimpleFsStorageProvider(path.join(dataPath, "matrix.json")),
-        )
-      : new Error("Missing $MATRIX_ACCESS_TOKEN")
-    : undefined
-  if (matrixClientPreStart instanceof Error) {
-    throw matrixClientPreStart
-  }
-  const matrix = await (matrixClientPreStart === undefined
-    ? Promise.resolve(null)
-    : new Promise<MatrixClient | Error>((resolve, reject) => {
-        matrixClientPreStart
-          .start()
-          .then(() => {
-            resolve(matrixClientPreStart)
-          })
-          .catch(reject)
-      }))
-  if (matrix instanceof Error) {
-    throw matrix
+  const matrixClientSetup: Ok<MatrixClient | null> | Err<unknown> =
+    await (matrixConfiguration === undefined
+      ? Promise.resolve(new Ok(null))
+      : new Promise((resolve) => {
+          const matrixClient = new MatrixClient(
+            matrixConfiguration.homeServer,
+            matrixConfiguration.accessToken,
+            new SimpleFsStorageProvider(path.join(dataPath, "matrix.json")),
+          )
+          matrixClient
+            .start()
+            .then(() => {
+              logger.info(
+                `Connected to Matrix homeserver ${matrixConfiguration.homeServer}`,
+              )
+              resolve(new Ok(matrixClient))
+            })
+            .catch((error) => {
+              resolve(new Err(error))
+            })
+        }))
+  if (matrixClientSetup instanceof Err) {
+    throw matrixClientSetup.value
   }
 
-  const nodesAddresses: Record<string, string> = {}
-  const nodeEnvVarSuffix = "_WEBSOCKET_ADDRESS"
-  for (const [envVar, envVarValue] of Object.entries(process.env)) {
-    if (!envVarValue || !envVar.endsWith(nodeEnvVarSuffix)) {
-      continue
-    }
-    const nodeName = envVar
-      .slice(0, envVar.indexOf(nodeEnvVarSuffix))
-      .toLowerCase()
-    nodesAddresses[nodeName] = envVarValue
-  }
-  logger.info(nodesAddresses, "Registered nodes addresses")
+  const { value: matrix } = matrixClientSetup
 
-  if (deployment !== undefined) {
-    if (matrix === null) {
-      throw new Error("Matrix configuration is expected for deployments")
-    }
-    if (!process.env.MASTER_TOKEN) {
-      throw new Error("Master token is expected for deployments")
-    }
+  if (deployment !== undefined && matrix === null) {
+    throw new Error("Matrix configuration is expected for deployments")
   }
 
   const ctx: Context = {
@@ -166,10 +140,11 @@ export const setup = async (
     repositoryCloneDirectory,
     deployment,
     matrix,
-    masterToken: process.env.MASTER_TOKEN || null,
+    masterToken,
     nodesAddresses,
     startDate,
     shouldPostPullRequestComment,
+    cargoTargetDir: process.env.CARGO_TARGET_DIR,
   }
 
   void requeueUnterminatedTasks(ctx, bot)

@@ -40,7 +40,7 @@ process.env.PRIVATE_KEY_BASE64 ??= Buffer.from(
 ).toString("base64")
 
 // The 'data' directory in this location is already ignored on version control
-process.env.DATA_PATH ??= path.join(__dirname, "..", "data")
+process.env.DATA_PATH ??= path.join(__dirname, "data")
 
 /*
   Comma-separated organizations whose members will be able to run the commands.
@@ -50,6 +50,12 @@ process.env.DATA_PATH ??= path.join(__dirname, "..", "data")
   https://api.github.com/users/$org.
 */
 process.env.ALLOWED_ORGANIZATIONS ??= "123,456"
+
+/*
+  $MASTER_TOKEN is the token for *managing* the API. It is able to create other
+  API tokens, but cannot be used as a normal token.
+*/
+process.env.MASTER_TOKEN ??= "placeholder"
 
 /*
   Any environment variable following the pattern `${NAME}_WEBSOCKET_ADDRESS`
@@ -69,7 +75,6 @@ process.env.ALLOWED_ORGANIZATIONS ??= "123,456"
 */
 // process.env.MATRIX_HOMESERVER ??= "https://matrix.parity.io"
 // process.env.MATRIX_ACCESS_TOKEN ??= "placeholder"
-// process.env.MASTER_TOKEN ??= "placeholder"
 
 /*
   NOT REQUIRED

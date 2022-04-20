@@ -219,16 +219,7 @@ export const setupApi = (ctx: Context, server: Server) => {
   setupRoute(
     "post",
     "/access",
-    async ({ req, res, next, token }) => {
-      if (token !== ctx.masterToken) {
-        return errorResponse(
-          res,
-          next,
-          422,
-          `Invalid ${token} for master token`,
-        )
-      }
-
+    async ({ req, res, next }) => {
       const { token: requesterToken, matrixRoom } = req.body
       if (typeof requesterToken !== "string" || !requesterToken) {
         return errorResponse(res, next, 400, "Invalid requesterToken")

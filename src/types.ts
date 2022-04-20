@@ -25,9 +25,10 @@ export type Context = {
   repositoryCloneDirectory: string
   deployment: { environment: string; container: string } | undefined
   matrix: MatrixClient | null
-  masterToken: string | null
+  masterToken: string
   nodesAddresses: Record<string, string>
   shouldPostPullRequestComment: boolean
+  cargoTargetDir: string | undefined
 }
 
 export class PullRequestError {
