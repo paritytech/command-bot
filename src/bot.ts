@@ -306,36 +306,33 @@ const setupEvent = <E extends WebhookEvents>(
         : undefined
     const octokit = getOctokit(ctx, await bot.auth(installationId))
 
-    try {
-      const result = await handler(
-        ctx,
-        octokit,
-        event.payload as WebhookEventPayload<E>,
-      )
-      if (result instanceof PullRequestError) {
-        const { pr, comment } = result
+    void handler(ctx, octokit, event.payload as WebhookEventPayload<E>)
+      .then(async (result) => {
+        if (result instanceof PullRequestError) {
+          const { pr, comment } = result
 
-        const sharedCommentParams = {
-          owner: pr.owner,
-          repo: pr.repo,
-          issue_number: pr.number,
-          body: `${comment.requester ? `@${comment.requester} ` : ""}${
-            comment.body
-          }`,
-        }
+          const sharedCommentParams = {
+            owner: pr.owner,
+            repo: pr.repo,
+            issue_number: pr.number,
+            body: `${comment.requester ? `@${comment.requester} ` : ""}${
+              comment.body
+            }`,
+          }
 
-        if (comment.commentId) {
-          await updateComment(ctx, octokit, {
-            ...sharedCommentParams,
-            comment_id: comment.commentId,
-          })
-        } else {
-          await createComment(ctx, octokit, sharedCommentParams)
+          if (comment.commentId) {
+            await updateComment(ctx, octokit, {
+              ...sharedCommentParams,
+              comment_id: comment.commentId,
+            })
+          } else {
+            await createComment(ctx, octokit, sharedCommentParams)
+          }
         }
-      }
-    } catch (error) {
-      logger.fatal(error, "Exception caught in webhook handler")
-    }
+      })
+      .catch((error) => {
+        logger.fatal(error, "Exception caught in webhook handler")
+      })
   })
 }
 
