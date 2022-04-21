@@ -55,10 +55,10 @@ const main = async () => {
   const shouldPostPullRequestComment = (() => {
     const value = process.env.POST_COMMENT
     switch (value) {
-      case "false":
-      case undefined: {
+      case "false": {
         return false
       }
+      case undefined:
       case "true": {
         return true
       }
