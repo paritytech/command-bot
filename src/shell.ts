@@ -81,6 +81,22 @@ export const getShellCommandExecutor = (
           }
 
           const child = cp.spawn(execPath, args, options)
+
+          let isResultPromiseSetup = false
+          child.on("close", (exitCode, signal) => {
+            if (!isResultPromiseSetup) {
+              resolveExecution(
+                new Error(
+                  `Process finished unexpectedly (exit code ${
+                    exitCode ?? "??"
+                  }, signal ${
+                    signal ?? "??"
+                  }) before the result promise could be installed`,
+                ),
+              )
+            }
+          })
+
           if (onChild) {
             onChild(child)
           }
@@ -112,6 +128,7 @@ export const getShellCommandExecutor = (
               // eslint-disable-next-line @typescript-eslint/no-misused-promises
               child.on("close", async (exitCode, signal) => {
                 try {
+                  isResultPromiseSetup = true
                   logger.info(
                     `Process finished with exit code ${exitCode ?? "??"}${
                       signal ? `and signal ${signal}` : ""
