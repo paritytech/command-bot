@@ -70,7 +70,7 @@ export const parseTaskQueuedDate = (str: string) => {
 
 const taskQueueMutex = new Mutex()
 export const queueTask = async (
-  ctx: Context,
+  parentCtx: Context,
   task: Task,
   {
     onResult,
@@ -82,6 +82,11 @@ export const queueTask = async (
     queuedTasks.get(task.id) === undefined,
     `Attempted to queue task ${task.id} when it's already registered in the taskMap`,
   )
+
+  const ctx = {
+    ...parentCtx,
+    logger: parentCtx.logger.child({ taskId: task.id }),
+  }
 
   let taskProcess: cp.ChildProcess | undefined = undefined
   let taskIsAlive = true
