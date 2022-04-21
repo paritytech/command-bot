@@ -129,12 +129,18 @@ export const getShellCommandExecutor = (
               child.on("close", async (exitCode, signal) => {
                 try {
                   isResultPromiseSetup = true
+
                   logger.info(
                     `Process finished with exit code ${exitCode ?? "??"}${
                       signal ? `and signal ${signal}` : ""
                     }`,
                   )
-                  if (exitCode) {
+
+                  if (signal) {
+                    return resolve(
+                      new Error(`Process got terminated by signal ${signal}`),
+                    )
+                  } else if (exitCode) {
                     const rawStderr = commandOutputBuffer
                       .reduce((acc, [stream, value]) => {
                         if (stream === "stderr") {
@@ -156,7 +162,7 @@ export const getShellCommandExecutor = (
                    */
                     if (stderr.includes("SIGKILL")) {
                       logger.fatal(
-                        "Compilation was terminated due to SIGKILL (might have something to do with system resource constraints)",
+                        "Compilation was terminated due to signal SIGKILL, found in the stderr output",
                       )
                     } else if (stderr.includes("No space left on device")) {
                       if (
