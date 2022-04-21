@@ -110,10 +110,12 @@ export const getShellCommandExecutor = (
           const result = await new Promise<Retry | Error | string>(
             (resolve) => {
               // eslint-disable-next-line @typescript-eslint/no-misused-promises
-              child.on("close", async (exitCode) => {
+              child.on("close", async (exitCode, signal) => {
                 try {
                   logger.info(
-                    `Process finished with exit code ${exitCode ?? "??"}`,
+                    `Process finished with exit code ${exitCode ?? "??"}${
+                      signal ? `and signal ${signal}` : ""
+                    }`,
                   )
                   if (exitCode) {
                     const rawStderr = commandOutputBuffer
