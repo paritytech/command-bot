@@ -82,9 +82,12 @@ export const getShellCommandExecutor = (
 
           const child = cp.spawn(execPath, args, options)
 
+          let shouldPreventExecution = false
+
           let isResultPromiseSetup = false
           child.on("close", (exitCode, signal) => {
             if (!isResultPromiseSetup) {
+              shouldPreventExecution = true
               resolveExecution(
                 new Error(
                   `Process finished unexpectedly (exit code ${
@@ -101,6 +104,7 @@ export const getShellCommandExecutor = (
             onChild(child)
           }
           child.on("error", (error) => {
+            shouldPreventExecution = true
             resolveExecution(error)
           })
 
@@ -125,11 +129,11 @@ export const getShellCommandExecutor = (
 
           const result = await new Promise<Retry | Error | string>(
             (resolve) => {
+              isResultPromiseSetup = true
+
               // eslint-disable-next-line @typescript-eslint/no-misused-promises
               child.on("close", async (exitCode, signal) => {
                 try {
-                  isResultPromiseSetup = true
-
                   logger.info(
                     `Process finished with exit code ${exitCode ?? "??"}${
                       signal ? `and signal ${signal}` : ""
@@ -321,7 +325,7 @@ export const getShellCommandExecutor = (
                   `Failed to recover from ${result.context}; stderr: ${result.stderr}`,
                 ),
               )
-            } else {
+            } else if (!shouldPreventExecution) {
               void execute(retries.concat(result))
             }
           } else {
