@@ -300,7 +300,7 @@ const setupEvent = <E extends WebhookEvents>(
   bot.on(eventName, async (event) => {
     const { logger } = parentCtx
     const eventLogger = logger.child({ eventId: event.id, eventName })
-    const ctx = { ...parentCtx, eventLogger }
+    const ctx: Context = { ...parentCtx, logger: eventLogger }
 
     eventLogger.info({ event, eventName }, "Received bot event")
 

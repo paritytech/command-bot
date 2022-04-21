@@ -81,6 +81,22 @@ export const getShellCommandExecutor = (
           }
 
           const child = cp.spawn(execPath, args, options)
+
+          let isResultPromiseSetup = false
+          child.on("close", (exitCode, signal) => {
+            if (!isResultPromiseSetup) {
+              resolveExecution(
+                new Error(
+                  `Process finished unexpectedly (exit code ${
+                    exitCode ?? "??"
+                  }, signal ${
+                    signal ?? "??"
+                  }) before the result promise could be installed`,
+                ),
+              )
+            }
+          })
+
           if (onChild) {
             onChild(child)
           }
@@ -110,9 +126,21 @@ export const getShellCommandExecutor = (
           const result = await new Promise<Retry | Error | string>(
             (resolve) => {
               // eslint-disable-next-line @typescript-eslint/no-misused-promises
-              child.on("close", async (exitCode) => {
+              child.on("close", async (exitCode, signal) => {
                 try {
-                  if (exitCode) {
+                  isResultPromiseSetup = true
+
+                  logger.info(
+                    `Process finished with exit code ${exitCode ?? "??"}${
+                      signal ? `and signal ${signal}` : ""
+                    }`,
+                  )
+
+                  if (signal) {
+                    return resolve(
+                      new Error(`Process got terminated by signal ${signal}`),
+                    )
+                  } else if (exitCode) {
                     const rawStderr = commandOutputBuffer
                       .reduce((acc, [stream, value]) => {
                         if (stream === "stderr") {
@@ -134,7 +162,7 @@ export const getShellCommandExecutor = (
                    */
                     if (stderr.includes("SIGKILL")) {
                       logger.fatal(
-                        "Compilation was terminated due to SIGKILL (might have something to do with system resource constraints)",
+                        "Compilation was terminated due to signal SIGKILL, found in the stderr output",
                       )
                     } else if (stderr.includes("No space left on device")) {
                       if (

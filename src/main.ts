@@ -55,10 +55,10 @@ const main = async () => {
   const shouldPostPullRequestComment = (() => {
     const value = process.env.POST_COMMENT
     switch (value) {
-      case "false":
-      case undefined: {
+      case "false": {
         return false
       }
+      case undefined:
       case "true": {
         return true
       }
@@ -136,7 +136,7 @@ const main = async () => {
   switch (logFormat) {
     case "json": {
       probotLogger = getLog({
-        level: "info",
+        level: "error",
         logFormat: "json",
         logLevelInString: true,
         logMessageKey: "msg",

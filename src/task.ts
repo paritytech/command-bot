@@ -68,9 +68,9 @@ export const parseTaskQueuedDate = (str: string) => {
   return parseISO(str)
 }
 
-const taskMutex = new Mutex()
+const taskQueueMutex = new Mutex()
 export const queueTask = async (
-  ctx: Context,
+  parentCtx: Context,
   task: Task,
   {
     onResult,
@@ -82,6 +82,11 @@ export const queueTask = async (
     queuedTasks.get(task.id) === undefined,
     `Attempted to queue task ${task.id} when it's already registered in the taskMap`,
   )
+
+  const ctx = {
+    ...parentCtx,
+    logger: parentCtx.logger.child({ taskId: task.id }),
+  }
 
   let taskProcess: cp.ChildProcess | undefined = undefined
   let taskIsAlive = true
@@ -138,7 +143,7 @@ export const queueTask = async (
   const message = await getTaskQueueMessage(ctx, commandDisplay)
   const cancelledMessage = "Command was cancelled"
 
-  const afterExecution = async (result: CommandOutput) => {
+  const afterTaskRun = async (result: CommandOutput) => {
     const wasAlive = taskIsAlive
 
     await terminate()
@@ -150,7 +155,7 @@ export const queueTask = async (
 
   await db.put(task.id, JSON.stringify(task))
 
-  taskMutex
+  void taskQueueMutex
     .runExclusive(async () => {
       try {
         await db.put(
@@ -205,7 +210,15 @@ export const queueTask = async (
 
         const startTime = new Date()
         const result = await run(execPath, args, {
-          options: { env: { ...process.env, ...task.env }, cwd: repoPath },
+          options: {
+            env: {
+              ...process.env,
+              ...task.env,
+              // https://github.com/paritytech/substrate/commit/9247e150ca0f50841a60a213ad8b15efdbd616fa
+              WASM_BUILD_WORKSPACE_HINT: repoPath,
+            },
+            cwd: repoPath,
+          },
           shouldTrackProgress: true,
           shouldCaptureAllStreams: true,
         })
@@ -219,14 +232,14 @@ export const queueTask = async (
               startTime,
               endTime,
             )} (from ${startTime.toISOString()} to ${endTime.toISOString()} server time) for ${commandDisplay}
-            ${resultDisplay}`
+              ${resultDisplay}`
           : cancelledMessage
       } catch (error) {
         return intoError(error)
       }
     })
-    .then(afterExecution)
-    .catch(afterExecution)
+    .then(afterTaskRun)
+    .catch(afterTaskRun)
 
   return `${message}\n${suffixMessage}`
 }
@@ -349,7 +362,7 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
       timesRequeued === task.timesRequeuedSnapshotBeforeExecution
     ) {
       await announceCancel(
-        `Command was rescheduled and failed to finish (check for task.id ${id} in the logs); execution will not automatically be restarted further.`,
+        `Command was rescheduled and failed to finish (check for task id ${id} in the logs); execution will not automatically be restarted further.`,
       )
     } else {
       try {
