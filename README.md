@@ -1,8 +1,6 @@
 # Introduction
 
-This bot provides interfaces for executing the
-[try-runtime cli](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/)
-on a dedicated remote host.
+command-bot provides interfaces for executing arbitrary commands on GitLab CI.
 
 Before starting to work on this project, we recommend reading the
 [Implementation section](#implementation).
@@ -32,9 +30,8 @@ Before starting to work on this project, we recommend reading the
 
 # How it works <a name="how-it-works"></a>
 
-This bot executes the
-[try-runtime CLI](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli)
-from [commands in pull request comments](#pull-request-commands) (the
+command-bot executes arbitrary commands on GitLab CI from
+[commands in pull request comments](#pull-request-commands) (the
 [GitHub App](#github-app) has to be installed in the repository) and from
 [API requests](#api).
 
@@ -42,34 +39,28 @@ from [commands in pull request comments](#pull-request-commands) (the
 
 ## Queue <a name="pull-request-command-queue"></a>
 
-*Note*: the try-runtime CLI arguments showed in the examples might be
-outdated. Consult the
-[try-runtime CLI](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)'s
-source code from your pull request for the actual options.
-
 Comment in a pull request:
 
-`/try-runtime queue [env-vars] --uri ws://[kusama | westend | polkadot] [try-runtime-cli-args]`
+`/cmd queue [bot-args] $ [command]`
 
-For instance:
+In `[bot-args]` you should provide the following arguments
 
-`/try-runtime queue RUST_LOG=debug --uri ws://kusama --block-at "0x0" on-runtime-upgrade live`
+- `-t` / `--tag`: defines
+  [GitLab CI runner tags](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run)
+  which will be attached to the CI job for running the command. This option
+  accepts multiple such as `--tag tag1 --tag tag2`.
 
-The `[try-runtime-cli-args]` form accepts the same arguments as the
-[try-runtime CLI](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/src/lib.rs)
-from your pull request, except that you **need to** refer to the nodes by their
-name e.g. `ws://polkadot` instead of using arbitrary addresses.
+In `[command]` you should provide a shell command to be run in the CI job.
 
-Upon receiving the event for that comment, try-runtime-bot will queue the
-execution of the try-runtime CLI using the pull request's branch and post the
-result (`stdout` for success or `stderr` for errors) as a pull request comment
-when it finishes.
+### Example
+
+`/cmd queue -t linux-docker $ RUST_LOG=debug cargo run --quiet --features=foo bar`
 
 ## Cancel <a name="pull-request-command-cancel"></a>
 
-In the pull request where you previously ran `/try-runtime queue`, comment:
+In the pull request where you previously ran `/cmd queue`, comment:
 
-`/try-runtime cancel`
+`/cmd cancel`
 
 # API <a name="api"></a>
 
@@ -90,7 +81,7 @@ be posted to after it finishes.
 curl \
   -H "X-Auth: $MASTER_TOKEN" \
   -H "Content-Type: application/json" \
-  -X POST http://try-runtime-bot/api/access \
+  -X POST http://command-bot/access \
   -d '{
     "token": "secret",
     "matrixRoom": "!tZrvvMzoIkIYbCkLuk:matrix.foo.io",
@@ -107,19 +98,13 @@ curl \
   -H "X-Auth: $token" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
-  -X POST http://try-runtime-bot/api/queue \
+  -X POST http://command-bot/api/queue \
   -d '{
-    "execPath": "cargo",
-    "args": [
-      "run",
-      "--quiet",
-      "--features=try-runtime",
-      "try-runtime",
-      "--block-at=0x5d67782862757220cb25cf073585f6a75a9031f1da4115e5cba1721c2c6e249c",
-      "--url=ws://polkadot",
-      "on-runtime-upgrade",
-      "live"
-    ],
+    "job": {
+      "tags": ["linux-docker"],
+      "image": "paritytech/ci-linux:production"
+    },
+    "command": "RUST_LOG=debug cargo run --features=foo bar",
     "gitRef": {
       "contributor": "paritytech",
       "owner": "paritytech",
@@ -138,7 +123,7 @@ used for cancelling an ongoing command through `POST /api/cancel`.
 curl \
   -H "X-Auth: $token" \
   -H "Content-Type: application/json" \
-  -X POST http://try-runtime/api/cancel \
+  -X POST http://command-bot/api/cancel \
   -d '{
     "handleId": "foo"
   }'
@@ -211,8 +196,8 @@ GitHub App, install it in a repository through
 ## Environment variables <a name="setup-environment-variables"></a>
 
 All environment variables are documented in the
-[env.example.cjs](./env.example.cjs) file. For development you're welcome to
-copy that file to `env.cjs` so that all values will be loaded automatically
+[.env.example.cjs](./.env.example.cjs) file. For development you're welcome to
+copy that file to `.env.cjs` so that all values will be loaded automatically
 once the application starts.
 
 # Development <a name="development"></a>
@@ -285,19 +270,7 @@ so that
 [it will be retried later in case it can't be finished](https://github.com/paritytech/try-runtime-bot/blob/06a2d872c752f216dc890596e633112de99b6699/src/executor.ts#L640)
 (e.g. due to a container restart or crash).
 
-After being saved to the database, the task is
-[queued through `mutex.runExclusive`](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L554)
-so that we'll execute one task at a time, in order (it is a fair mutex), without
-risking conflicts due to parallel task execution.
-
-Note: since execution of the task entails compiling the
-[try-runtime cli](https://github.com/paritytech/substrate/blob/master/utils/frame/try-runtime/cli/),
-which in turn entails compiling Substrate (or some other project based on
-Substrate, such as Polkadot), the bot needs quite a lot of disk space since
-those projects consume upwards of dozens of gigabytes per build. In this sense
-the application also deeply cares about having enough space for running the
-commands, as discussed in
-https://github.com/paritytech/try-runtime-bot/issues/24#issuecomment-920737773.
+TODO: Update this to reflect command-bot refactor.
 
 **Step 3**: Get the result
 
