@@ -79,7 +79,10 @@ tolerations:
   value: "try-runtime"
   effect: "NoExecute"
 
-env: {}
+env:
+  GITLAB_PUSH_NAMESPACE: parity/mirrors
+  GITLAB_DEFAULT_JOB_IMAGE: paritytech/ci-linux:production
+  GITLAB_DOMAIN: gitlab.parity.io
 
 persistence:
   enabled: true

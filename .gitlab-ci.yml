@@ -91,9 +91,6 @@ lint:
       sed -i "s/version:.*/version: $KUBERNETES_VERSION_TAG/" helm/Chart.yaml
     - |-
       sed -i "s/appVersion:.*/appVersion: $KUBERNETES_VERSION_TAG/" helm/Chart.yaml
-    # CARGO_TARGET_DIR is shared for the projects we compile because then their
-    # common build artifacts can be reused, overall both speeding up the
-    # compilation and using less disk space
     - helm upgrade --install "$KUBE_NAMESPACE" ./helm
       --values helm/values.yaml
       --namespace "$KUBE_NAMESPACE"
@@ -108,17 +105,14 @@ lint:
       --set env.DATA_PATH="$DATA_PATH"
       --set persistence.mountPath="$DATA_PATH"
       --set env.IS_DEPLOYMENT="true"
-      --set env.DEPLOYMENT_ENVIRONMENT="$CI_ENVIRONMENT_NAME"
-      --set env.DEPLOYMENT_CONTAINER="$DEPLOYMENT_CONTAINER"
       --set env.TMPDIR="$DATA_PATH/tmp"
       --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
       --set env.PING_PORT="$PING_PORT"
       --set env.MATRIX_HOMESERVER="$MATRIX_HOMESERVER"
       --set env.MATRIX_ACCESS_TOKEN="$MATRIX_ACCESS_TOKEN"
       --set env.MASTER_TOKEN="$MASTER_TOKEN"
-      --set env.POLKADOT_WEBSOCKET_ADDRESS="$POLKADOT_WEBSOCKET_ADDRESS"
-      --set env.KUSAMA_WEBSOCKET_ADDRESS="$KUSAMA_WEBSOCKET_ADDRESS"
-      --set env.WESTEND_WEBSOCKET_ADDRESS="$WESTEND_WEBSOCKET_ADDRESS"
+      --set env.GITLAB_ACCESS_TOKEN="$GITLAB_ACCESS_TOKEN"
+      --set env.GITLAB_ACCESS_TOKEN_USERNAME="$GITLAB_ACCESS_TOKEN_USERNAME"
       --set env.LOG_FORMAT=json
 
 .uninstall-deployment: &uninstall-deployment
