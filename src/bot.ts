@@ -80,26 +80,44 @@ export const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
       })
 
       let activeOption: string | undefined = undefined
+
       const options: Map<string, string[]> = new Map()
+      const insertOption = (option: string, value: string) => {
+        options.set(option, [...(options.get(option) ?? []), value])
+      }
+
       for (const tok of botOptionsTokens) {
-        if (tok[0] === "-") {
-          activeOption = tok
-        } else if (activeOption) {
-          options.set(activeOption, [...(options.get(activeOption) ?? []), tok])
+        if (activeOption) {
+          insertOption(activeOption, tok)
+          activeOption = undefined
+        } else if (tok[0] === "-") {
+          if (/* --foo=bar */ tok.includes("=")) {
+            const [option, ...value] = tok.split("=")
+            insertOption(option, value.join("="))
+          } /* --foo bar */ else {
+            activeOption = tok
+          }
         } else {
-          return new Error(`Expected command option, got ${tok}`)
+          return new Error(
+            `In line "${rawCommandLine}", expected command option but got ${tok}`,
+          )
         }
+      }
+      if (activeOption) {
+        return new Error(
+          `In line "${rawCommandLine}", expected value for ${activeOption}`,
+        )
       }
 
       const jobTags = (options.get("-t") ?? []).concat(
         options.get("--tag") ?? [],
       )
-
       if ((jobTags?.length ?? 0) === 0) {
         return new Error(
-          `Unable to parse job tags from command line ${botOptionsLinePart}`,
+          `No job tags were parsed from the command line ${rawCommandLine}`,
         )
       }
+
       return { jobTags, command: commandLinePart.trim(), subCommand }
     }
     default: {
