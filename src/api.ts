@@ -1,21 +1,19 @@
-import Ajv from "ajv"
 import bodyParser from "body-parser"
 import { NextFunction, RequestHandler, Response } from "express"
+import Joi from "joi"
 import LevelErrors from "level-errors"
 import path from "path"
 import { Server } from "probot"
 
-import { parsePullRequestBotCommandArgs } from "./core"
 import {
   ApiTask,
+  cancelTask,
   getNextTaskId,
   getSendTaskMatrixResult,
-  queuedTasks,
   queueTask,
   serializeTaskQueuedDate,
 } from "./task"
 import { Context } from "./types"
-import { displayCommand } from "./utils"
 
 const getApiRoute = (route: string) => {
   return `/api${route}`
@@ -122,54 +120,30 @@ export const setupApi = (ctx: Context, server: Server) => {
       }
     }
 
-    const ajv = new Ajv()
-    const validateQueueEndpointInput = ajv.compile({
-      type: "object",
-      properties: {
-        execPath: { type: "string" },
-        args: { type: "array", items: { type: "string" } },
-        env: {
-          type: "object",
-          patternProperties: { ".*": { type: "string" } },
-        },
-        gitRef: {
-          type: "object",
-          properties: {
-            contributor: { type: "string" },
-            owner: { type: "string" },
-            repo: { type: "string" },
-            branch: { type: "string" },
-          },
-          required: ["contributor", "owner", "repo", "branch"],
-        },
-        secretsToHide: { type: "array", items: { type: "string" } },
-      },
-      required: ["execPath", "args", "gitRef"],
-      additionalProperties: false,
-    })
-    const isInputValid = (await validateQueueEndpointInput(req.body)) as boolean
-    if (!isInputValid) {
-      return errorResponse(res, next, 400, validateQueueEndpointInput.errors)
+    const validation = Joi.object()
+      .keys({
+        command: Joi.string().required(),
+        job: Joi.object().keys({
+          tags: Joi.array().items(Joi.string()).required(),
+          image: Joi.string().required(),
+        }),
+        gitRef: Joi.object().keys({
+          contributor: Joi.string().required(),
+          owner: Joi.string().required(),
+          repo: Joi.string().required(),
+          branch: Joi.string().required(),
+        }),
+      })
+      .validate(req.body)
+    if (validation.error) {
+      return errorResponse(res, next, 422, validation.error)
     }
 
-    type Payload = Pick<ApiTask, "execPath" | "args" | "gitRef"> & {
-      env?: ApiTask["env"]
-      secretsToHide?: string[]
+    type Payload = Pick<ApiTask, "gitRef" | "command"> & {
+      job: ApiTask["gitlab"]["job"]
     }
-    const {
-      execPath,
-      args: inputArgs,
-      gitRef,
-      secretsToHide = [],
-      env = {},
-    } = req.body as Payload
+    const { command, job, gitRef } = req.body as Payload
 
-    const args = parsePullRequestBotCommandArgs(ctx, inputArgs)
-    if (typeof args === "string") {
-      return errorResponse(res, next, 422, args)
-    }
-
-    const commandDisplay = displayCommand({ execPath, args, secretsToHide })
     const taskId = getNextTaskId()
     const queuedDate = new Date()
 
@@ -179,41 +153,38 @@ export const setupApi = (ctx: Context, server: Server) => {
       timesRequeued: 0,
       timesRequeuedSnapshotBeforeExecution: 0,
       timesExecuted: 0,
-      commandDisplay,
-      execPath,
-      args,
-      env,
       gitRef,
       matrixRoom,
       repoPath: path.join(repositoryCloneDirectory, gitRef.repo),
       queuedDate: serializeTaskQueuedDate(queuedDate),
       requester: matrixRoom,
+      command,
+      gitlab: { job, pipeline: null },
     }
 
-    const message = await queueTask(ctx, task, {
-      onResult: getSendTaskMatrixResult(matrix, logger, task),
+    const updateProgress = getSendTaskMatrixResult(matrix, logger, task)
+    const queueMessage = await queueTask(ctx, task, {
+      onResult: updateProgress,
+      updateProgress,
     })
 
     response(res, next, 201, {
-      message,
-      task_id: taskId,
-      info: `Send a DELETE request to ${getApiRoute(taskRoute)} for cancelling`,
+      task,
+      message: `${queueMessage} Send a DELETE request to ${getApiRoute(
+        taskRoute,
+      )} for cancelling`,
     })
   })
 
-  setupRoute("delete", taskRoute, ({ req, res, next }) => {
+  setupRoute("delete", taskRoute, async ({ req, res, next }) => {
     const { task_id: taskId } = req.params
     if (typeof taskId !== "string" || !taskId) {
       return errorResponse(res, next, 403, "Invalid task_id")
     }
 
-    const queuedTask = queuedTasks.get(taskId)
-    if (queuedTask === undefined) {
-      return errorResponse(res, next, 404)
-    }
+    await cancelTask(ctx, taskId)
 
-    void queuedTask.cancel()
-    response(res, next, 200, queuedTask.task)
+    response(res, next, 204)
   })
 
   setupRoute(

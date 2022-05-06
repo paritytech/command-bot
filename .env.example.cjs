@@ -6,7 +6,6 @@ const fs = require("fs")
 const path = require("path")
 
 /*
-
   Notes:
   - All variables are required unless explicitly told otherwise.
   - All values used for the variables are presented only for the sake of
@@ -25,6 +24,22 @@ process.env.WEBHOOK_SECRET ??= "placeholder"
 process.env.APP_ID ??= 123
 process.env.CLIENT_ID ??= "placeholder"
 process.env.CLIENT_SECRET ??= "placeholder"
+
+/*
+  Related to the GitLab instance where the commands will be executed
+
+  GITLAB_ACCESS_TOKEN token needs the following scopes:
+  - "write_repository"
+  - "read_api"
+
+  Instructions for generating this token are available at:
+  https://docs.gitlab.com/ee/security/token_overview.html
+*/
+process.env.GITLAB_ACCESS_TOKEN ??= "placeholder"
+process.env.GITLAB_ACCESS_TOKEN_USERNAME ??= "placeholder"
+process.env.GITLAB_DOMAIN ??= "placeholder"
+process.env.GITLAB_PUSH_NAMESPACE ??= "placeholder"
+process.env.GITLAB_DEFAULT_JOB_IMAGE ??= "placeholder"
 
 /*
   This private key's file can be generated and downloaded from
@@ -53,16 +68,6 @@ process.env.ALLOWED_ORGANIZATIONS ??= "123,456"
   API tokens, but cannot be used as a normal token.
 */
 process.env.MASTER_TOKEN ??= "placeholder"
-
-/*
-  Any environment variable following the pattern `${NAME}_WEBSOCKET_ADDRESS`
-  will be registered as a possible node target at the start of the application.
-  For instance, if you define a `POLKADOT_WEBSOCKET_ADDRESS` it will be
-  possible try use `ws://polkadot` in try-runtime's arguments.
-*/
-// process.env.POLKADOT_WEBSOCKET_ADDRESS ??= "ws://0.0.0.0:9944"
-// process.env.KUSAMA_WEBSOCKET_ADDRESS ??= "ws://0.0.0.0:9945"
-// process.env.WESTEND_WEBSOCKET_ADDRESS ??= "ws://0.0.0.0:9946"
 
 /*
   NOT REQUIRED

@@ -86,29 +86,6 @@ const main = async () => {
       })(process.env.TASK_DB_VERSION.trim())
     : false
 
-  const deployment = (() => {
-    const value = process.env.IS_DEPLOYMENT
-    switch (value) {
-      case "true": {
-        assert(process.env.DEPLOYMENT_ENVIRONMENT)
-        assert(process.env.DEPLOYMENT_CONTAINER)
-        return {
-          environment: process.env.DEPLOYMENT_ENVIRONMENT,
-          container: process.env.DEPLOYMENT_CONTAINER,
-        }
-      }
-      case undefined:
-      case "false": {
-        return
-      }
-      default: {
-        throw new Error(
-          `Invalid value for $IS_DEPLOYMENT: ${value ?? "undefined"}`,
-        )
-      }
-    }
-  })()
-
   if (process.env.PING_PORT) {
     // Signal that we have started listening until Probot kicks in
     const pingPort = parseInt(process.env.PING_PORT)
@@ -205,23 +182,35 @@ const main = async () => {
   }
   logger.info(nodesAddresses, "Registered nodes addresses")
 
+  const gitlabAccessToken = envVar("GITLAB_ACCESS_TOKEN")
+  const gitlabAccessTokenUsername = envVar("GITLAB_ACCESS_TOKEN_USERNAME")
+  const gitlabDomain = envVar("GITLAB_DOMAIN")
+  const gitlabPushNamespace = envVar("GITLAB_PUSH_NAMESPACE")
+  const gitlabDefaultJobImage = envVar("GITLAB_DEFAULT_JOB_IMAGE")
+
   await server.load((probot) => {
     void setup(probot, server, {
       appId,
       clientId,
       clientSecret,
       privateKey,
-      deployment,
       logger,
       startDate,
       shouldPostPullRequestComment,
       allowedOrganizations,
       dataPath,
       matrix,
-      cargoTargetDir: process.env.CARGO_TARGET_DIR,
       nodesAddresses,
       masterToken,
       shouldClearTaskDatabaseOnStart,
+      isDeployment: !!process.env.IS_DEPLOYMENT,
+      gitlab: {
+        accessToken: gitlabAccessToken,
+        accessTokenUsername: gitlabAccessTokenUsername,
+        domain: gitlabDomain,
+        pushNamespace: gitlabPushNamespace,
+        defaultJobImage: gitlabDefaultJobImage,
+      },
     })
   })
 

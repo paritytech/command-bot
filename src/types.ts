@@ -1,4 +1,3 @@
-import cp from "child_process"
 import { MatrixClient } from "matrix-bot-sdk"
 
 import type { AccessDB, TaskDB } from "./db"
@@ -12,7 +11,6 @@ export type GitRef = {
 }
 
 export type Context = {
-  appName: string
   startDate: Date
   taskDb: TaskDB
   accessDb: AccessDB
@@ -22,13 +20,19 @@ export type Context = {
   log: (str: string) => void
   allowedOrganizations: number[]
   logger: Logger
-  repositoryCloneDirectory: string
-  deployment: { environment: string; container: string } | undefined
+  isDeployment: boolean
   matrix: MatrixClient | null
   masterToken: string
   nodesAddresses: Record<string, string>
   shouldPostPullRequestComment: boolean
-  cargoTargetDir: string | undefined
+  repositoryCloneDirectory: string
+  gitlab: {
+    accessToken: string
+    domain: string
+    pushNamespace: string
+    defaultJobImage: string
+    accessTokenUsername: string
+  }
 }
 
 export class PullRequestError {
@@ -49,15 +53,3 @@ export class PullRequestError {
 export type ToString = { toString: () => string }
 
 export type CommandOutput = Error | string
-export type CommandExecutor = (
-  execPath: string,
-  args: string[],
-  opts?: {
-    allowedErrorCodes?: number[]
-    options?: cp.SpawnOptionsWithoutStdio & { cwd?: string }
-    testAllowedErrorMessage?: (stderr: string) => boolean
-    secretsToHide?: string[]
-    shouldTrackProgress?: boolean
-    shouldCaptureAllStreams?: boolean
-  },
-) => Promise<CommandOutput>
