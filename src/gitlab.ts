@@ -33,6 +33,8 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
         variables: {
           GH_CONTRIBUTOR: task.gitRef.contributor,
           GH_CONTRIBUTOR_REPO: task.gitRef.repo,
+          GH_CONTRIBUTOR_BRANCH: task.gitRef.branch,
+          COMMIT_MESSAGE: task.command,
         },
       },
     }),
