@@ -9,8 +9,6 @@ import { Task, taskExecutionTerminationEvent, TaskGitlabPipeline } from "./task"
 import { Context } from "./types"
 import { validatedFetch } from "./utils"
 
-const runCommandBranchPrefix = "ci-exec"
-
 export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   const { logger } = ctx
 
@@ -54,7 +52,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
     cwd: task.repoPath,
   })
 
-  const branchName = `${runCommandBranchPrefix}/${
+  const branchName = `cmd-bot/${
     "prNumber" in task.gitRef ? task.gitRef.prNumber : task.gitRef.branch
   }`
   await cmdRunner.run("git", ["branch", "-D", branchName], {
