@@ -32,6 +32,12 @@ export type Context = {
     defaultJobImage: string
     accessTokenUsername: string
   }
+  pipelineScripts:
+    | {
+        repository: string
+        ref: string | undefined
+      }
+    | undefined
 }
 
 export class PullRequestError {

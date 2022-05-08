@@ -174,6 +174,16 @@ const main = async () => {
   const gitlabPushNamespace = envVar("GITLAB_PUSH_NAMESPACE")
   const gitlabDefaultJobImage = envVar("GITLAB_DEFAULT_JOB_IMAGE")
 
+  const pipelineScripts = (() => {
+    const pipelineScriptsRepository = process.env.PIPELINE_SCRIPTS_REPOSITORY
+    if (pipelineScriptsRepository) {
+      return {
+        repository: pipelineScriptsRepository,
+        ref: process.env.PIPELINE_SCRIPTS_REF,
+      }
+    }
+  })()
+
   await server.load((probot) => {
     void setup(probot, server, {
       appId,
@@ -189,6 +199,7 @@ const main = async () => {
       masterToken,
       shouldClearTaskDatabaseOnStart,
       isDeployment: !!process.env.IS_DEPLOYMENT,
+      pipelineScripts,
       gitlab: {
         accessToken: gitlabAccessToken,
         accessTokenUsername: gitlabAccessTokenUsername,

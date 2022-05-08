@@ -57,6 +57,15 @@ process.env.GITLAB_ACCESS_TOKEN ??= "placeholder"
 process.env.GITLAB_ACCESS_TOKEN_USERNAME ??= "placeholder"
 
 /*
+  Define a $PIPELINE_SCRIPTS_REPOSITORY (full URL to a Git repository, e.g.
+  "https://github.com/paritytech/pipeline-scripts") to be cloned on GitLab
+  pipelines with ref $PIPELINE_SCRIPTS_REF. Leave it unset to disable
+  $PIPELINE_SCRIPTS.
+*/
+// process.env.PIPELINE_SCRIPTS_REPOSITORY ??= "placeholder"
+// process.env.PIPELINE_SCRIPTS_REF ??= "placeholder"
+
+/*
   This private key's file can be generated and downloaded from
   https://github.com/settings/apps/[app-name].
   If you need to calculate the Base64 of the value manually, that can be done

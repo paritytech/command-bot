@@ -34,6 +34,7 @@ export const setup = async (
     | "allowedOrganizations"
     | "masterToken"
     | "gitlab"
+    | "pipelineScripts"
   > & {
     appId: number
     clientId: string

@@ -28,6 +28,7 @@ type ParsedBotCommand = {
   jobTags: string[]
   command: string
   subCommand: "queue" | "cancel"
+  variables: Record<string, string>
 }
 export const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
   let commandLine = rawCommandLine.trim()
@@ -118,10 +119,27 @@ export const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
         )
       }
 
-      return { jobTags, command: commandLinePart.trim(), subCommand }
+      const variables: Record<string, string> = {}
+      const variablesArgs = (options.get("-v") ?? []).concat(
+        options.get("--var") ?? [],
+      )
+      const valueSeparator = "="
+      for (const tok of variablesArgs) {
+        const valueSeparatorIndex = tok.indexOf(valueSeparator)
+        if (valueSeparatorIndex === -1) {
+          return new Error(
+            `Variable token "${tok}" doesn't have the value separator '${valueSeparator}'`,
+          )
+        }
+        variables[tok.slice(0, valueSeparatorIndex)] = tok.slice(
+          valueSeparatorIndex + 1,
+        )
+      }
+
+      return { jobTags, command: commandLinePart.trim(), subCommand, variables }
     }
     default: {
-      return { jobTags: [], command: "", subCommand }
+      return { jobTags: [], command: "", subCommand, variables: {} }
     }
   }
 }
@@ -293,6 +311,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
               job: {
                 tags: parsedCommand.jobTags,
                 image: gitlab.defaultJobImage,
+                variables: parsedCommand.variables,
               },
               pipeline: null,
             },

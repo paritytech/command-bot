@@ -43,6 +43,10 @@ Comment in a pull request:
 
 `/cmd queue [bot-args] $ [command]`
 
+In `[command]` you should provide a shell command to be run in the CI job. The
+`$ARTIFACTS_DIR` environment variable is available in case the command needs to
+generate some artifact.
+
 In `[bot-args]` you should provide the following arguments
 
 - `-t` / `--tag`: defines
@@ -50,9 +54,10 @@ In `[bot-args]` you should provide the following arguments
   which will be attached to the CI job for running the command. You can specify
   this option multiple times for multiple tags.
 
-In `[command]` you should provide a shell command to be run in the CI job. The
-`$ARTIFACTS_DIR` environment variable is available in case the command needs to
-generate some artifact.
+- `-v` / `--var`: defines environment variables for the CI job which runs the
+  command. You can specify this option multiple times for multiple tags. Note
+  that you can also specify environment variables by putting them after ` $ `,
+  as showcased in the example below.
 
 ### Example
 

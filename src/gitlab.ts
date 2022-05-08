@@ -12,6 +12,17 @@ import { validatedFetch } from "./utils"
 export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   const { logger } = ctx
 
+  const pipelineScriptsDir = ".git/.pipeline-scripts"
+  const getPipelineScriptsCloneCommand = ({
+    withRef,
+  }: {
+    withRef: boolean
+  }) => {
+    return `git clone --depth 1 ${
+      withRef ? `--branch="$PIPELINE_SCRIPTS_REF"` : ""
+    } "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"`
+  }
+
   const artifactsFolderPath = ".git/.command-bot-artifacts"
   await fsWriteFile(
     path.join(task.repoPath, ".gitlab-ci.yml"),
@@ -25,6 +36,11 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
       command: {
         ...task.gitlab.job,
         script: [
+          `if [ "\${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then if [ "\${PIPELINE_SCRIPTS_REF:-}" ]; then ${getPipelineScriptsCloneCommand(
+            { withRef: true },
+          )}; else ${getPipelineScriptsCloneCommand({
+            withRef: false,
+          })}; fi; fi`,
           `export ARTIFACTS_DIR="$PWD/${artifactsFolderPath}"`,
           `mkdir -p "$ARTIFACTS_DIR"`,
           task.command,
@@ -40,6 +56,10 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
           GH_CONTRIBUTOR_REPO: task.gitRef.repo,
           GH_CONTRIBUTOR_BRANCH: task.gitRef.branch,
           COMMIT_MESSAGE: task.command,
+          PIPELINE_SCRIPTS_REPOSITORY: ctx.pipelineScripts?.repository,
+          PIPELINE_SCRIPTS_REF: ctx.pipelineScripts?.ref,
+          PIPELINE_SCRIPTS_DIR: pipelineScriptsDir,
+          ...task.gitlab.job.variables,
         },
       },
     }),
