@@ -104,7 +104,6 @@ const main = async () => {
     envVar("PRIVATE_KEY_BASE64"),
     "base64",
   ).toString()
-
   const clientId = envVar("CLIENT_ID")
   const clientSecret = envVar("CLIENT_SECRET")
   const webhookSecret = envVar("WEBHOOK_SECRET")
@@ -169,19 +168,6 @@ const main = async () => {
     }
   })()
 
-  const nodesAddresses: Record<string, string> = {}
-  const nodeEnvVarSuffix = "_WEBSOCKET_ADDRESS"
-  for (const [envVarName, envVarValue] of Object.entries(process.env)) {
-    if (!envVarValue || !envVarName.endsWith(nodeEnvVarSuffix)) {
-      continue
-    }
-    const nodeName = envVarName
-      .slice(0, envVarName.indexOf(nodeEnvVarSuffix))
-      .toLowerCase()
-    nodesAddresses[nodeName] = envVarValue
-  }
-  logger.info(nodesAddresses, "Registered nodes addresses")
-
   const gitlabAccessToken = envVar("GITLAB_ACCESS_TOKEN")
   const gitlabAccessTokenUsername = envVar("GITLAB_ACCESS_TOKEN_USERNAME")
   const gitlabDomain = envVar("GITLAB_DOMAIN")
@@ -200,7 +186,6 @@ const main = async () => {
       allowedOrganizations,
       dataPath,
       matrix,
-      nodesAddresses,
       masterToken,
       shouldClearTaskDatabaseOnStart,
       isDeployment: !!process.env.IS_DEPLOYMENT,

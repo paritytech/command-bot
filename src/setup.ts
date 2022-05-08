@@ -21,23 +21,17 @@ export const setup = async (
     clientId,
     clientSecret,
     privateKey,
-    startDate,
     logger,
-    shouldPostPullRequestComment,
-    allowedOrganizations,
     dataPath,
     matrix: matrixConfiguration,
-    nodesAddresses,
-    masterToken,
     shouldClearTaskDatabaseOnStart,
-    gitlab,
     isDeployment,
+    ...partialContext
   }: Pick<
     Context,
     | "isDeployment"
     | "shouldPostPullRequestComment"
     | "allowedOrganizations"
-    | "nodesAddresses"
     | "masterToken"
     | "gitlab"
   > & {
@@ -127,19 +121,14 @@ export const setup = async (
   }
 
   const ctx: Context = {
+    ...partialContext,
     taskDb,
     accessDb,
     getFetchEndpoint,
     log: bot.log,
-    allowedOrganizations,
     logger,
     isDeployment,
     matrix,
-    masterToken,
-    nodesAddresses,
-    startDate,
-    shouldPostPullRequestComment,
-    gitlab,
     repositoryCloneDirectory,
   }
 

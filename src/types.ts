@@ -23,7 +23,6 @@ export type Context = {
   isDeployment: boolean
   matrix: MatrixClient | null
   masterToken: string
-  nodesAddresses: Record<string, string>
   shouldPostPullRequestComment: boolean
   repositoryCloneDirectory: string
   gitlab: {
