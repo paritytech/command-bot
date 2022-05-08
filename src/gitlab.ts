@@ -228,6 +228,8 @@ const getAliveTaskGitlabContext = (
   terminate: () => Promise<Error | undefined>
   waitUntilFinished: (taskEventChannel: EventEmitter) => Promise<unknown>
 } => {
+  const { logger } = ctx
+
   let wasTerminated = false
   return {
     ...pipeline,
@@ -244,20 +246,33 @@ const getAliveTaskGitlabContext = (
           })
         }),
         new Promise<void>((resolve, reject) => {
+          /*
+            Avoid potentially cancelling a costly long-running job if the GitLab
+            request fails randomly
+          */
+          let subsequentErrors: unknown[] = []
           const pollPipelineCompletion = async () => {
             if (wasTerminated) {
-              return
+              return resolve()
             }
             try {
               if (await isPipelineFinished(ctx, pipeline)) {
                 return resolve()
               }
-              setTimeout(() => {
-                void pollPipelineCompletion()
-              }, 16384)
+              subsequentErrors = []
             } catch (error) {
-              reject(error)
+              subsequentErrors.push(error)
+              if (subsequentErrors.length > 2) {
+                logger.error(
+                  { errors: subsequentErrors, pipeline },
+                  `GitLab pipeline status polling failed ${subsequentErrors.length} in a row. Aborting...`,
+                )
+                return reject(error)
+              }
             }
+            setTimeout(() => {
+              void pollPipelineCompletion()
+            }, 16384)
           }
           void pollPipelineCompletion()
         }),
