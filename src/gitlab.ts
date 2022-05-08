@@ -19,7 +19,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
     withRef: boolean
   }) => {
     return `git clone --depth 1 ${
-      withRef ? `--branch="$PIPELINE_SCRIPTS_REF"` : ""
+      withRef ? `--branch "$PIPELINE_SCRIPTS_REF"` : ""
     } "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"`
   }
 
