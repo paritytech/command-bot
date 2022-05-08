@@ -297,9 +297,10 @@ export const getPostPullRequestResult = (
         owner,
         repo,
         issue_number: prNumber,
-        body: `@${requester} Command \`${command}\` has finished. ${
+        body: `@${requester} Command \`${command}\` has finished. Result:\n\`\`\`\n
+        ${
           typeof result === "string" ? result : displayError(result)
-        }`,
+        }\n\`\`\`\n`,
       })
     } catch (error) {
       logger.error(
