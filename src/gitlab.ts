@@ -14,7 +14,7 @@ const runCommandBranchPrefix = "ci-exec"
 export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   const { logger } = ctx
 
-  const artifactsFolderName = ".command-bot-artifacts"
+  const artifactsFolderPath = ".git/.command-bot-artifacts"
   await fsWriteFile(
     path.join(task.repoPath, ".gitlab-ci.yml"),
     yaml.stringify({
@@ -27,14 +27,14 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
           ],
         },
         script: [
-          `export ARTIFACTS_DIR="$PWD/${artifactsFolderName}"`,
+          `export ARTIFACTS_DIR="$PWD/${artifactsFolderPath}"`,
           `mkdir -p "$ARTIFACTS_DIR"`,
           task.command,
         ],
         artifacts: {
           name: "${CI_JOB_NAME}_${CI_COMMIT_REF_NAME}",
           expire_in: "7 days",
-          paths: [artifactsFolderName],
+          paths: [artifactsFolderPath],
         },
         variables: {
           GH_CONTRIBUTOR: task.gitRef.contributor,
