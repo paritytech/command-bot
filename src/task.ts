@@ -232,7 +232,7 @@ export const queueTask = async (
           afterTaskRun(
             `${taskPipeline.jobWebUrl} ${
               taskIsAlive ? "finished" : "was cancelled"
-            }`,
+            }.`,
           )
         })
         .catch(afterTaskRun)
