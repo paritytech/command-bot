@@ -20,6 +20,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
     yaml.stringify({
       command: {
         ...task.gitlab.job,
+        workflow: { rules: [{ if: `$CI_PIPELINE_SOURCE == "api"` }] },
         script: [
           `export ARTIFACTS_DIR="$PWD/${artifactsFolderName}"`,
           `mkdir -p "$ARTIFACTS_DIR"`,
