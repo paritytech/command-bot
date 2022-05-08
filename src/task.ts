@@ -1,4 +1,5 @@
 import assert from "assert"
+import { Mutex } from "async-mutex"
 import cp from "child_process"
 import { randomUUID } from "crypto"
 import { parseISO } from "date-fns"
@@ -20,7 +21,7 @@ import { CommandOutput, Context, GitRef } from "./types"
 import { displayError, getNextUniqueIncrementalId, intoError } from "./utils"
 
 export const queuedTasks: Map<string, EventEmitter> = new Map()
-export const taskTerminationEvent = Symbol()
+export const taskExecutionTerminationEvent = Symbol()
 
 export type TaskGitlabPipeline = {
   id: number
@@ -74,6 +75,15 @@ export const parseTaskQueuedDate = (str: string) => {
   return parseISO(str)
 }
 
+/*
+  A Mutex is necessary because otherwise operations from two different commands
+  could be interleaved in the same repository, thus leading to
+  undefined/unwanted behavior.
+  TODO: The Mutex could be per-repository instead of a single one for all
+  repositories for better throughput.
+*/
+const tasksRepositoryLockMutex = new Mutex()
+
 export const queueTask = async (
   parentCtx: Context,
   task: Task,
@@ -89,7 +99,6 @@ export const queueTask = async (
     !queuedTasks.has(task.id),
     `Attempted to queue task ${task.id} when it's already registered in the taskMap`,
   )
-
   const taskEventChannel = new EventEmitter()
   queuedTasks.set(task.id, taskEventChannel)
 
@@ -102,14 +111,14 @@ export const queueTask = async (
 
   await db.put(task.id, JSON.stringify(task))
 
-  let terminateTask: (() => Promise<unknown>) | undefined = undefined
+  let terminateTaskExecution: (() => Promise<unknown>) | undefined = undefined
   let activeProcess: cp.ChildProcess | undefined = undefined
   let taskIsAlive = true
   const terminate = async () => {
-    if (terminateTask) {
-      await terminateTask()
-      terminateTask = undefined
-      taskEventChannel.emit(taskTerminationEvent)
+    if (terminateTaskExecution) {
+      await terminateTaskExecution()
+      terminateTaskExecution = undefined
+      taskEventChannel.emit(taskExecutionTerminationEvent)
     }
 
     taskIsAlive = false
@@ -125,10 +134,6 @@ export const queueTask = async (
     }
   }
 
-  const queueMessage = `Check out https://${gitlab.domain}/${gitlab.pushNamespace}/${task.gitRef.repo}/-/pipelines?page=1&scope=all&username=${gitlab.accessTokenUsername} to know what else is being executed currently`
-
-  const cancelledMessage = "Task was cancelled"
-
   const afterTaskRun = (result: CommandOutput | null) => {
     const wasAlive = taskIsAlive
 
@@ -141,97 +146,99 @@ export const queueTask = async (
     }
   }
 
-  const runTask = async () => {
-    try {
-      await db.put(
-        task.id,
-        JSON.stringify({
-          ...task,
-          timesRequeuedSnapshotBeforeExecution: task.timesRequeued,
-          timesExecuted: task.timesExecuted + 1,
-        }),
-      )
+  const cancelledMessage = "Task was cancelled"
+  void tasksRepositoryLockMutex
+    .runExclusive(async () => {
+      try {
+        await db.put(
+          task.id,
+          JSON.stringify({
+            ...task,
+            timesRequeuedSnapshotBeforeExecution: task.timesRequeued,
+            timesExecuted: task.timesExecuted + 1,
+          }),
+        )
 
-      const restoredTaskGitlabCtx = await restoreTaskGitlabContext(ctx, task)
+        const restoredTaskGitlabCtx = await restoreTaskGitlabContext(ctx, task)
+        if (restoredTaskGitlabCtx !== undefined) {
+          return restoredTaskGitlabCtx
+        }
 
-      if (restoredTaskGitlabCtx === null) {
-        return null
+        if (taskIsAlive) {
+          logger.info(task, "Starting task")
+        } else {
+          logger.info(task, "Task was cancelled before it could start")
+          return cancelledMessage
+        }
+
+        const prepareBranchSteps = prepareBranch(ctx, task, {
+          getFetchEndpoint: () => {
+            return getFetchEndpoint(
+              "installationId" in task ? task.installationId : null,
+            )
+          },
+        })
+        while (taskIsAlive) {
+          const next = await prepareBranchSteps.next()
+          if (next.done) {
+            break
+          }
+
+          activeProcess = undefined
+
+          if (typeof next.value !== "string") {
+            return next.value
+          }
+        }
+        if (!taskIsAlive) {
+          return cancelledMessage
+        }
+
+        const pipelineCtx = await runCommandInGitlabPipeline(ctx, task)
+
+        task.gitlab.pipeline = {
+          id: pipelineCtx.id,
+          jobWebUrl: pipelineCtx.jobWebUrl,
+          projectId: pipelineCtx.projectId,
+        }
+        await db.put(task.id, JSON.stringify(task))
+
+        if (updateProgress) {
+          await updateProgress(
+            `@${task.requester} ${pipelineCtx.jobWebUrl} was started. Check out https://${gitlab.domain}/${gitlab.pushNamespace}/${task.gitRef.repo}/-/pipelines?page=1&scope=all&username=${gitlab.accessTokenUsername} to know what else is being executed currently.`,
+          )
+        }
+
+        return pipelineCtx
+      } catch (error) {
+        return intoError(error)
       }
-
-      const taskStartResult =
-        restoredTaskGitlabCtx ??
-        (await (async () => {
-          if (taskIsAlive) {
-            logger.info(
-              { task, currentTaskQueue: await getSortedTasks(ctx) },
-              "Starting task",
-            )
-          } else {
-            logger.info(task, "Task was cancelled before it could start")
-            return cancelledMessage
-          }
-
-          const prepareBranchSteps = prepareBranch(ctx, task, {
-            getFetchEndpoint: () => {
-              return getFetchEndpoint(
-                "installationId" in task ? task.installationId : null,
-              )
-            },
-          })
-          while (taskIsAlive) {
-            const next = await prepareBranchSteps.next()
-            if (next.done) {
-              break
-            }
-
-            activeProcess = undefined
-
-            if (typeof next.value !== "string") {
-              return next.value
-            }
-          }
-          if (!taskIsAlive) {
-            return cancelledMessage
-          }
-
-          const pipelineCtx = await runCommandInGitlabPipeline(ctx, task)
-
-          task.gitlab.pipeline = {
-            id: pipelineCtx.id,
-            jobWebUrl: pipelineCtx.jobWebUrl,
-            projectId: pipelineCtx.projectId,
-          }
-          await db.put(task.id, JSON.stringify(task))
-
-          if (updateProgress) {
-            await updateProgress(
-              `@${task.requester} ${pipelineCtx.jobWebUrl} was started. ${queueMessage}.`,
-            )
-          }
-
-          return pipelineCtx
-        })())
-
+    })
+    .then((taskPipeline) => {
       if (
-        taskStartResult instanceof Error ||
-        typeof taskStartResult === "string"
+        taskPipeline instanceof Error ||
+        typeof taskPipeline === "string" ||
+        taskPipeline === null
       ) {
-        return taskStartResult
+        return afterTaskRun(taskPipeline)
       }
 
-      terminateTask = taskStartResult.terminate
-      await taskStartResult.waitUntilFinished(taskEventChannel)
+      terminateTaskExecution = taskPipeline.terminate
 
-      return `${taskStartResult.jobWebUrl} ${
-        taskIsAlive ? "finished" : "was cancelled"
-      }`
-    } catch (error) {
-      return intoError(error)
-    }
-  }
-  void runTask().then(afterTaskRun).catch(afterTaskRun)
+      taskPipeline
+        .waitUntilFinished(taskEventChannel)
+        .then(() => {
+          afterTaskRun(
+            `${taskPipeline.jobWebUrl} ${
+              taskIsAlive ? "finished" : "was cancelled"
+            }`,
+          )
+        })
+        .catch(afterTaskRun)
+    })
+    .catch(afterTaskRun)
 
-  return `Command was queued. ${queueMessage}.`
+  return `${task.command} was queued.`
 }
 
 export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {

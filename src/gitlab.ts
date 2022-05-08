@@ -5,7 +5,7 @@ import path from "path"
 import yaml from "yaml"
 
 import { CommandRunner, fsWriteFile } from "./shell"
-import { Task, TaskGitlabPipeline, taskTerminationEvent } from "./task"
+import { Task, taskExecutionTerminationEvent, TaskGitlabPipeline } from "./task"
 import { Context } from "./types"
 import { validatedFetch } from "./utils"
 
@@ -204,18 +204,26 @@ const getAliveTaskGitlabContext = (
   terminate: () => Promise<Error | undefined>
   waitUntilFinished: (taskEventChannel: EventEmitter) => Promise<unknown>
 } => {
+  let wasTerminated = false
   return {
     ...pipeline,
     terminate: () => {
+      wasTerminated = true
       return cancelGitlabPipeline(ctx, pipeline)
     },
     waitUntilFinished: (taskEventChannel) => {
       return Promise.race([
         new Promise<void>((resolve) => {
-          taskEventChannel.on(taskTerminationEvent, resolve)
+          taskEventChannel.on(taskExecutionTerminationEvent, () => {
+            wasTerminated = true
+            resolve()
+          })
         }),
         new Promise<void>((resolve, reject) => {
           const pollPipelineCompletion = async () => {
+            if (wasTerminated) {
+              return
+            }
             try {
               if (await isPipelineFinished(ctx, pipeline)) {
                 return resolve()
