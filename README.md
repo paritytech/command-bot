@@ -52,6 +52,9 @@ In `[bot-args]` you should provide the following arguments
 
 In `[command]` you should provide a shell command to be run in the CI job.
 
+The `$ARTIFACTS_DIR` variable is available in case the command needs to
+generates some artifact.
+
 ### Example
 
 `/cmd queue -t linux-docker $ RUST_LOG=debug cargo run --quiet --features=foo bar`
