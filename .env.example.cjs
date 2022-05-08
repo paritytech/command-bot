@@ -26,8 +26,26 @@ process.env.CLIENT_ID ??= "placeholder"
 process.env.CLIENT_SECRET ??= "placeholder"
 
 /*
-  Related to the GitLab instance where the commands will be executed
+  The GitLab domain (e.g. gitlab.parity.io) where the CI jobs will be executed
+  in. Do not include https:// or any other prefix at the start of the value.
+*/
+process.env.GITLAB_DOMAIN ??= "placeholder"
 
+/*
+  The GitLab namespace (i.e. repository path without the repository name) where
+  the GitHub repositories are mirrored to in GitLab. e.g. for a project
+  github.com/foo which is hosted in gitlab.parity.io/nested/namespace/foo,
+  $GITLAB_PUSH_NAMESPACE would be nested/namespace.
+*/
+process.env.GITLAB_PUSH_NAMESPACE ??= "placeholder"
+
+/*
+  The default image to be used on GitLab jobs for bot commands which don't
+  specify a custom image
+*/
+process.env.GITLAB_DEFAULT_JOB_IMAGE ??= "placeholder"
+
+/*
   GITLAB_ACCESS_TOKEN token needs the following scopes:
   - "write_repository"
   - "read_api"
@@ -37,9 +55,6 @@ process.env.CLIENT_SECRET ??= "placeholder"
 */
 process.env.GITLAB_ACCESS_TOKEN ??= "placeholder"
 process.env.GITLAB_ACCESS_TOKEN_USERNAME ??= "placeholder"
-process.env.GITLAB_DOMAIN ??= "placeholder"
-process.env.GITLAB_PUSH_NAMESPACE ??= "placeholder"
-process.env.GITLAB_DEFAULT_JOB_IMAGE ??= "placeholder"
 
 /*
   This private key's file can be generated and downloaded from
