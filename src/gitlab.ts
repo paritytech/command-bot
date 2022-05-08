@@ -18,14 +18,14 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   await fsWriteFile(
     path.join(task.repoPath, ".gitlab-ci.yml"),
     yaml.stringify({
+      workflow: {
+        rules: [
+          { if: `$CI_PIPELINE_SOURCE == "api"` },
+          { if: `$CI_PIPELINE_SOURCE == "web"` },
+        ],
+      },
       command: {
         ...task.gitlab.job,
-        workflow: {
-          rules: [
-            { if: `$CI_PIPELINE_SOURCE == "api"` },
-            { if: `$CI_PIPELINE_SOURCE == "web"` },
-          ],
-        },
         script: [
           `export ARTIFACTS_DIR="$PWD/${artifactsFolderPath}"`,
           `mkdir -p "$ARTIFACTS_DIR"`,
