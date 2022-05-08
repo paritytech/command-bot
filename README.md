@@ -47,8 +47,8 @@ In `[bot-args]` you should provide the following arguments
 
 - `-t` / `--tag`: defines
   [GitLab CI runner tags](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run)
-  which will be attached to the CI job for running the command. This option
-  accepts multiple such as `--tag tag1 --tag tag2`.
+  which will be attached to the CI job for running the command. You can specify
+  this option multiple times for multiple tags.
 
 In `[command]` you should provide a shell command to be run in the CI job.
 
