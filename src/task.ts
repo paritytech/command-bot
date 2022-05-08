@@ -230,7 +230,7 @@ export const queueTask = async (
         .waitUntilFinished(taskEventChannel)
         .then(() => {
           afterTaskRun(
-            `${taskPipeline.jobWebUrl} ${
+            `${taskPipeline.jobWebUrl} has ${
               taskIsAlive ? "finished" : "was cancelled"
             }.`,
           )
