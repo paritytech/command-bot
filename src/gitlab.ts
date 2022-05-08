@@ -22,6 +22,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
         ...task.gitlab.job,
         script: [
           `export ARTIFACTS_DIR="$PWD/${artifactsFolderName}"`,
+          `mkdir -p "$ARTIFACTS_DIR"`,
           task.command,
         ],
         artifacts: {
