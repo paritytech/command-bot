@@ -98,7 +98,7 @@ RUN $APT_INSTALL \
 
 WORKDIR $APP_DIR
 
-RUN git config --global user.name "command-bot" && \
+RUN git config --global user.name command-bot && \
   git config --global user.email "<>"
 
 CMD . $CARGO_HOME/env && yarn start
