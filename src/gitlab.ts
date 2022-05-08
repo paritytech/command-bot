@@ -34,6 +34,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
         artifacts: {
           name: "${CI_JOB_NAME}_${CI_COMMIT_REF_NAME}",
           expire_in: "7 days",
+          when: "always",
           paths: [artifactsFolderPath],
         },
         variables: {
