@@ -232,7 +232,9 @@ export const queueTask = async (
           afterTaskRun(
             `${taskPipeline.jobWebUrl} has ${
               taskIsAlive ? "finished" : "was cancelled"
-            }.`,
+            }. If any artifacts were generated, you can download them from ${
+              taskPipeline.jobWebUrl
+            }/artifacts/download.`,
           )
         })
         .catch(afterTaskRun)
