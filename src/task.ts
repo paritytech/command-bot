@@ -206,7 +206,7 @@ export const queueTask = async (
 
         if (updateProgress) {
           await updateProgress(
-            `@${task.requester} ${pipelineCtx.jobWebUrl} was started. Check out https://${gitlab.domain}/${gitlab.pushNamespace}/${task.gitRef.repo}/-/pipelines?page=1&scope=all&username=${gitlab.accessTokenUsername} to know what else is being executed currently.`,
+            `@${task.requester} ${pipelineCtx.jobWebUrl} was started for your command \`${task.command}\`. Check out https://${gitlab.domain}/${gitlab.pushNamespace}/${task.gitRef.repo}/-/pipelines?page=1&scope=all&username=${gitlab.accessTokenUsername} to know what else is being executed currently.`,
           )
         }
 
