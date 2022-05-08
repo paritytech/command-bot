@@ -7,7 +7,7 @@ variables:
   DEPLOYMENT_CONTAINER: try-runtime
   DATA_PATH: /data
   PING_PORT: 3001
-  TASK_DB_VERSION: v1
+  TASK_DB_VERSION: v2
 
 default:
   image: $CI_IMAGE
