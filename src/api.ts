@@ -182,7 +182,10 @@ export const setupApi = (ctx: Context, server: Server) => {
       return errorResponse(res, next, 403, "Invalid task_id")
     }
 
-    await cancelTask(ctx, taskId)
+    const cancelError = await cancelTask(ctx, taskId)
+    if (cancelError instanceof LevelErrors.NotFoundError) {
+      return errorResponse(res, next, 422, "Task not found")
+    }
 
     response(res, next, 204)
   })

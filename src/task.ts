@@ -4,6 +4,7 @@ import cp from "child_process"
 import { randomUUID } from "crypto"
 import { parseISO } from "date-fns"
 import EventEmitter from "events"
+import LevelErrors from "level-errors"
 import { extractRequestError, MatrixClient } from "matrix-bot-sdk"
 import { Probot } from "probot"
 
@@ -417,9 +418,21 @@ export const cancelTask = async (ctx: Context, taskId: Task | string) => {
   const task =
     typeof taskId === "string"
       ? await (async () => {
-          return JSON.parse(await db.get(taskId)) as Task
+          try {
+            return JSON.parse(await db.get(taskId)) as Task
+          } catch (error) {
+            if (error instanceof LevelErrors.NotFoundError) {
+              return error
+            } else {
+              throw error
+            }
+          }
         })()
       : taskId
+
+  if (task instanceof Error) {
+    return task
+  }
 
   if (task.gitlab.pipeline !== null) {
     await cancelGitlabPipeline(ctx, task.gitlab.pipeline)
