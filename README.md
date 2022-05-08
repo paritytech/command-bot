@@ -50,10 +50,9 @@ In `[bot-args]` you should provide the following arguments
   which will be attached to the CI job for running the command. You can specify
   this option multiple times for multiple tags.
 
-In `[command]` you should provide a shell command to be run in the CI job.
-
-The `$ARTIFACTS_DIR` variable is available in case the command needs to
-generates some artifact.
+In `[command]` you should provide a shell command to be run in the CI job. The
+`$ARTIFACTS_DIR` environment variable is available in case the command needs to
+generate some artifact.
 
 ### Example
 
