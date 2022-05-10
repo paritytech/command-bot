@@ -432,7 +432,6 @@ export const cancelTask = async (ctx: Context, taskId: Task | string) => {
           }
         })()
       : taskId
-
   if (task instanceof Error) {
     return task
   }
