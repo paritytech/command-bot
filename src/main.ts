@@ -44,7 +44,7 @@ const main = async () => {
     }
   })()
   const logger = new Logger({
-    name: "try-runtime-bot",
+    name: "command-bot",
     minLogLevel,
     logFormat,
     impl: console,
