@@ -40,7 +40,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
           'if [ "${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then ' +
             'if [ "${PIPELINE_SCRIPTS_REF:-}" ]; then ' +
               getPipelineScriptsCloneCommand({ withRef: true }) + "; " +
-            "else" +
+            "else " +
               getPipelineScriptsCloneCommand({ withRef: false }) + "; " +
             "fi" + "; " +
           "fi",
