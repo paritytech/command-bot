@@ -8,24 +8,38 @@ import { Logger } from "./logger"
 import { Context, ToString } from "./types"
 import { displayCommand, redact } from "./utils"
 
-export const fsExists = promisify(fs.exists)
 export const fsReadFile = promisify(fs.readFile)
 export const fsWriteFile = promisify(fs.writeFile)
 const fsMkdir = promisify(fs.mkdir)
 const fsUnlink = promisify(fs.unlink)
 
 export const ensureDir = async (dir: string) => {
-  if (!(await fsExists(dir))) {
-    await fsMkdir(dir, { recursive: true })
-  }
+  // mkdir doesn't throw an error if the directory already exists
+  await fsMkdir(dir, { recursive: true })
   return dir
 }
 
 export const initDatabaseDir = async (dir: string) => {
   dir = await ensureDir(dir)
   const lockPath = path.join(dir, "LOCK")
-  if (await fsExists(lockPath)) {
+  try {
     await fsUnlink(lockPath)
+  } catch (error) {
+    if (
+      /*
+      Test for the following error:
+        [Error: ENOENT: no such file or directory, unlink '/foo'] {
+          errno: -2,
+          code: 'ENOENT',
+          syscall: 'unlink',
+          path: '/foo'
+        }
+      */
+      !(error instanceof Error) ||
+      (error as { code?: string })?.code !== "ENOENT"
+    ) {
+      throw error
+    }
   }
   return dir
 }

@@ -7,7 +7,7 @@ import stoppable from "stoppable"
 
 import { Logger } from "./logger"
 import { setup } from "./setup"
-import { ensureDir, fsExists, fsReadFile, fsWriteFile } from "./shell"
+import { ensureDir, fsReadFile, fsWriteFile } from "./shell"
 import { envNumberVar, envVar } from "./utils"
 
 const main = async () => {
@@ -75,8 +75,24 @@ const main = async () => {
   const shouldClearTaskDatabaseOnStart = process.env.TASK_DB_VERSION
     ? await (async (appDbVersion) => {
         const currentDbVersion = await (async () => {
-          if (await fsExists(appDbVersionPath)) {
+          try {
             return (await fsReadFile(appDbVersionPath)).toString().trim()
+          } catch (error) {
+            if (
+              /*
+              Test for the following error:
+                [Error: ENOENT: no such file or directory, open '/foo'] {
+                  errno: -2,
+                  code: 'ENOENT',
+                  syscall: 'unlink',
+                  path: '/foo'
+                }
+              */
+              !(error instanceof Error) ||
+              (error as { code?: string })?.code !== "ENOENT"
+            ) {
+              throw error
+            }
           }
         })()
         if (currentDbVersion !== appDbVersion) {
