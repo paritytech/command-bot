@@ -21,6 +21,10 @@ const getApiRoute = (route: string) => {
 
 const taskRoute = "/task/:task_id"
 
+export const getApiTaskEndpoint = (task: ApiTask) => {
+  return getApiRoute(taskRoute).replaceAll(":task_id", task.id)
+}
+
 const response = <T>(
   res: Response,
   next: NextFunction,
@@ -168,12 +172,7 @@ export const setupApi = (ctx: Context, server: Server) => {
       updateProgress,
     })
 
-    response(res, next, 201, {
-      task,
-      message: `${queueMessage} Send a DELETE request to ${getApiRoute(
-        taskRoute,
-      )} for cancelling`,
-    })
+    response(res, next, 201, { task, queueMessage })
   })
 
   setupRoute("delete", taskRoute, async ({ req, res, next }) => {

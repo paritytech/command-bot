@@ -10,6 +10,11 @@ import { Probot } from "probot"
 
 import { getSortedTasks } from "src/db"
 
+import { getApiTaskEndpoint } from "./api"
+import {
+  botPullRequestCommentMention,
+  botPullRequestCommentSubcommands,
+} from "./bot"
 import { prepareBranch } from "./core"
 import { getPostPullRequestResult, updateComment } from "./github"
 import {
@@ -148,7 +153,26 @@ export const queueTask = async (
     }
   }
 
+  const additionalTaskCancelInstructions = (() => {
+    switch (task.tag) {
+      case "PullRequestTask": {
+        return `\n\nComment \`/${botPullRequestCommentMention} ${botPullRequestCommentSubcommands.cancel}\` to cancel all commands for this pull request.`
+      }
+      case "ApiTask": {
+        return `Send a DELETE request to ${getApiTaskEndpoint(
+          task,
+        )} for cancelling this task.`
+      }
+      default: {
+        const exhaustivenessCheck: never = task
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+        throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
+      }
+    }
+  })()
+
   const cancelledMessage = "Task was cancelled"
+
   void tasksRepositoryLockMutex
     .runExclusive(async () => {
       try {
@@ -207,7 +231,7 @@ export const queueTask = async (
 
         if (updateProgress) {
           await updateProgress(
-            `@${task.requester} ${pipelineCtx.jobWebUrl} was started for your command \`${task.command}\`. Check out https://${gitlab.domain}/${gitlab.pushNamespace}/${task.gitRef.repo}/-/pipelines?page=1&scope=all&username=${gitlab.accessTokenUsername} to know what else is being executed currently.`,
+            `@${task.requester} ${pipelineCtx.jobWebUrl} was started for your command \`${task.command}\`. Check out https://${gitlab.domain}/${gitlab.pushNamespace}/${task.gitRef.repo}/-/pipelines?page=1&scope=all&username=${gitlab.accessTokenUsername} to know what else is being executed currently. ${additionalTaskCancelInstructions}`,
           )
         }
 
@@ -242,7 +266,7 @@ export const queueTask = async (
     })
     .catch(afterTaskRun)
 
-  return `${task.command} was queued.`
+  return `${task.command} was queued. ${additionalTaskCancelInstructions}`
 }
 
 export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {

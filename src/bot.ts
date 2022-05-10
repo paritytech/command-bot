@@ -22,17 +22,22 @@ import {
 import { Context, PullRequestError } from "./types"
 import { displayError, getLines } from "./utils"
 
+export const botPullRequestCommentMention = "/cmd"
+export const botPullRequestCommentSubcommands: {
+  [K in "queue" | "cancel"]: K
+} = { queue: "queue", cancel: "cancel" }
+
 type ParsedBotCommand = {
   jobTags: string[]
   command: string
-  subCommand: "queue" | "cancel"
+  subCommand: keyof typeof botPullRequestCommentSubcommands
   variables: Record<string, string>
 }
 const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
   let commandLine = rawCommandLine.trim()
 
-  const botPullRequestCommentMention = "/cmd "
-  if (!commandLine.startsWith(botPullRequestCommentMention)) {
+  // Add trailing whitespace so that /cmd can be differentiated from /cmd-[?]
+  if (!commandLine.startsWith(`${botPullRequestCommentMention} `)) {
     return
   }
 
