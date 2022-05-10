@@ -163,14 +163,18 @@ export const cancelGitlabPipeline = async (
   { gitlab }: Context,
   { id, projectId }: { id: number; projectId: number },
 ) => {
-  const response = await fetch(
-    `https://${gitlab.domain}/api/v4/projects/${projectId}/pipeline/${id}/cancel`,
-    { method: "POST", headers: { "PRIVATE-TOKEN": gitlab.accessToken } },
+  await validatedFetch(
+    fetch(
+      /*
+        https://docs.gitlab.com/ee/api/pipelines.html#cancel-a-pipelines-jobs
+        Note: this endpoint can be called any time, even if the pipeline has
+        already finished
+      */
+      `https://${gitlab.domain}/api/v4/projects/${projectId}/pipeline/${id}/cancel`,
+      { method: "POST", headers: { "PRIVATE-TOKEN": gitlab.accessToken } },
+    ),
+    Joi.object().keys({ id: Joi.number() }).options({ allowUnknown: true }),
   )
-
-  if (!response.ok) {
-    return new Error(await response.text())
-  }
 }
 
 const isPipelineFinished = async (
@@ -225,9 +229,10 @@ const getAliveTaskGitlabContext = (
   let wasTerminated = false
   return {
     ...pipeline,
-    terminate: () => {
+    terminate: async () => {
       wasTerminated = true
-      return cancelGitlabPipeline(ctx, pipeline)
+      await cancelGitlabPipeline(ctx, pipeline)
+      return undefined
     },
     waitUntilFinished: (taskEventChannel) => {
       return Promise.race([

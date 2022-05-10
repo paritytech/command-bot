@@ -416,6 +416,7 @@ export const getSendTaskMatrixResult = (
 export const cancelTask = async (ctx: Context, taskId: Task | string) => {
   const {
     taskDb: { db },
+    logger,
   } = ctx
 
   const task =
@@ -435,6 +436,8 @@ export const cancelTask = async (ctx: Context, taskId: Task | string) => {
   if (task instanceof Error) {
     return task
   }
+
+  logger.info(task, "Cancelling task")
 
   if (task.gitlab.pipeline !== null) {
     await cancelGitlabPipeline(ctx, task.gitlab.pipeline)
