@@ -184,7 +184,7 @@ export const setupApi = (ctx: Context, server: Server) => {
 
     const cancelError = await cancelTask(ctx, taskId)
     if (cancelError instanceof LevelErrors.NotFoundError) {
-      return errorResponse(res, next, 422, "Task not found")
+      return errorResponse(res, next, 404)
     }
 
     response(res, next, 204)
