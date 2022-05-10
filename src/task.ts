@@ -156,7 +156,7 @@ export const queueTask = async (
   const additionalTaskCancelInstructions = (() => {
     switch (task.tag) {
       case "PullRequestTask": {
-        return `\n\nComment \`/${botPullRequestCommentMention} ${botPullRequestCommentSubcommands.cancel}\` to cancel all commands for this pull request.`
+        return `\n\nComment \`${botPullRequestCommentMention} ${botPullRequestCommentSubcommands.cancel}\` to cancel all commands for this pull request.`
       }
       case "ApiTask": {
         return `Send a DELETE request to ${getApiTaskEndpoint(
