@@ -167,7 +167,6 @@ export const cancelGitlabPipeline = async (
   await validatedFetch(
     fetch(
       /*
-        https://docs.gitlab.com/ee/api/pipelines.html#cancel-a-pipelines-jobs
         Note: this endpoint can be called any time, even if the pipeline has
         already finished
       */
