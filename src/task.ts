@@ -300,6 +300,8 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
                   Assumes the relevant progress update was already sent when
                   the task was queued for the first time, thus there's no need
                   to keep updating it
+                  TODO: Update the item in the database to tell when
+                  updateProgress no longer needs to be called.
                 */
                 updateProgress: null,
               })
@@ -339,6 +341,8 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
                     Assumes the relevant progress update was already sent when
                     the task was queued for the first time, thus there's no need
                     to keep updating it
+                    TODO: Update the item in the database to tell when
+                    updateProgress no longer needs to be called.
                   */
                   updateProgress: null,
                 })
