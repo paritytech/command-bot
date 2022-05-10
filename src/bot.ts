@@ -341,6 +341,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
         }
         case "cancel": {
           const cancelledTasks: PullRequestTask[] = []
+          const failedToCancelTasks: PullRequestTask[] = []
 
           for (const { task } of await getSortedTasks(ctx)) {
             if (task.tag !== "PullRequestTask") {
@@ -356,26 +357,46 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
                 await cancelTask(ctx, task)
                 cancelledTasks.push(task)
               } catch (error) {
+                failedToCancelTasks.push(task)
                 logger.error(error, `Failed to cancel task ${task.id}`)
               }
             }
-          }
-
-          if (cancelledTasks.length === 0) {
-            return getError(
-              "try-runtime is not being executed for this pull request",
-            )
           }
 
           for (const cancelledTask of cancelledTasks) {
             if (cancelledTask.comment.id === undefined) {
               continue
             }
-            await updateComment(ctx, octokit, {
-              ...commentParams,
-              comment_id: cancelledTask.comment.id,
-              body: `@${requester} command was cancelled`.trim(),
-            })
+            try {
+              await updateComment(ctx, octokit, {
+                ...commentParams,
+                comment_id: cancelledTask.comment.id,
+                body: `@${requester} command was cancelled`.trim(),
+              })
+            } catch (error) {
+              logger.error(
+                { error, task: cancelledTask },
+                `Failed to update the cancel comment of task ${cancelledTask.id}`,
+              )
+            }
+          }
+
+          if (failedToCancelTasks.length) {
+            return getError(
+              `Successfully cancelled the following tasks: ${JSON.stringify(
+                cancelledTasks.map((task) => {
+                  return task.id
+                }),
+              )}\n\nFailed to cancel the following tasks: ${JSON.stringify(
+                failedToCancelTasks.map((task) => {
+                  return task.id
+                }),
+              )}`,
+            )
+          }
+
+          if (cancelledTasks.length === 0) {
+            return getError("No task is being executed for this pull request")
           }
 
           break
