@@ -170,10 +170,12 @@ export const cancelGitlabPipeline = async (
         Note: this endpoint can be called any time, even if the pipeline has
         already finished
       */
-      `https://${gitlab.domain}/api/v4/projects/${pipeline.projectId}/pipeline/${pipeline.id}/cancel`,
+      `https://${gitlab.domain}/api/v4/projects/${pipeline.projectId}/pipelines/${pipeline.id}/cancel`,
       { method: "POST", headers: { "PRIVATE-TOKEN": gitlab.accessToken } },
     ),
-    Joi.object().keys({ id: Joi.number() }).options({ allowUnknown: true }),
+    Joi.object()
+      .keys({ id: Joi.number().required() })
+      .options({ allowUnknown: true }),
   )
 }
 
