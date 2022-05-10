@@ -10,7 +10,19 @@ import { Context } from "./types"
 import { validatedFetch } from "./utils"
 
 export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
-  const { logger } = ctx
+  const { logger, gitlab } = ctx
+
+  const cmdRunner = new CommandRunner(ctx, {
+    itemsToRedact: [gitlab.accessToken],
+    shouldTrackProgress: false,
+    cwd: task.repoPath,
+  })
+
+  /*
+    Save the head SHA before doing any modifications to the branch so that
+    scripts will be able to restore the branch as it was on GitHub
+  */
+  const headSha = await cmdRunner.run("git", ["rev-parse", "HEAD"])
 
   const pipelineScriptsDir = ".git/.pipeline-scripts"
   const getPipelineScriptsCloneCommand = ({
@@ -58,6 +70,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
           GH_CONTRIBUTOR: task.gitRef.contributor,
           GH_CONTRIBUTOR_REPO: task.gitRef.repo,
           GH_CONTRIBUTOR_BRANCH: task.gitRef.branch,
+          GH_HEAD_SHA: headSha,
           COMMIT_MESSAGE: task.command,
           PIPELINE_SCRIPTS_REPOSITORY: ctx.pipelineScripts?.repository,
           PIPELINE_SCRIPTS_REF: ctx.pipelineScripts?.ref,
@@ -67,13 +80,6 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
       },
     }),
   )
-
-  const { gitlab } = ctx
-  const cmdRunner = new CommandRunner(ctx, {
-    itemsToRedact: [gitlab.accessToken],
-    shouldTrackProgress: false,
-    cwd: task.repoPath,
-  })
 
   const branchName = `cmd-bot/${
     "prNumber" in task.gitRef ? task.gitRef.prNumber : task.gitRef.branch
