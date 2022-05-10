@@ -1,4 +1,5 @@
 import bodyParser from "body-parser"
+import { randomUUID } from "crypto"
 import { NextFunction, RequestHandler, Response } from "express"
 import Joi from "joi"
 import LevelErrors from "level-errors"
@@ -70,6 +71,7 @@ export const setupApi = (ctx: Context, server: Server) => {
       res: JsonRequestHandlerParams[1]
       next: JsonRequestHandlerParams[2]
       token: string
+      matrixRoom: string
     }) => void | Promise<void>,
     { checkMasterToken }: { checkMasterToken?: boolean } = {},
   ) => {
@@ -83,16 +85,33 @@ export const setupApi = (ctx: Context, server: Server) => {
             return errorResponse(res, next, 400, "Invalid auth token")
           }
 
-          if (checkMasterToken && token !== ctx.masterToken) {
-            return errorResponse(
-              res,
-              next,
-              422,
-              `Invalid ${token} for master token`,
-            )
+          /*
+            Empty when the masterToken is supposed to be used because it doesn't
+            matter in that case
+          */
+          let matrixRoom: string = ""
+          if (checkMasterToken) {
+            if (token !== ctx.masterToken) {
+              return errorResponse(
+                res,
+                next,
+                422,
+                `Invalid ${token} for master token`,
+              )
+            }
+          } else {
+            try {
+              matrixRoom = await accessDb.db.get(token)
+            } catch (error) {
+              if (error instanceof LevelErrors.NotFoundError) {
+                return errorResponse(res, next, 404, "Token not found")
+              } else {
+                return apiError(res, next, error)
+              }
+            }
           }
 
-          await handler({ req, res, next, token })
+          await handler({ req, res, next, token, matrixRoom })
         } catch (error) {
           apiError(res, next, error)
         }
@@ -100,7 +119,7 @@ export const setupApi = (ctx: Context, server: Server) => {
     )
   }
 
-  setupRoute("post", "/queue", async ({ req, res, next, token }) => {
+  setupRoute("post", "/queue", async ({ req, res, next, matrixRoom }) => {
     if (matrix === null) {
       return errorResponse(
         res,
@@ -108,20 +127,6 @@ export const setupApi = (ctx: Context, server: Server) => {
         400,
         "Matrix is not configured for this server",
       )
-    }
-
-    let matrixRoom: string
-    try {
-      matrixRoom = await accessDb.db.get(token)
-      if (!matrixRoom) {
-        return errorResponse(res, next, 404)
-      }
-    } catch (error) {
-      if (error instanceof LevelErrors.NotFoundError) {
-        return errorResponse(res, next, 404)
-      } else {
-        return apiError(res, next, error)
-      }
     }
 
     const validation = Joi.object()
@@ -183,7 +188,7 @@ export const setupApi = (ctx: Context, server: Server) => {
 
     const cancelError = await cancelTask(ctx, taskId)
     if (cancelError instanceof LevelErrors.NotFoundError) {
-      return errorResponse(res, next, 404)
+      return errorResponse(res, next, 404, "Task not found")
     }
 
     response(res, next, 204)
@@ -193,14 +198,12 @@ export const setupApi = (ctx: Context, server: Server) => {
     "post",
     "/access",
     async ({ req, res, next }) => {
-      const { token: requesterToken, matrixRoom } = req.body
-      if (typeof requesterToken !== "string" || !requesterToken) {
-        return errorResponse(res, next, 400, "Invalid requesterToken")
-      }
+      const { matrixRoom } = req.body
       if (typeof matrixRoom !== "string" || !matrixRoom) {
         return errorResponse(res, next, 400, "Invalid matrixRoom")
       }
 
+      const requesterToken = randomUUID()
       try {
         if (await accessDb.db.get(requesterToken)) {
           return errorResponse(res, next, 422, "requesterToken already exists")
@@ -212,7 +215,7 @@ export const setupApi = (ctx: Context, server: Server) => {
       }
 
       await accessDb.db.put(requesterToken, matrixRoom)
-      response(res, next, 201)
+      response(res, next, 201, { token: requesterToken })
     },
     { checkMasterToken: true },
   )

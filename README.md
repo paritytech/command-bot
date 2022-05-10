@@ -76,12 +76,12 @@ without having to go through pull request comments.
 
 ## Create a Personal Token <a name="api-create-token"></a>
 
-For interacting with the commands, first a Personal Token needs to be registered
+For interacting with the commands, first a Personal Token needs to be generated
 through `POST /api/access` by the
 [`$MASTER_TOKEN`](#setup-environment-variables) (it is currently owned
 by the OpsTooling team of Parity for Parity's deployments).
 
-Each Personal Token is tied to a Matrix Room ID where the command's output will
+Each Personal Token is tied to a Matrix Room ID where the command's outcome will
 be posted to after it finishes.
 
 ```
@@ -90,7 +90,6 @@ curl \
   -H "Content-Type: application/json" \
   -X POST http://command-bot/access \
   -d '{
-    "token": "secret",
     "matrixRoom": "!tZrvvMzoIkIYbCkLuk:matrix.foo.io",
   }'
 ```
