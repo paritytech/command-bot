@@ -31,7 +31,7 @@ type ParsedBotCommand = {
 const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
   let commandLine = rawCommandLine.trim()
 
-  const botPullRequestCommentMention = "/cmd"
+  const botPullRequestCommentMention = "/cmd "
   if (!commandLine.startsWith(botPullRequestCommentMention)) {
     return
   }
