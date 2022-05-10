@@ -37,12 +37,12 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
         ...task.gitlab.job,
         script: [
           // prettier-ignore
-          'if [ "${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then' +
-            'if [ "${PIPELINE_SCRIPTS_REF:-}" ]; then' +
-              getPipelineScriptsCloneCommand({ withRef: true }) + ';' +
+          'if [ "${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then ' +
+            'if [ "${PIPELINE_SCRIPTS_REF:-}" ]; then ' +
+              getPipelineScriptsCloneCommand({ withRef: true }) + "; " +
             "else" +
-              getPipelineScriptsCloneCommand({ withRef: false }) + ';' +
-            "fi" + ';' +
+              getPipelineScriptsCloneCommand({ withRef: false }) + "; " +
+            "fi" + "; " +
           "fi",
           `export ARTIFACTS_DIR="$PWD/${artifactsFolderPath}"`,
           `mkdir -p "$ARTIFACTS_DIR"`,
