@@ -210,17 +210,6 @@ export const restoreTaskGitlabContext = async (ctx: Context, task: Task) => {
   return getAliveTaskGitlabContext(ctx, pipeline)
 }
 
-export const isPipelineFinishedStatus = (status: string) => {
-  switch (status) {
-    case "success":
-    case "skipped":
-    case "canceled":
-    case "failed": {
-      return true
-    }
-  }
-}
-
 const getAliveTaskGitlabContext = (
   ctx: Context,
   pipeline: TaskGitlabPipeline,

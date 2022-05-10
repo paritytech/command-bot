@@ -69,15 +69,6 @@ export const displayError = (value: unknown) => {
   return errorMessage
 }
 
-export const escapeHtml = (str: string) => {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;")
-}
-
 let lastIncrementalId = 0
 export const getNextUniqueIncrementalId = () => {
   const nextIncrementalId = ++lastIncrementalId

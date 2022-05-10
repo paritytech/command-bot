@@ -22,17 +22,16 @@ import {
 import { Context, PullRequestError } from "./types"
 import { displayError, getLines } from "./utils"
 
-export const botPullRequestCommentMention = "/cmd"
-
 type ParsedBotCommand = {
   jobTags: string[]
   command: string
   subCommand: "queue" | "cancel"
   variables: Record<string, string>
 }
-export const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
+const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
   let commandLine = rawCommandLine.trim()
 
+  const botPullRequestCommentMention = "/cmd"
   if (!commandLine.startsWith(botPullRequestCommentMention)) {
     return
   }
@@ -117,7 +116,7 @@ export const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
       )
       if ((jobTags?.length ?? 0) === 0) {
         return new Error(
-          `No job tags were parsed from the command line ${rawCommandLine}`,
+          `No job tags were parsed from the command line "${rawCommandLine}"`,
         )
       }
 
