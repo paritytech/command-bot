@@ -64,17 +64,19 @@ export const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
 
   switch (subCommand) {
     case "queue": {
-      const startOfArgs = " $ "
-      const indexOfArgsStart = commandLine.indexOf(startOfArgs)
-      if (indexOfArgsStart === -1) {
-        return new Error(`Could not find start of arguments ("${startOfArgs}")`)
+      const commandStartSymbol = " $ "
+      const indexOfCommandStart = commandLine.indexOf(commandStartSymbol)
+      if (indexOfCommandStart === -1) {
+        return new Error(
+          `Could not find start of command ("${commandStartSymbol}")`,
+        )
       }
 
       const commandLinePart = commandLine.slice(
-        indexOfArgsStart + startOfArgs.length,
+        indexOfCommandStart + commandStartSymbol.length,
       )
 
-      const botOptionsLinePart = commandLine.slice(0, indexOfArgsStart)
+      const botOptionsLinePart = commandLine.slice(0, indexOfCommandStart)
       const botOptionsTokens = botOptionsLinePart.split(" ").filter((value) => {
         botOptionsLinePart
         return !!value
