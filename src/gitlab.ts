@@ -150,7 +150,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
       .length(1)
       .required(),
   )
-  logger.info(job, `Created job for task ${task.id}`)
+  logger.info(job, `Fetched job for task ${task.id}`)
 
   return getAliveTaskGitlabContext(ctx, {
     id: pipeline.id,
