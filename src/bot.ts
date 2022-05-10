@@ -238,6 +238,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
     }
 
     for (const parsedCommand of commands) {
+      logger.info(parsedCommand, "Processing parsed command")
       switch (parsedCommand.subCommand) {
         case "queue": {
           const installationId = installation?.id
@@ -334,7 +335,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           break
         }
         case "cancel": {
-          const cancelledTasks: { id: string; commentId?: number }[] = []
+          const cancelledTasks: PullRequestTask[] = []
 
           for (const { task } of await getSortedTasks(ctx)) {
             if (task.tag !== "PullRequestTask") {
@@ -362,12 +363,12 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           }
 
           for (const cancelledTask of cancelledTasks) {
-            if (cancelledTask.commentId === undefined) {
+            if (cancelledTask.comment.id === undefined) {
               continue
             }
             await updateComment(ctx, octokit, {
               ...commentParams,
-              comment_id: cancelledTask.commentId,
+              comment_id: cancelledTask.comment.id,
               body: `@${requester} command was cancelled`.trim(),
             })
           }
