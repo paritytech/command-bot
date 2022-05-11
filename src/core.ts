@@ -40,7 +40,7 @@ export const commandsConfiguration: {
   },
   "bench-bot": {
     gitlab: { job: { tags: ["weights"] } },
-    commandStart: ["$PIPELINE_SCRIPTS_DIR/bench-bot.sh"],
+    commandStart: ['"$PIPELINE_SCRIPTS_DIR/bench-bot.sh"'],
   },
 }
 
