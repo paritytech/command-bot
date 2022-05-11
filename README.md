@@ -59,7 +59,7 @@ In `[bot-args]` you should provide the following options
 
 ### Example
 
-`/cmd queue -c bench-bot -v RUST_LOG=debug $ runtime westend-dev pallet_balances`
+`/cmd queue -v RUST_LOG=debug -c bench-bot $ runtime westend-dev pallet_balances`
 
 ## Cancel <a name="pull-request-command-cancel"></a>
 
