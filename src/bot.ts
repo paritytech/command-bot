@@ -350,7 +350,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
             queuedDate: serializeTaskQueuedDate(queuedDate),
             gitlab: {
               job: {
-                tags: parsedCommand.configuration.gitlab.job.tags,
+                ...parsedCommand.configuration.gitlab.job,
                 image: gitlab.jobImage,
                 variables: parsedCommand.variables,
               },
