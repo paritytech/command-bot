@@ -30,8 +30,7 @@ export const commandsConfiguration: {
       "--release",
       /*
         "--quiet" should be kept so that the output doesn't get polluted
-        with a bunch of compilation stuff; bear in mind the output is posted
-        on Github comments which have limited character count
+        with a bunch of compilation stuff
       */
       "--quiet",
       "--features=try-runtime",
