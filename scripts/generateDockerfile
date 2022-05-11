@@ -2,13 +2,8 @@
 
 set -u
 
-RUSTUP_HOME=/usr/local/rustup
-CARGO_HOME=/usr/local/cargo
 PRE_COMMIT_BUILD_DEPS="gcc python3-dev libc-dev python3-pip"
-RUST_BUILD_DEPS="curl ca-certificates"
 ROCKSDB_BUILD_DEPS="build-essential python3"
-# https://github.com/paritytech/substrate/search?q=x86_64-unknown-linux-gnu
-SUBSTRATE_HOST=x86_64-unknown-linux-gnu
 APT_INSTALL="apt install --assume-yes --quiet --no-install-recommends"
 APP_DIR="/app"
 NODE_USER="node"
