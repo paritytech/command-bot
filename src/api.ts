@@ -6,6 +6,8 @@ import LevelErrors from "level-errors"
 import path from "path"
 import { Server } from "probot"
 
+import { commandsConfiguration } from "./core"
+import { validateSingleShellCommand } from "./shell"
 import {
   ApiTask,
   cancelTask,
@@ -52,7 +54,7 @@ const errorResponse = <T>(
 const jsonBodyParserMiddleware = bodyParser.json()
 
 export const setupApi = (ctx: Context, server: Server) => {
-  const { accessDb, matrix, repositoryCloneDirectory, logger } = ctx
+  const { accessDb, matrix, repositoryCloneDirectory, logger, gitlab } = ctx
 
   const apiError = (res: Response, next: NextFunction, error: unknown) => {
     const msg = "Failed to handle errors in API endpoint"
@@ -131,11 +133,13 @@ export const setupApi = (ctx: Context, server: Server) => {
 
     const validation = Joi.object()
       .keys({
-        command: Joi.string().required(),
-        job: Joi.object().keys({
-          tags: Joi.array().items(Joi.string()).required(),
-          image: Joi.string().required(),
-        }),
+        configuration: Joi.string().required(),
+        args: Joi.array().items(Joi.string()).required(),
+        variables: Joi.object().pattern(/.*/, [
+          Joi.string(),
+          Joi.number(),
+          Joi.boolean(),
+        ]),
         gitRef: Joi.object().keys({
           contributor: Joi.string().required(),
           owner: Joi.string().required(),
@@ -148,10 +152,41 @@ export const setupApi = (ctx: Context, server: Server) => {
       return errorResponse(res, next, 422, validation.error)
     }
 
-    type Payload = Pick<ApiTask, "gitRef" | "command"> & {
-      job: ApiTask["gitlab"]["job"]
+    const {
+      configuration: configurationName,
+      gitRef,
+      args,
+      variables,
+    } = req.body as Pick<ApiTask, "gitRef"> & {
+      configuration: string
+      args: string[]
+      variables: Record<string, number | boolean | string>
     }
-    const { command, job, gitRef } = req.body as Payload
+
+    const configuration =
+      configurationName in commandsConfiguration
+        ? commandsConfiguration[
+            configurationName as keyof typeof commandsConfiguration
+          ]
+        : undefined
+    if (!configuration) {
+      return errorResponse(
+        res,
+        next,
+        422,
+        `Could not find matching configuration for ${configurationName}; available ones are ${Object.keys(
+          commandsConfiguration,
+        ).join(", ")}.`,
+      )
+    }
+
+    const command = await validateSingleShellCommand(
+      ctx,
+      [...configuration.commandStart, ...args].join(" "),
+    )
+    if (command instanceof Error) {
+      return errorResponse(res, next, 422, command.message)
+    }
 
     const taskId = getNextTaskId()
     const queuedDate = new Date()
@@ -168,7 +203,10 @@ export const setupApi = (ctx: Context, server: Server) => {
       queuedDate: serializeTaskQueuedDate(queuedDate),
       requester: matrixRoom,
       command,
-      gitlab: { job, pipeline: null },
+      gitlab: {
+        job: { ...configuration.gitlab.job, variables, image: gitlab.jobImage },
+        pipeline: null,
+      },
     }
 
     const updateProgress = getSendTaskMatrixResult(matrix, logger, task)

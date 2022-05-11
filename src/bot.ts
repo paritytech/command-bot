@@ -3,7 +3,11 @@ import { IssueCommentCreatedEvent } from "@octokit/webhooks-types/schema"
 import path from "path"
 import { Probot } from "probot"
 
-import { isRequesterAllowed } from "./core"
+import {
+  CommandConfiguration,
+  commandsConfiguration,
+  isRequesterAllowed,
+} from "./core"
 import { getSortedTasks } from "./db"
 import {
   createComment,
@@ -12,6 +16,7 @@ import {
   getPostPullRequestResult,
   updateComment,
 } from "./github"
+import { validateSingleShellCommand } from "./shell"
 import {
   cancelTask,
   getNextTaskId,
@@ -24,16 +29,23 @@ import { displayError, getLines } from "./utils"
 
 export const botPullRequestCommentMention = "/cmd"
 export const botPullRequestCommentSubcommands: {
-  [K in "queue" | "cancel"]: K
+  [Subcommand in "queue" | "cancel"]: Subcommand
 } = { queue: "queue", cancel: "cancel" }
 
-type ParsedBotCommand = {
-  jobTags: string[]
-  command: string
-  subCommand: keyof typeof botPullRequestCommentSubcommands
-  variables: Record<string, string>
-}
-const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
+type ParsedBotCommand =
+  | {
+      subcommand: "queue"
+      configuration: CommandConfiguration
+      variables: Record<string, string>
+      command: string
+    }
+  | {
+      subcommand: "cancel"
+    }
+const parsePullRequestBotCommandLine = async (
+  ctx: Context,
+  rawCommandLine: string,
+) => {
   let commandLine = rawCommandLine.trim()
 
   // Add trailing whitespace so that /cmd can be differentiated from /cmd-[?]
@@ -43,7 +55,7 @@ const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
 
   commandLine = commandLine.slice(botPullRequestCommentMention.length).trim()
 
-  const subCommand = (() => {
+  const subcommand = (() => {
     const nextToken = /^\w+/.exec(commandLine)?.[0]
     if (!nextToken) {
       return new Error(`Must provide a subcommand in line ${rawCommandLine}.`)
@@ -60,13 +72,13 @@ const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
       }
     }
   })()
-  if (subCommand instanceof Error) {
-    return subCommand
+  if (subcommand instanceof Error) {
+    return subcommand
   }
 
-  commandLine = commandLine.slice(subCommand.length)
+  commandLine = commandLine.slice(subcommand.length)
 
-  switch (subCommand) {
+  switch (subcommand) {
     case "queue": {
       const commandStartSymbol = " $ "
       const indexOfCommandStart = commandLine.indexOf(commandStartSymbol)
@@ -116,12 +128,26 @@ const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
         )
       }
 
-      const jobTags = (options.get("-t") ?? []).concat(
-        options.get("--tag") ?? [],
+      const configurationValues = (options.get("-c") ?? []).concat(
+        options.get("--configuration") ?? [],
       )
-      if ((jobTags?.length ?? 0) === 0) {
+      if (configurationValues.length !== 1) {
         return new Error(
-          `No job tags were parsed from the command line "${rawCommandLine}"`,
+          `Received more than one configuration in "${rawCommandLine}",`,
+        )
+      }
+      const configurationName = configurationValues[0]
+      const configuration =
+        configurationName in commandsConfiguration
+          ? commandsConfiguration[
+              configurationName as keyof typeof commandsConfiguration
+            ]
+          : undefined
+      if (!configuration) {
+        return new Error(
+          `Could not find matching configuration ${configurationName}; available ones are ${Object.keys(
+            commandsConfiguration,
+          ).join(", ")}.`,
         )
       }
 
@@ -142,10 +168,18 @@ const parsePullRequestBotCommandLine = (rawCommandLine: string) => {
         )
       }
 
-      return { jobTags, command: commandLinePart.trim(), subCommand, variables }
+      const command = await validateSingleShellCommand(
+        ctx,
+        [...configuration.commandStart, commandLinePart].join(" "),
+      )
+      if (command instanceof Error) {
+        return command
+      }
+
+      return { subcommand, configuration, variables, command }
     }
     default: {
-      return { jobTags: [], command: "", subCommand, variables: {} }
+      return { subcommand }
     }
   }
 }
@@ -219,7 +253,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
   try {
     const commands: ParsedBotCommand[] = []
     for (const line of getLines(comment.body)) {
-      const parsedCommand = parsePullRequestBotCommandLine(line)
+      const parsedCommand = await parsePullRequestBotCommandLine(ctx, line)
 
       if (parsedCommand === undefined) {
         continue
@@ -244,7 +278,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
 
     for (const parsedCommand of commands) {
       logger.info(parsedCommand, "Processing parsed command")
-      switch (parsedCommand.subCommand) {
+      switch (parsedCommand.subcommand) {
         case "queue": {
           const installationId = installation?.id
           if (!installationId) {
@@ -316,8 +350,8 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
             queuedDate: serializeTaskQueuedDate(queuedDate),
             gitlab: {
               job: {
-                tags: parsedCommand.jobTags,
-                image: gitlab.defaultJobImage,
+                tags: parsedCommand.configuration.gitlab.job.tags,
+                image: gitlab.jobImage,
                 variables: parsedCommand.variables,
               },
               pipeline: null,
@@ -406,7 +440,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           break
         }
         default: {
-          const exhaustivenessCheck: never = parsedCommand.subCommand
+          const exhaustivenessCheck: never = parsedCommand
           // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           return getError(`Invalid sub-command: ${exhaustivenessCheck}`)
         }

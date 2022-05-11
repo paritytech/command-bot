@@ -3,6 +3,43 @@ import { CommandRunner } from "./shell"
 import { Task } from "./task"
 import { Context } from "./types"
 
+export type CommandConfiguration = {
+  gitlab: {
+    job: {
+      tags: string[]
+    }
+  }
+  commandStart: string[]
+}
+export const commandsConfiguration: {
+  [K in "try-runtime" | "bench-bot"]: CommandConfiguration
+} = {
+  "try-runtime": {
+    gitlab: { job: { tags: ["linux-docker"] } },
+    commandStart: [
+      "cargo",
+      "run",
+      /*
+        Requirement: always run the command in release mode.
+        See https://github.com/paritytech/try-runtime-bot/issues/26#issue-1049555966
+      */
+      "--release",
+      /*
+        "--quiet" should be kept so that the output doesn't get polluted
+        with a bunch of compilation stuff; bear in mind the output is posted
+        on Github comments which have limited character count
+      */
+      "--quiet",
+      "--features=try-runtime",
+      "try-runtime",
+    ],
+  },
+  "bench-bot": {
+    gitlab: { job: { tags: ["weights"] } },
+    commandStart: ["$PIPELINE_SCRIPTS_DIR/bench-bot.sh"],
+  },
+}
+
 export const isRequesterAllowed = async (
   ctx: Context,
   octokit: ExtendedOctokit,

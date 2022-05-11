@@ -29,7 +29,7 @@ export type Context = {
     accessToken: string
     domain: string
     pushNamespace: string
-    defaultJobImage: string
+    jobImage: string
     accessTokenUsername: string
   }
   pipelineScripts:

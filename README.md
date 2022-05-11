@@ -41,18 +41,16 @@ command-bot executes arbitrary commands on GitLab CI from
 
 Comment in a pull request:
 
-`/cmd queue [bot-args] $ [command]`
+`/cmd queue [bot-args] $ [args]`
 
-In `[command]` you should provide a shell command to be run in the CI job. The
-`$ARTIFACTS_DIR` environment variable is available in case the command needs to
-generate some artifact.
+In `[bot-args]` you should provide the following options
 
-In `[bot-args]` you should provide the following arguments
-
-- `-t` / `--tag`: defines
-  [GitLab CI runner tags](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run)
-  which will be attached to the CI job for running the command. You can specify
-  this option multiple times for multiple tags.
+- `-c` / `--configuration`: select one of the following configurations
+  - `bench-bot`: runs
+    [`bench-bot`](https://github.com/paritytech/pipeline-scripts/blob/master/bench-bot.sh)
+    `[args]`
+  - `try-runtime`: runs
+    `cargo run --release --quiet --features=try-runtime try-runtime [args]`
 
 - `-v` / `--var`: defines environment variables for the CI job which runs the
   command. You can specify this option multiple times for multiple tags. Note
@@ -61,7 +59,7 @@ In `[bot-args]` you should provide the following arguments
 
 ### Example
 
-`/cmd queue -t linux-docker $ RUST_LOG=debug cargo run --quiet --features=foo bar`
+`/cmd queue -c bench-bot -v RUST_LOG=debug $ runtime westend-dev pallet_balances`
 
 ## Cancel <a name="pull-request-command-cancel"></a>
 

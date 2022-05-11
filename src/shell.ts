@@ -2,6 +2,7 @@ import { ChildProcess, spawn } from "child_process"
 import { randomUUID } from "crypto"
 import fs from "fs"
 import path from "path"
+import { Readable as ReadableStream } from "stream"
 import { promisify } from "util"
 
 import { Logger } from "./logger"
@@ -66,10 +67,12 @@ export class CommandRunner {
       allowedErrorCodes,
       testAllowedErrorMessage,
       shouldCaptureAllStreams,
+      stdinInput,
     }: {
       allowedErrorCodes?: number[]
       testAllowedErrorMessage?: (stderr: string) => boolean
       shouldCaptureAllStreams?: boolean
+      stdinInput?: string
     } = {},
   ) {
     const { logger } = this
@@ -83,6 +86,13 @@ export class CommandRunner {
       const child = spawn(execPath, args, { cwd, stdio: "pipe" })
       if (onChild) {
         onChild(child)
+      }
+
+      if (stdinInput) {
+        const stdinStream = new ReadableStream()
+        stdinStream.push(stdinInput)
+        stdinStream.push(null)
+        stdinStream.pipe(child.stdin)
       }
 
       const commandOutputBuffer: ["stdout" | "stderr", string][] = []
@@ -161,4 +171,32 @@ export class CommandRunner {
       })
     })
   }
+}
+
+export const validateSingleShellCommand = async (
+  ctx: Context,
+  command: string,
+) => {
+  const { logger } = ctx
+  const cmdRunner = new CommandRunner(ctx, {
+    itemsToRedact: [],
+    shouldTrackProgress: false,
+  })
+  const commandAstText = await cmdRunner.run("shfmt", ["--tojson"], {
+    stdinInput: command,
+  })
+  if (commandAstText instanceof Error) {
+    return new Error(`Command AST could not be parsed for "${command}"`)
+  }
+  const commandAst = JSON.parse(commandAstText) as {
+    Stmts: { Cmd: { Type?: string } }[]
+  }
+  logger.info(commandAst.Stmts[0].Cmd, `Parsed AST for "${command}"`)
+  if (
+    commandAst.Stmts.length !== 1 ||
+    commandAst.Stmts[0].Cmd.Type !== "CallExpr"
+  ) {
+    return new Error(`Command "${command}" failed validation`)
+  }
+  return command
 }

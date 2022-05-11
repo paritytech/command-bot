@@ -188,7 +188,7 @@ const main = async () => {
   const gitlabAccessTokenUsername = envVar("GITLAB_ACCESS_TOKEN_USERNAME")
   const gitlabDomain = envVar("GITLAB_DOMAIN")
   const gitlabPushNamespace = envVar("GITLAB_PUSH_NAMESPACE")
-  const gitlabDefaultJobImage = envVar("GITLAB_DEFAULT_JOB_IMAGE")
+  const gitlabJobImage = envVar("GITLAB_JOB_IMAGE")
 
   const pipelineScripts = (() => {
     const pipelineScriptsRepository = process.env.PIPELINE_SCRIPTS_REPOSITORY
@@ -221,7 +221,7 @@ const main = async () => {
         accessTokenUsername: gitlabAccessTokenUsername,
         domain: gitlabDomain,
         pushNamespace: gitlabPushNamespace,
-        defaultJobImage: gitlabDefaultJobImage,
+        jobImage: gitlabJobImage,
       },
     })
   })

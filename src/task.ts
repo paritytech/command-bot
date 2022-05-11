@@ -48,7 +48,7 @@ type TaskBase<T> = {
     job: {
       tags: string[]
       image: string
-      variables: Record<string, string>
+      variables: Record<string, string | boolean | number>
     }
     pipeline: TaskGitlabPipeline | null
   }

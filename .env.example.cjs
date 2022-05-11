@@ -43,7 +43,7 @@ process.env.GITLAB_PUSH_NAMESPACE ??= "placeholder"
   The default image to be used on GitLab jobs for bot commands which don't
   specify a custom image
 */
-process.env.GITLAB_DEFAULT_JOB_IMAGE ??= "placeholder"
+process.env.GITLAB_JOB_IMAGE ??= "placeholder"
 
 /*
   GITLAB_ACCESS_TOKEN token needs the following scopes:

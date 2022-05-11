@@ -24,7 +24,8 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   */
   const headSha = await cmdRunner.run("git", ["rev-parse", "HEAD"])
 
-  const pipelineScriptsDir = ".git/.pipeline-scripts"
+  const artifactsFolderPath = ".git/.artifacts"
+
   const getPipelineScriptsCloneCommand = ({
     withRef,
   }: {
@@ -35,7 +36,6 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
     } "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"`
   }
 
-  const artifactsFolderPath = ".git/.command-bot-artifacts"
   await fsWriteFile(
     path.join(task.repoPath, ".gitlab-ci.yml"),
     yaml.stringify({
@@ -67,6 +67,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
           paths: [artifactsFolderPath],
         },
         variables: {
+          ...task.gitlab.job.variables,
           GH_CONTRIBUTOR: task.gitRef.contributor,
           GH_CONTRIBUTOR_REPO: task.gitRef.repo,
           GH_CONTRIBUTOR_BRANCH: task.gitRef.branch,
@@ -74,8 +75,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
           COMMIT_MESSAGE: task.command,
           PIPELINE_SCRIPTS_REPOSITORY: ctx.pipelineScripts?.repository,
           PIPELINE_SCRIPTS_REF: ctx.pipelineScripts?.ref,
-          PIPELINE_SCRIPTS_DIR: pipelineScriptsDir,
-          ...task.gitlab.job.variables,
+          PIPELINE_SCRIPTS_DIR: ".git/.scripts",
         },
       },
     }),
