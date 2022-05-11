@@ -371,7 +371,11 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
               await updateComment(ctx, octokit, {
                 ...commentParams,
                 comment_id: cancelledTask.comment.id,
-                body: `@${requester} command was cancelled`.trim(),
+                body: `@${requester} \`${cancelledTask.command}\`${
+                  cancelledTask.gitlab.pipeline === null
+                    ? ""
+                    : ` (${cancelledTask.gitlab.pipeline.jobWebUrl})`
+                } was cancelled in ${comment.html_url}`,
               })
             } catch (error) {
               logger.error(
