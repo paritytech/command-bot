@@ -3,6 +3,10 @@ import { CommandRunner } from "./shell"
 import { Task } from "./task"
 import { Context } from "./types"
 
+/*
+  TODO: Move command configurations to configuration repository or database so
+  that it can be updated dynamically, without redeploying the application
+*/
 export type CommandConfiguration = {
   gitlab: {
     job: {
