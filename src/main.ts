@@ -1,4 +1,5 @@
 import assert from "assert"
+import { readFile, writeFile } from "fs/promises"
 import http from "http"
 import path from "path"
 import { Logger as ProbotLogger, Probot, Server } from "probot"
@@ -7,7 +8,7 @@ import stoppable from "stoppable"
 
 import { Logger } from "./logger"
 import { setup } from "./setup"
-import { ensureDir, fsReadFile, fsWriteFile } from "./shell"
+import { ensureDir } from "./shell"
 import { envNumberVar, envVar } from "./utils"
 
 const main = async () => {
@@ -76,7 +77,7 @@ const main = async () => {
     ? await (async (appDbVersion) => {
         const currentDbVersion = await (async () => {
           try {
-            return (await fsReadFile(appDbVersionPath)).toString().trim()
+            return (await readFile(appDbVersionPath)).toString().trim()
           } catch (error) {
             if (
               /*
@@ -96,7 +97,7 @@ const main = async () => {
           }
         })()
         if (currentDbVersion !== appDbVersion) {
-          await fsWriteFile(appDbVersionPath, appDbVersion)
+          await writeFile(appDbVersionPath, appDbVersion)
           return true
         }
       })(process.env.TASK_DB_VERSION.trim())

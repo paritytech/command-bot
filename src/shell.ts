@@ -1,47 +1,25 @@
 import { ChildProcess, spawn } from "child_process"
 import { randomUUID } from "crypto"
-import fs from "fs"
+import { mkdir, rm } from "fs/promises"
 import path from "path"
 import { Readable as ReadableStream } from "stream"
-import { promisify } from "util"
 
 import { Logger } from "./logger"
 import { Context, ToString } from "./types"
 import { displayCommand, redact } from "./utils"
 
-export const fsReadFile = promisify(fs.readFile)
-export const fsWriteFile = promisify(fs.writeFile)
-const fsMkdir = promisify(fs.mkdir)
-const fsUnlink = promisify(fs.unlink)
-
 export const ensureDir = async (dir: string) => {
   // mkdir doesn't throw an error if the directory already exists
-  await fsMkdir(dir, { recursive: true })
+  await mkdir(dir, { recursive: true })
   return dir
 }
 
 export const initDatabaseDir = async (dir: string) => {
   dir = await ensureDir(dir)
-  const lockPath = path.join(dir, "LOCK")
-  try {
-    await fsUnlink(lockPath)
-  } catch (error) {
-    if (
-      /*
-      Test for the following error:
-        [Error: ENOENT: no such file or directory, unlink '/foo'] {
-          errno: -2,
-          code: 'ENOENT',
-          syscall: 'unlink',
-          path: '/foo'
-        }
-      */
-      !(error instanceof Error) ||
-      (error as { code?: string })?.code !== "ENOENT"
-    ) {
-      throw error
-    }
-  }
+  await rm(path.join(dir, "LOCK"), {
+    // ignore error if the file does not exist
+    force: true,
+  })
   return dir
 }
 

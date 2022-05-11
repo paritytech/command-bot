@@ -1,10 +1,11 @@
 import EventEmitter from "events"
+import { writeFile } from "fs/promises"
 import Joi from "joi"
 import fetch from "node-fetch"
 import path from "path"
 import yaml from "yaml"
 
-import { CommandRunner, fsWriteFile } from "./shell"
+import { CommandRunner } from "./shell"
 import { Task, taskExecutionTerminationEvent, TaskGitlabPipeline } from "./task"
 import { Context } from "./types"
 import { validatedFetch } from "./utils"
@@ -36,7 +37,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
     } "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"`
   }
 
-  await fsWriteFile(
+  await writeFile(
     path.join(task.repoPath, ".gitlab-ci.yml"),
     yaml.stringify({
       workflow: {
