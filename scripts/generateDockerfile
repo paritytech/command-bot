@@ -84,7 +84,7 @@ WORKDIR $APP_DIR
 RUN git config --global user.name command-bot && \
   git config --global user.email "<>"
 
-CMD . $CARGO_HOME/env && yarn start
+CMD yarn start
 EOF
     echo "$app"
     ;;
