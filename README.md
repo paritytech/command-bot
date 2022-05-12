@@ -84,7 +84,7 @@ by the OpsTooling team of Parity for Parity's deployments).
 Each Personal Token is tied to a Matrix Room ID where the command's outcome will
 be posted to after it finishes.
 
-```
+```sh
 curl \
   -H "X-Auth: $MASTER_TOKEN" \
   -H "Content-Type: application/json" \
@@ -99,7 +99,7 @@ curl \
 Use a [Personal Token](#api-create-token) for queueing a command through `POST
 /api/queue`:
 
-```
+```sh
 curl \
   -H "X-Auth: $token" \
   -H "Content-Type: application/json" \
@@ -122,17 +122,15 @@ curl \
 
 ## Cancel <a name="api-command-cancel"></a>
 
-`POST /api/queue` will return a `{ "handleId": string }` response which can be
-used for cancelling an ongoing command through `POST /api/cancel`.
+`POST /api/queue` will return a `{ task: { id: string } }` response. The
+`task.id` can used for cancelling an ongoing command through `DELETE
+/api/task/:task_id`.
 
-```
+```sh
 curl \
   -H "X-Auth: $token" \
   -H "Content-Type: application/json" \
-  -X POST http://command-bot/api/cancel \
-  -d '{
-    "handleId": "foo"
-  }'
+  -X DELETE http://command-bot/api/task/${TASK_ID}
 ```
 
 # GitHub App <a name="github-app"></a>
