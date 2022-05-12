@@ -213,3 +213,13 @@ export const validatedFetch = async <T>(
   }
   return validation.value as T
 }
+
+export const arrayify = (value: unknown) => {
+  if (value === undefined || value === null) {
+    return []
+  }
+  if (Array.isArray(value)) {
+    return value
+  }
+  return [value]
+}

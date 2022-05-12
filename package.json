@@ -25,7 +25,8 @@
     "probot": "12.2.2",
     "stoppable": "1.1.0",
     "ts-node": "^10.7.0",
-    "yaml": "^2.0.1"
+    "yaml": "^2.0.1",
+    "yargs": "^17.5.0"
   },
   "devDependencies": {
     "@octokit/auth-app": "3.6.1",
@@ -37,6 +38,7 @@
     "@types/rocksdb": "3.0.1",
     "@types/shelljs": "0.8.11",
     "@types/stoppable": "1.1.1",
+    "@types/yargs": "^17.0.10",
     "@typescript-eslint/eslint-plugin": "5.19.0",
     "@typescript-eslint/parser": "5.19.0",
     "eslint": "8.13.0",

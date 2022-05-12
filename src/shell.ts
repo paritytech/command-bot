@@ -174,7 +174,9 @@ export const validateSingleShellCommand = async (
     commandAst.Stmts.length !== 1 ||
     commandAst.Stmts[0].Cmd.Type !== "CallExpr"
   ) {
-    return new Error(`Command "${command}" failed validation`)
+    return new Error(
+      `Command "${command}" failed validation: the resulting command line should have a single command`,
+    )
   }
   return command
 }

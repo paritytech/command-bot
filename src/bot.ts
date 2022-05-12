@@ -2,6 +2,7 @@ import { EmitterWebhookEventName } from "@octokit/webhooks/dist-types/types"
 import { IssueCommentCreatedEvent } from "@octokit/webhooks-types/schema"
 import path from "path"
 import { Probot } from "probot"
+import yargs from "yargs"
 
 import {
   CommandConfiguration,
@@ -25,7 +26,7 @@ import {
   serializeTaskQueuedDate,
 } from "./task"
 import { Context, PullRequestError } from "./types"
-import { displayError, getLines } from "./utils"
+import { arrayify, displayError, getLines } from "./utils"
 
 export const botPullRequestCommentMention = "/cmd"
 export const botPullRequestCommentSubcommands: {
@@ -46,6 +47,8 @@ const parsePullRequestBotCommandLine = async (
   ctx: Context,
   rawCommandLine: string,
 ) => {
+  const { logger } = ctx
+
   let commandLine = rawCommandLine.trim()
 
   // Add trailing whitespace so that /cmd can be differentiated from /cmd-[?]
@@ -93,50 +96,24 @@ const parsePullRequestBotCommandLine = async (
       )
 
       const botOptionsLinePart = commandLine.slice(0, indexOfCommandStart)
-      const botOptionsTokens = botOptionsLinePart.split(" ").filter((value) => {
-        botOptionsLinePart
-        return !!value
-      })
+      const botArgs = await yargs(
+        botOptionsLinePart.split(" ").filter((value) => {
+          botOptionsLinePart
+          return !!value
+        }),
+      ).argv
+      logger.info({ botArgs, botOptionsLinePart }, "Parsed bot arguments")
 
-      let activeOption: string | undefined = undefined
-
-      const options: Map<string, string[]> = new Map()
-      const insertOption = (option: string, value: string) => {
-        options.set(option, [...(options.get(option) ?? []), value])
-      }
-
-      for (const tok of botOptionsTokens) {
-        if (activeOption) {
-          insertOption(activeOption, tok)
-          activeOption = undefined
-        } else if (tok[0] === "-") {
-          if (/* --foo=bar */ tok.includes("=")) {
-            const [option, ...value] = tok.split("=")
-            insertOption(option, value.join("="))
-          } /* --foo bar */ else {
-            activeOption = tok
-          }
-        } else {
-          return new Error(
-            `In line "${rawCommandLine}", expected command option but got ${tok}`,
-          )
-        }
-      }
-      if (activeOption) {
+      const configurationNameLongArg = "configuration"
+      const configurationNameShortArg = "c"
+      const configurationName =
+        botArgs[configurationNameLongArg] ?? botArgs[configurationNameShortArg]
+      if (typeof configurationName !== "string") {
         return new Error(
-          `In line "${rawCommandLine}", expected value for ${activeOption}`,
+          `Configuration ("-${configurationNameShortArg}" or "--${configurationNameLongArg}") should be specified exactly once`,
         )
       }
 
-      const configurationValues = (options.get("-c") ?? []).concat(
-        options.get("--configuration") ?? [],
-      )
-      if (configurationValues.length !== 1) {
-        return new Error(
-          `Received more than one configuration in "${rawCommandLine}",`,
-        )
-      }
-      const configurationName = configurationValues[0]
       const configuration =
         configurationName in commandsConfiguration
           ? commandsConfiguration[
@@ -152,20 +129,29 @@ const parsePullRequestBotCommandLine = async (
       }
 
       const variables: Record<string, string> = {}
-      const variablesArgs = (options.get("-v") ?? []).concat(
-        options.get("--var") ?? [],
-      )
-      const valueSeparator = "="
-      for (const tok of variablesArgs) {
-        const valueSeparatorIndex = tok.indexOf(valueSeparator)
-        if (valueSeparatorIndex === -1) {
-          return new Error(
-            `Variable token "${tok}" doesn't have the value separator '${valueSeparator}'`,
-          )
+      const variableValueSeparator = "="
+      for (const tok of arrayify(botArgs.var).concat(arrayify(botArgs.v))) {
+        switch (typeof tok) {
+          case "string": {
+            const valueSeparatorIndex = tok.indexOf(variableValueSeparator)
+            if (valueSeparatorIndex === -1) {
+              return new Error(
+                `Variable token "${tok}" doesn't have a value separator ('${variableValueSeparator}')`,
+              )
+            }
+            variables[tok.slice(0, valueSeparatorIndex)] = tok.slice(
+              valueSeparatorIndex + 1,
+            )
+            break
+          }
+          default: {
+            return new Error(
+              `Variable token "${String(
+                tok,
+              )}" should be a string of the form NAME=VALUE`,
+            )
+          }
         }
-        variables[tok.slice(0, valueSeparatorIndex)] = tok.slice(
-          valueSeparatorIndex + 1,
-        )
       }
 
       const command = await validateSingleShellCommand(
