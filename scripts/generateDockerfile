@@ -4,6 +4,7 @@ set -u
 
 PRE_COMMIT_BUILD_DEPS="gcc python3-dev libc-dev python3-pip"
 ROCKSDB_BUILD_DEPS="build-essential python3"
+SHFMT_BUILD_DEPS="wget ca-certificates"
 APT_INSTALL="apt install --assume-yes --quiet --no-install-recommends"
 APP_DIR="/app"
 NODE_USER="node"
@@ -54,7 +55,7 @@ RUN if [ ! "\$REPO" ]; then exit 1; fi
 $common
 
 # for downloading shfmt
-RUN $APT_INSTALL wget ca-certificates && apt-mark auto wget ca-certificates
+RUN $APT_INSTALL $SHFMT_BUILD_DEPS && apt-mark auto $SHFMT_BUILD_DEPS
 
 # shfmt is needed for shell command parsing
 RUN wget https://github.com/mvdan/sh/releases/download/v3.5.0/shfmt_v3.5.0_linux_amd64 -O /bin/shfmt && \
@@ -72,6 +73,7 @@ RUN mkdir $APP_DIR && \
   mv * $APP_DIR && \
   chown -R $NODE_USER:$NODE_USER $APP_DIR
 
+# clean up all build packages which are not needed to run the application
 RUN apt-get autoremove -y
 
 WORKDIR $APP_DIR
