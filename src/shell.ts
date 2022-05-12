@@ -30,7 +30,7 @@ export class CommandRunner {
     ctx: Context,
     private configuration: {
       itemsToRedact: string[]
-      shouldTrackProgress: boolean
+      shouldTrackProgress?: boolean
       cwd?: string
       onChild?: (child: ChildProcess) => void
     },
@@ -156,10 +156,7 @@ export const validateSingleShellCommand = async (
   command: string,
 ) => {
   const { logger } = ctx
-  const cmdRunner = new CommandRunner(ctx, {
-    itemsToRedact: [],
-    shouldTrackProgress: false,
-  })
+  const cmdRunner = new CommandRunner(ctx, { itemsToRedact: [] })
   const commandAstText = await cmdRunner.run("shfmt", ["--tojson"], {
     stdinInput: command,
   })

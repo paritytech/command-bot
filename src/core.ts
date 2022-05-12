@@ -72,16 +72,12 @@ export const prepareBranch = async function* (
 ) {
   const { token, url } = await getFetchEndpoint()
 
-  const cmdRunner = new CommandRunner(ctx, {
-    itemsToRedact: [token],
-    shouldTrackProgress: false,
-  })
+  const cmdRunner = new CommandRunner(ctx, { itemsToRedact: [token] })
 
   yield cmdRunner.run("mkdir", ["-p", repoPath])
 
   const repoCmdRunner = new CommandRunner(ctx, {
     itemsToRedact: [token],
-    shouldTrackProgress: false,
     cwd: repoPath,
   })
 
