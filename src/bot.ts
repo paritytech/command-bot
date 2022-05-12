@@ -42,6 +42,7 @@ type ParsedBotCommand =
     }
   | {
       subcommand: "cancel"
+      taskId: string
     }
 const parsePullRequestBotCommandLine = async (
   ctx: Context,
@@ -164,8 +165,13 @@ const parsePullRequestBotCommandLine = async (
 
       return { subcommand, configuration, variables, command }
     }
+    case "cancel": {
+      return { subcommand, taskId: commandLine.trim() }
+    }
     default: {
-      return { subcommand }
+      const exhaustivenessCheck: never = subcommand
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+      throw new Error(`Subcommand is not handled: ${exhaustivenessCheck}`)
     }
   }
 }
@@ -360,6 +366,8 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           break
         }
         case "cancel": {
+          const { taskId } = parsedCommand
+
           const cancelledTasks: PullRequestTask[] = []
           const failedToCancelTasks: PullRequestTask[] = []
 
@@ -367,19 +375,27 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
             if (task.tag !== "PullRequestTask") {
               continue
             }
-            const { gitRef } = task
-            if (
-              gitRef.owner === pr.owner &&
-              gitRef.repo === pr.repo &&
-              gitRef.prNumber === pr.number
-            ) {
-              try {
-                await cancelTask(ctx, task)
-                cancelledTasks.push(task)
-              } catch (error) {
-                failedToCancelTasks.push(task)
-                logger.error(error, `Failed to cancel task ${task.id}`)
+
+            if (taskId) {
+              if (task.id !== taskId) {
+                continue
               }
+            } else {
+              if (
+                task.gitRef.owner !== pr.owner ||
+                task.gitRef.repo !== pr.repo ||
+                task.gitRef.prNumber !== pr.number
+              ) {
+                continue
+              }
+            }
+
+            try {
+              await cancelTask(ctx, task)
+              cancelledTasks.push(task)
+            } catch (error) {
+              failedToCancelTasks.push(task)
+              logger.error(error, `Failed to cancel task ${task.id}`)
             }
           }
 
@@ -420,7 +436,11 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           }
 
           if (cancelledTasks.length === 0) {
-            return getError("No task is being executed for this pull request")
+            if (taskId) {
+              return getError(`No task matching ${taskId} was found`)
+            } else {
+              return getError("No task is being executed for this pull request")
+            }
           }
 
           break
