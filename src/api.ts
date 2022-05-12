@@ -160,7 +160,7 @@ export const setupApi = (ctx: Context, server: Server) => {
     } = req.body as Pick<ApiTask, "gitRef"> & {
       configuration: string
       args: string[]
-      variables: Record<string, number | boolean | string>
+      variables?: Record<string, number | boolean | string>
     }
 
     const configuration =
@@ -204,7 +204,11 @@ export const setupApi = (ctx: Context, server: Server) => {
       requester: matrixRoom,
       command,
       gitlab: {
-        job: { ...configuration.gitlab.job, variables, image: gitlab.jobImage },
+        job: {
+          ...configuration.gitlab.job,
+          variables: variables ?? {},
+          image: gitlab.jobImage,
+        },
         pipeline: null,
       },
     }
