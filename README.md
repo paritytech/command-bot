@@ -50,7 +50,10 @@ In `[bot-args]` you should provide the following options
     [`bench-bot`](https://github.com/paritytech/pipeline-scripts/blob/master/bench-bot.sh)
     `[args]`
   - `try-runtime`: runs
-    `cargo run --release --quiet --features=try-runtime try-runtime [args]`
+    `cargo run --release --quiet --features=try-runtime try-runtime [args]`. Note
+    that you can use
+    [the dedicated internal RPC nodes](https://github.com/paritytech/devops/wiki/Internal-RPC-nodes)
+    in the arguments of this command.
 
 - `-v` / `--var` (optional): defines environment variables for the CI job which
   runs the command. You can specify this option multiple times for multiple
