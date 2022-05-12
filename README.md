@@ -53,9 +53,8 @@ In `[bot-args]` you should provide the following options
     `cargo run --release --quiet --features=try-runtime try-runtime [args]`
 
 - `-v` / `--var` (optional): defines environment variables for the CI job which
-  runs the command. You can specify this option multiple times for multiple tags.
-  Note that you can also specify environment variables by putting them after
-  ` $ `, as showcased in the example below.
+  runs the command. You can specify this option multiple times for multiple
+  variables.
 
 ### Example
 
