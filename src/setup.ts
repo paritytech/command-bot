@@ -58,9 +58,12 @@ export const setup = async (
 
   const taskDbPath = await initDatabaseDir(path.join(dataPath, "db"))
   const taskDb = new TaskDB(getDb(taskDbPath))
+  const tasks = await getSortedTasks({ taskDb, logger })
+  logger.info(tasks, "Tasks found at the start of the application")
+
   if (shouldClearTaskDatabaseOnStart) {
     logger.info("Clearing the task database during setup")
-    for (const { id } of await getSortedTasks({ taskDb, logger })) {
+    for (const { id } of tasks) {
       await taskDb.db.del(id)
     }
   }
