@@ -2,13 +2,14 @@ import { EmitterWebhookEventName } from "@octokit/webhooks/dist-types/types"
 import { IssueCommentCreatedEvent } from "@octokit/webhooks-types/schema"
 import path from "path"
 import { Probot } from "probot"
+import yargs from "yargs"
 
 import {
-  defaultParseTryRuntimeBotCommandOptions,
+  CommandConfiguration,
+  commandsConfiguration,
   isRequesterAllowed,
-  parsePullRequestBotCommand,
-  parsePullRequestBotCommandArgs,
 } from "./core"
+import { getSortedTasks } from "./db"
 import {
   createComment,
   ExtendedOctokit,
@@ -16,17 +17,164 @@ import {
   getPostPullRequestResult,
   updateComment,
 } from "./github"
+import { validateSingleShellCommand } from "./shell"
 import {
+  cancelTask,
   getNextTaskId,
   PullRequestTask,
-  queuedTasks,
   queueTask,
   serializeTaskQueuedDate,
 } from "./task"
 import { Context, PullRequestError } from "./types"
-import { displayCommand, displayError, getLines } from "./utils"
+import { arrayify, displayError, getLines } from "./utils"
 
-export const botPullRequestCommentMention = "/try-runtime"
+export const botPullRequestCommentMention = "/cmd"
+export const botPullRequestCommentSubcommands: {
+  [Subcommand in "queue" | "cancel"]: Subcommand
+} = { queue: "queue", cancel: "cancel" }
+
+type ParsedBotCommand =
+  | {
+      subcommand: "queue"
+      configuration: CommandConfiguration
+      variables: Record<string, string>
+      command: string
+    }
+  | {
+      subcommand: "cancel"
+      taskId: string
+    }
+const parsePullRequestBotCommandLine = async (
+  ctx: Context,
+  rawCommandLine: string,
+) => {
+  const { logger } = ctx
+
+  let commandLine = rawCommandLine.trim()
+
+  // Add trailing whitespace so that /cmd can be differentiated from /cmd-[?]
+  if (!commandLine.startsWith(`${botPullRequestCommentMention} `)) {
+    return
+  }
+
+  commandLine = commandLine.slice(botPullRequestCommentMention.length).trim()
+
+  const subcommand = (() => {
+    const nextToken = /^\w+/.exec(commandLine)?.[0]
+    if (!nextToken) {
+      return new Error(`Must provide a subcommand in line ${rawCommandLine}.`)
+    }
+    switch (nextToken) {
+      case "cancel":
+      case "queue": {
+        return nextToken
+      }
+      default: {
+        return new Error(
+          `Invalid subcommand "${nextToken}" in line ${rawCommandLine}.`,
+        )
+      }
+    }
+  })()
+  if (subcommand instanceof Error) {
+    return subcommand
+  }
+
+  commandLine = commandLine.slice(subcommand.length)
+
+  switch (subcommand) {
+    case "queue": {
+      const commandStartSymbol = " $ "
+      const indexOfCommandStart = commandLine.indexOf(commandStartSymbol)
+      if (indexOfCommandStart === -1) {
+        return new Error(
+          `Could not find start of command ("${commandStartSymbol}")`,
+        )
+      }
+
+      const commandLinePart = commandLine.slice(
+        indexOfCommandStart + commandStartSymbol.length,
+      )
+
+      const botOptionsLinePart = commandLine.slice(0, indexOfCommandStart)
+      const botArgs = await yargs(
+        botOptionsLinePart.split(" ").filter((value) => {
+          botOptionsLinePart
+          return !!value
+        }),
+      ).argv
+      logger.info({ botArgs, botOptionsLinePart }, "Parsed bot arguments")
+
+      const configurationNameLongArg = "configuration"
+      const configurationNameShortArg = "c"
+      const configurationName =
+        botArgs[configurationNameLongArg] ?? botArgs[configurationNameShortArg]
+      if (typeof configurationName !== "string") {
+        return new Error(
+          `Configuration ("-${configurationNameShortArg}" or "--${configurationNameLongArg}") should be specified exactly once`,
+        )
+      }
+
+      const configuration =
+        configurationName in commandsConfiguration
+          ? commandsConfiguration[
+              configurationName as keyof typeof commandsConfiguration
+            ]
+          : undefined
+      if (!configuration) {
+        return new Error(
+          `Could not find matching configuration ${configurationName}; available ones are ${Object.keys(
+            commandsConfiguration,
+          ).join(", ")}.`,
+        )
+      }
+
+      const variables: Record<string, string> = {}
+      const variableValueSeparator = "="
+      for (const tok of arrayify(botArgs.var).concat(arrayify(botArgs.v))) {
+        switch (typeof tok) {
+          case "string": {
+            const valueSeparatorIndex = tok.indexOf(variableValueSeparator)
+            if (valueSeparatorIndex === -1) {
+              return new Error(
+                `Variable token "${tok}" doesn't have a value separator ('${variableValueSeparator}')`,
+              )
+            }
+            variables[tok.slice(0, valueSeparatorIndex)] = tok.slice(
+              valueSeparatorIndex + 1,
+            )
+            break
+          }
+          default: {
+            return new Error(
+              `Variable token "${String(
+                tok,
+              )}" should be a string of the form NAME=VALUE`,
+            )
+          }
+        }
+      }
+
+      const command = await validateSingleShellCommand(
+        ctx,
+        [...configuration.commandStart, commandLinePart].join(" "),
+      )
+      if (command instanceof Error) {
+        return command
+      }
+
+      return { subcommand, configuration, variables, command }
+    }
+    case "cancel": {
+      return { subcommand, taskId: commandLine.trim() }
+    }
+    default: {
+      const exhaustivenessCheck: never = subcommand
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+      throw new Error(`Subcommand is not handled: ${exhaustivenessCheck}`)
+    }
+  }
+}
 
 type WebhookEvents = Extract<EmitterWebhookEventName, "issue_comment.created">
 
@@ -44,7 +192,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
   octokit,
   payload,
 ) => {
-  const { logger, repositoryCloneDirectory, cargoTargetDir } = ctx
+  const { logger, repositoryCloneDirectory, gitlab } = ctx
 
   const { issue, comment, repository, installation } = payload
 
@@ -89,31 +237,29 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
     repo: pr.repo,
     issue_number: pr.number,
   }
-  let commentId: number | undefined = undefined
 
-  const getError = (body: string) => {
-    return new PullRequestError(pr, { body, requester, commentId })
+  let getError = (body: string) => {
+    return new PullRequestError(pr, { body, requester })
   }
 
   try {
-    const commandLines = getLines(comment.body)
-      .map((line) => {
-        return parsePullRequestBotCommand(
-          line,
-          defaultParseTryRuntimeBotCommandOptions,
-        )
-      })
-      .filter((line) => {
-        return !!line
-      })
+    const commands: ParsedBotCommand[] = []
+    for (const line of getLines(comment.body)) {
+      const parsedCommand = await parsePullRequestBotCommandLine(ctx, line)
 
-    const command = commandLines[0]
-    if (command === undefined) {
-      return
+      if (parsedCommand === undefined) {
+        continue
+      }
+
+      if (parsedCommand instanceof Error) {
+        return getError(parsedCommand.message)
+      }
+
+      commands.push(parsedCommand)
     }
 
-    if (commandLines.length > 1) {
-      return getError("Only one try-runtime-bot command is allowed per comment")
+    if (commands.length === 0) {
+      return
     }
 
     if (!(await isRequesterAllowed(ctx, octokit, requester))) {
@@ -122,166 +268,191 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
       )
     }
 
-    const [subCommand, ...otherArgs] = command.args
-
-    switch (subCommand) {
-      case "queue": {
-        const installationId = installation?.id
-        if (!installationId) {
-          return getError(
-            "Github Installation ID was not found in webhook payload",
-          )
-        }
-
-        for (const { task } of queuedTasks.values()) {
-          if (task.tag !== "PullRequestTask") {
-            continue
-          }
-          const { gitRef } = task
-          if (
-            gitRef.owner === pr.owner &&
-            gitRef.repo === pr.repo &&
-            gitRef.prNumber === pr.number
-          ) {
+    for (const parsedCommand of commands) {
+      logger.info(parsedCommand, "Processing parsed command")
+      switch (parsedCommand.subcommand) {
+        case "queue": {
+          const installationId = installation?.id
+          if (!installationId) {
             return getError(
-              "try-runtime is already being executed for this pull request",
+              "Github Installation ID was not found in webhook payload",
             )
           }
-        }
 
-        const prResponse = await octokit.pulls.get({
-          owner: pr.owner,
-          repo: pr.repo,
-          pull_number: pr.number,
-        })
-
-        const contributor = prResponse.data.head?.user?.login
-        if (!contributor) {
-          return getError(`Failed to get branch owner from the Github API`)
-        }
-
-        const branch = prResponse.data.head?.ref
-        if (!branch) {
-          return getError(`Failed to get branch name from the Github API`)
-        }
-
-        const commentBody =
-          `Preparing try-runtime command for branch: \`${branch}\`. Comment will be updated.\n\n`.trim()
-        const commentCreationResponse = await createComment(ctx, octokit, {
-          ...commentParams,
-          body: commentBody,
-        })
-        if (commentCreationResponse.status !== 201) {
-          return getError(
-            `When trying to create a comment in the pull request, Github API responded with unexpected status ${
-              prResponse.status
-            }\n(${JSON.stringify(commentCreationResponse.data)})`,
-          )
-        }
-        commentId = commentCreationResponse.id
-
-        const parsedArgs = parsePullRequestBotCommandArgs(ctx, otherArgs)
-        if (typeof parsedArgs === "string") {
-          return getError(parsedArgs)
-        }
-
-        const queuedDate = new Date()
-
-        const execPath = "cargo"
-        const args = [
-          "run",
-          /*
-            Application requirement: always run the command in release mode.
-            See https://github.com/paritytech/try-runtime-bot/issues/26#issue-1049555966
-          */
-          "--release",
-          /*
-            "--quiet" should be kept so that the output doesn't get polluted
-            with a bunch of compilation stuff; bear in mind the output is posted
-            on Github comments which have limited character count
-          */
-          "--quiet",
-          "--features=try-runtime",
-          "try-runtime",
-          ...parsedArgs,
-        ]
-
-        const task: PullRequestTask = {
-          ...pr,
-          id: getNextTaskId(),
-          tag: "PullRequestTask",
-          requester,
-          execPath,
-          args,
-          env: {
-            ...command.env,
-            CARGO_TERM_COLOR: "never",
-            ...(cargoTargetDir ? { CARGO_TARGET_DIR: cargoTargetDir } : {}),
-          },
-          commentId,
-          installationId,
-          gitRef: {
+          const prResponse = await octokit.pulls.get({
             owner: pr.owner,
             repo: pr.repo,
-            contributor,
-            branch,
-            prNumber: pr.number,
-          },
-          commandDisplay: displayCommand({ execPath, args, secretsToHide: [] }),
-          timesRequeued: 0,
-          timesRequeuedSnapshotBeforeExecution: 0,
-          timesExecuted: 0,
-          repoPath: path.join(repositoryCloneDirectory, pr.repo),
-          queuedDate: serializeTaskQueuedDate(queuedDate),
-        }
-
-        const message = await queueTask(ctx, task, {
-          onResult: getPostPullRequestResult(ctx, octokit, task),
-        })
-        await updateComment(ctx, octokit, {
-          ...commentParams,
-          comment_id: commentId,
-          body: `${commentBody}\n${message}`,
-        })
-
-        break
-      }
-      case "cancel": {
-        const commentIdsToCancel: number[] = []
-
-        for (const { task, cancel } of queuedTasks.values()) {
-          if (task.tag !== "PullRequestTask") {
-            continue
-          }
-          const { gitRef } = task
-          if (
-            gitRef.owner === pr.owner &&
-            gitRef.repo === pr.repo &&
-            gitRef.prNumber === pr.number
-          ) {
-            void cancel()
-            commentIdsToCancel.push(task.commentId)
-          }
-        }
-
-        if (commentIdsToCancel.length === 0) {
-          return getError(
-            "try-runtime is already being executed for this pull request",
-          )
-        }
-
-        for (const commentIdToCancel of commentIdsToCancel) {
-          await updateComment(ctx, octokit, {
-            ...commentParams,
-            comment_id: commentIdToCancel,
-            body: `@${requester} command was cancelled`.trim(),
+            pull_number: pr.number,
           })
-        }
 
-        break
-      }
-      default: {
-        return getError(`Invalid sub-command: ${subCommand}`)
+          const contributor = prResponse.data.head?.user?.login
+          if (!contributor) {
+            return getError(`Failed to get branch owner from the Github API`)
+          }
+
+          const branch = prResponse.data.head?.ref
+          if (!branch) {
+            return getError(`Failed to get branch name from the Github API`)
+          }
+
+          const commentBody =
+            `Preparing command "${parsedCommand.command}". This comment will be updated later.`.trim()
+          const createdComment = await createComment(ctx, octokit, {
+            ...commentParams,
+            body: commentBody,
+          })
+          if (createdComment.status !== 201) {
+            return getError(
+              `The GitHub API responded with unexpected status ${
+                prResponse.status
+              } when trying to create a comment in the pull request\n\`\`\`\n(${JSON.stringify(
+                createdComment.data,
+              )})\n\`\`\``,
+            )
+          }
+          getError = (body: string) => {
+            return new PullRequestError(pr, {
+              body,
+              requester,
+              commentId: createdComment.id,
+            })
+          }
+
+          const queuedDate = new Date()
+
+          const task: PullRequestTask = {
+            ...pr,
+            id: getNextTaskId(),
+            tag: "PullRequestTask",
+            requester,
+            command: parsedCommand.command,
+            comment: { id: createdComment.id, htmlUrl: createdComment.htmlUrl },
+            installationId,
+            gitRef: {
+              owner: pr.owner,
+              repo: pr.repo,
+              contributor,
+              branch,
+              prNumber: pr.number,
+            },
+            timesRequeued: 0,
+            timesRequeuedSnapshotBeforeExecution: 0,
+            timesExecuted: 0,
+            repoPath: path.join(repositoryCloneDirectory, pr.repo),
+            queuedDate: serializeTaskQueuedDate(queuedDate),
+            gitlab: {
+              job: {
+                ...parsedCommand.configuration.gitlab.job,
+                image: gitlab.jobImage,
+                variables: {
+                  ...parsedCommand.configuration.gitlab.job.variables,
+                  ...parsedCommand.variables,
+                },
+              },
+              pipeline: null,
+            },
+          }
+
+          const updateProgress = (message: string) => {
+            return updateComment(ctx, octokit, {
+              ...commentParams,
+              comment_id: createdComment.id,
+              body: message,
+            })
+          }
+          const queueMessage = await queueTask(ctx, task, {
+            onResult: getPostPullRequestResult(ctx, octokit, task),
+            updateProgress,
+          })
+          await updateProgress(queueMessage)
+
+          break
+        }
+        case "cancel": {
+          const { taskId } = parsedCommand
+
+          const cancelledTasks: PullRequestTask[] = []
+          const failedToCancelTasks: PullRequestTask[] = []
+
+          for (const { task } of await getSortedTasks(ctx)) {
+            if (task.tag !== "PullRequestTask") {
+              continue
+            }
+
+            if (taskId) {
+              if (task.id !== taskId) {
+                continue
+              }
+            } else {
+              if (
+                task.gitRef.owner !== pr.owner ||
+                task.gitRef.repo !== pr.repo ||
+                task.gitRef.prNumber !== pr.number
+              ) {
+                continue
+              }
+            }
+
+            try {
+              await cancelTask(ctx, task)
+              cancelledTasks.push(task)
+            } catch (error) {
+              failedToCancelTasks.push(task)
+              logger.error(error, `Failed to cancel task ${task.id}`)
+            }
+          }
+
+          for (const cancelledTask of cancelledTasks) {
+            if (cancelledTask.comment.id === undefined) {
+              continue
+            }
+            try {
+              await updateComment(ctx, octokit, {
+                ...commentParams,
+                comment_id: cancelledTask.comment.id,
+                body: `@${requester} \`${cancelledTask.command}\`${
+                  cancelledTask.gitlab.pipeline === null
+                    ? ""
+                    : ` (${cancelledTask.gitlab.pipeline.jobWebUrl})`
+                } was cancelled in ${comment.html_url}`,
+              })
+            } catch (error) {
+              logger.error(
+                { error, task: cancelledTask },
+                `Failed to update the cancel comment of task ${cancelledTask.id}`,
+              )
+            }
+          }
+
+          if (failedToCancelTasks.length) {
+            return getError(
+              `Successfully cancelled the following tasks: ${JSON.stringify(
+                cancelledTasks.map((task) => {
+                  return task.id
+                }),
+              )}\n\nFailed to cancel the following tasks: ${JSON.stringify(
+                failedToCancelTasks.map((task) => {
+                  return task.id
+                }),
+              )}`,
+            )
+          }
+
+          if (cancelledTasks.length === 0) {
+            if (taskId) {
+              return getError(`No task matching ${taskId} was found`)
+            } else {
+              return getError("No task is being executed for this pull request")
+            }
+          }
+
+          break
+        }
+        default: {
+          const exhaustivenessCheck: never = parsedCommand
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+          return getError(`Invalid sub-command: ${exhaustivenessCheck}`)
+        }
       }
     }
   } catch (rawError) {

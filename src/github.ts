@@ -4,7 +4,6 @@ import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types"
 import { Mutex } from "async-mutex"
 import { Probot } from "probot"
 
-import { getDeploymentsLogsMessage } from "./core"
 import { PullRequestTask } from "./task"
 import { CommandOutput, Context } from "./types"
 import { displayError, Err, millisecondsDelay, Ok } from "./utils"
@@ -12,12 +11,6 @@ import { displayError, Err, millisecondsDelay, Ok } from "./utils"
 type Octokit = Awaited<ReturnType<Probot["auth"]>>
 
 const wasOctokitExtendedByApplication = Symbol()
-
-/*
-  The actual limit should be 65532 but we're a bit conservative here
-  https://github.community/t/maximum-length-for-the-comment-body-in-issues-and-pr/148867/2
-*/
-const githubCommentCharacterLimit = 65500
 
 export type ExtendedOctokit = Octokit & {
   orgs: Octokit["orgs"] & {
@@ -225,10 +218,10 @@ export const createComment = async (
 ) => {
   if (shouldPostPullRequestComment) {
     const { data, status } = await octokit.issues.createComment(...args)
-    return { status, id: data.id, data }
+    return { status, id: data.id, htmlUrl: data.html_url, data }
   } else {
     logger.info({ call: "createComment", args })
-    return { status: 201, id: 0, data: null }
+    return { status: 201, id: 0, htmlUrl: "", data: null }
   }
 }
 
@@ -297,53 +290,18 @@ export const getPostPullRequestResult = (
       const {
         gitRef: { owner, repo, prNumber: prNumber },
         requester,
-        commandDisplay,
+        command,
       } = task
-
-      const before = `
-@${requester} Results are ready for:\n\n  \`${commandDisplay}\`
-
-<details>
-<summary>Output</summary>
-
-\`\`\`
-`
-
-      const after = `
-\`\`\`
-
-</details>
-
-`
-
-      let resultDisplay =
-        typeof result === "string" ? result : displayError(result)
-      let truncateMessageWarning: string
-      if (
-        before.length + resultDisplay.length + after.length >
-        githubCommentCharacterLimit
-      ) {
-        truncateMessageWarning = `\n---\nThe command's output was too big to be fully displayed. ${getDeploymentsLogsMessage(
-          ctx,
-        )}.`
-        const truncationIndicator = "[truncated]..."
-        resultDisplay = `${resultDisplay.slice(
-          0,
-          githubCommentCharacterLimit -
-            (before.length +
-              truncationIndicator.length +
-              after.length +
-              truncateMessageWarning.length),
-        )}${truncationIndicator}`
-      } else {
-        truncateMessageWarning = ""
-      }
 
       await createComment(ctx, octokit, {
         owner,
         repo,
         issue_number: prNumber,
-        body: `${before}${resultDisplay}${after}${truncateMessageWarning}`,
+        body: `@${requester} Command \`${command}\` has finished. Result: ${
+          typeof result === "string"
+            ? result
+            : `\n\`\`\`\n${displayError(result)}\n\`\`\`\n`
+        }`,
       })
     } catch (error) {
       logger.error(

@@ -1,4 +1,5 @@
 import assert from "assert"
+import { readFile, writeFile } from "fs/promises"
 import http from "http"
 import path from "path"
 import { Logger as ProbotLogger, Probot, Server } from "probot"
@@ -7,7 +8,7 @@ import stoppable from "stoppable"
 
 import { Logger } from "./logger"
 import { setup } from "./setup"
-import { ensureDir, fsExists, fsReadFile, fsWriteFile } from "./shell"
+import { ensureDir } from "./shell"
 import { envNumberVar, envVar } from "./utils"
 
 const main = async () => {
@@ -44,7 +45,7 @@ const main = async () => {
     }
   })()
   const logger = new Logger({
-    name: "try-runtime-bot",
+    name: "command-bot",
     minLogLevel,
     logFormat,
     impl: console,
@@ -75,39 +76,32 @@ const main = async () => {
   const shouldClearTaskDatabaseOnStart = process.env.TASK_DB_VERSION
     ? await (async (appDbVersion) => {
         const currentDbVersion = await (async () => {
-          if (await fsExists(appDbVersionPath)) {
-            return (await fsReadFile(appDbVersionPath)).toString().trim()
+          try {
+            return (await readFile(appDbVersionPath)).toString().trim()
+          } catch (error) {
+            if (
+              /*
+              Test for the following error:
+                [Error: ENOENT: no such file or directory, open '/foo'] {
+                  errno: -2,
+                  code: 'ENOENT',
+                  syscall: 'unlink',
+                  path: '/foo'
+                }
+              */
+              !(error instanceof Error) ||
+              (error as { code?: string })?.code !== "ENOENT"
+            ) {
+              throw error
+            }
           }
         })()
         if (currentDbVersion !== appDbVersion) {
-          await fsWriteFile(appDbVersionPath, appDbVersion)
+          await writeFile(appDbVersionPath, appDbVersion)
           return true
         }
       })(process.env.TASK_DB_VERSION.trim())
     : false
-
-  const deployment = (() => {
-    const value = process.env.IS_DEPLOYMENT
-    switch (value) {
-      case "true": {
-        assert(process.env.DEPLOYMENT_ENVIRONMENT)
-        assert(process.env.DEPLOYMENT_CONTAINER)
-        return {
-          environment: process.env.DEPLOYMENT_ENVIRONMENT,
-          container: process.env.DEPLOYMENT_CONTAINER,
-        }
-      }
-      case undefined:
-      case "false": {
-        return
-      }
-      default: {
-        throw new Error(
-          `Invalid value for $IS_DEPLOYMENT: ${value ?? "undefined"}`,
-        )
-      }
-    }
-  })()
 
   if (process.env.PING_PORT) {
     // Signal that we have started listening until Probot kicks in
@@ -127,7 +121,6 @@ const main = async () => {
     envVar("PRIVATE_KEY_BASE64"),
     "base64",
   ).toString()
-
   const clientId = envVar("CLIENT_ID")
   const clientSecret = envVar("CLIENT_SECRET")
   const webhookSecret = envVar("WEBHOOK_SECRET")
@@ -192,18 +185,21 @@ const main = async () => {
     }
   })()
 
-  const nodesAddresses: Record<string, string> = {}
-  const nodeEnvVarSuffix = "_WEBSOCKET_ADDRESS"
-  for (const [envVarName, envVarValue] of Object.entries(process.env)) {
-    if (!envVarValue || !envVarName.endsWith(nodeEnvVarSuffix)) {
-      continue
+  const gitlabAccessToken = envVar("GITLAB_ACCESS_TOKEN")
+  const gitlabAccessTokenUsername = envVar("GITLAB_ACCESS_TOKEN_USERNAME")
+  const gitlabDomain = envVar("GITLAB_DOMAIN")
+  const gitlabPushNamespace = envVar("GITLAB_PUSH_NAMESPACE")
+  const gitlabJobImage = envVar("GITLAB_JOB_IMAGE")
+
+  const pipelineScripts = (() => {
+    const pipelineScriptsRepository = process.env.PIPELINE_SCRIPTS_REPOSITORY
+    if (pipelineScriptsRepository) {
+      return {
+        repository: pipelineScriptsRepository,
+        ref: process.env.PIPELINE_SCRIPTS_REF,
+      }
     }
-    const nodeName = envVarName
-      .slice(0, envVarName.indexOf(nodeEnvVarSuffix))
-      .toLowerCase()
-    nodesAddresses[nodeName] = envVarValue
-  }
-  logger.info(nodesAddresses, "Registered nodes addresses")
+  })()
 
   await server.load((probot) => {
     void setup(probot, server, {
@@ -211,17 +207,23 @@ const main = async () => {
       clientId,
       clientSecret,
       privateKey,
-      deployment,
       logger,
       startDate,
       shouldPostPullRequestComment,
       allowedOrganizations,
       dataPath,
       matrix,
-      cargoTargetDir: process.env.CARGO_TARGET_DIR,
-      nodesAddresses,
       masterToken,
       shouldClearTaskDatabaseOnStart,
+      isDeployment: !!process.env.IS_DEPLOYMENT,
+      pipelineScripts,
+      gitlab: {
+        accessToken: gitlabAccessToken,
+        accessTokenUsername: gitlabAccessTokenUsername,
+        domain: gitlabDomain,
+        pushNamespace: gitlabPushNamespace,
+        jobImage: gitlabJobImage,
+      },
     })
   })
 

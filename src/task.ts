@@ -3,26 +3,37 @@ import { Mutex } from "async-mutex"
 import cp from "child_process"
 import { randomUUID } from "crypto"
 import { parseISO } from "date-fns"
-import fs from "fs"
+import EventEmitter from "events"
+import LevelErrors from "level-errors"
 import { extractRequestError, MatrixClient } from "matrix-bot-sdk"
-import path from "path"
 import { Probot } from "probot"
 
 import { getSortedTasks } from "src/db"
 
-import { getDeploymentsLogsMessage, prepareBranch } from "./core"
-import { getPostPullRequestResult, updateComment } from "./github"
-import { Logger } from "./logger"
-import { getShellCommandExecutor } from "./shell"
-import { CommandOutput, Context, GitRef } from "./types"
+import { getApiTaskEndpoint } from "./api"
 import {
-  displayDuration,
-  displayError,
-  escapeHtml,
-  getNextUniqueIncrementalId,
-  intoError,
-} from "./utils"
+  botPullRequestCommentMention,
+  botPullRequestCommentSubcommands,
+} from "./bot"
+import { prepareBranch } from "./core"
+import { getPostPullRequestResult, updateComment } from "./github"
+import {
+  cancelGitlabPipeline,
+  restoreTaskGitlabContext,
+  runCommandInGitlabPipeline,
+} from "./gitlab"
+import { Logger } from "./logger"
+import { CommandOutput, Context, GitRef } from "./types"
+import { displayError, getNextUniqueIncrementalId, intoError } from "./utils"
 
+export const queuedTasks: Map<string, EventEmitter> = new Map()
+export const taskExecutionTerminationEvent = Symbol()
+
+export type TaskGitlabPipeline = {
+  id: number
+  projectId: number
+  jobWebUrl: string
+}
 type TaskBase<T> = {
   tag: T
   id: string
@@ -30,17 +41,25 @@ type TaskBase<T> = {
   timesRequeued: number
   timesRequeuedSnapshotBeforeExecution: number
   timesExecuted: number
-  commandDisplay: string
-  execPath: string
-  args: string[]
-  env: Record<string, string>
   gitRef: GitRef
   repoPath: string
   requester: string
+  gitlab: {
+    job: {
+      tags: string[]
+      image: string
+      variables: Record<string, string | boolean | number>
+    }
+    pipeline: TaskGitlabPipeline | null
+  }
+  command: string
 }
 
 export type PullRequestTask = TaskBase<"PullRequestTask"> & {
-  commentId: number
+  comment: {
+    id: number
+    htmlUrl: string
+  }
   installationId: number
   gitRef: GitRef & { prNumber: number }
 }
@@ -50,11 +69,6 @@ export type ApiTask = TaskBase<"ApiTask"> & {
 }
 
 export type Task = PullRequestTask | ApiTask
-
-export const queuedTasks: Map<
-  string,
-  { cancel: () => Promise<void> | void; task: Task }
-> = new Map()
 
 export const getNextTaskId = () => {
   return `${getNextUniqueIncrementalId()}-${randomUUID()}`
@@ -68,94 +82,98 @@ export const parseTaskQueuedDate = (str: string) => {
   return parseISO(str)
 }
 
-const taskQueueMutex = new Mutex()
+/*
+  A Mutex is necessary because otherwise operations from two different commands
+  could be interleaved in the same repository, thus leading to
+  undefined/unwanted behavior.
+  TODO: The Mutex could be per-repository instead of a single one for all
+  repositories for better throughput.
+*/
+const tasksRepositoryLockMutex = new Mutex()
+
 export const queueTask = async (
   parentCtx: Context,
   task: Task,
   {
     onResult,
+    updateProgress,
   }: {
     onResult: (result: CommandOutput) => Promise<unknown>
+    updateProgress: ((message: string) => Promise<unknown>) | null
   },
 ) => {
   assert(
-    queuedTasks.get(task.id) === undefined,
+    !queuedTasks.has(task.id),
     `Attempted to queue task ${task.id} when it's already registered in the taskMap`,
   )
+  const taskEventChannel = new EventEmitter()
+  queuedTasks.set(task.id, taskEventChannel)
 
   const ctx = {
     ...parentCtx,
     logger: parentCtx.logger.child({ taskId: task.id }),
   }
+  const { logger, taskDb, getFetchEndpoint, gitlab } = ctx
+  const { db } = taskDb
 
-  let taskProcess: cp.ChildProcess | undefined = undefined
+  await db.put(task.id, JSON.stringify(task))
+
+  let terminateTaskExecution: (() => Promise<unknown>) | undefined = undefined
+  let activeProcess: cp.ChildProcess | undefined = undefined
   let taskIsAlive = true
   const terminate = async () => {
+    if (terminateTaskExecution) {
+      await terminateTaskExecution()
+      terminateTaskExecution = undefined
+      taskEventChannel.emit(taskExecutionTerminationEvent)
+    }
+
     taskIsAlive = false
 
     queuedTasks.delete(task.id)
 
     await db.del(task.id)
 
-    logger.info(
-      { task, queue: await getSortedTasks(ctx) },
-      "Queue state after termination of task",
-    )
-
-    if (taskProcess === undefined) {
-      return
+    if (activeProcess !== undefined) {
+      activeProcess.kill()
+      logger.info(`Killed child with PID ${activeProcess.pid ?? "?"}`)
+      activeProcess = undefined
     }
-
-    taskProcess.kill()
-    logger.info(
-      `Killed child with PID ${taskProcess.pid ?? "?"} (${commandDisplay})`,
-    )
-
-    taskProcess = undefined
   }
 
-  queuedTasks.set(task.id, { task, cancel: terminate })
-
-  const { execPath, args, commandDisplay, repoPath } = task
-  const {
-    logger,
-    taskDb,
-    getFetchEndpoint,
-    appName,
-    repositoryCloneDirectory,
-    cargoTargetDir,
-  } = ctx
-  const { db } = taskDb
-
-  let suffixMessage = getDeploymentsLogsMessage(ctx)
-  if (!fs.existsSync(repoPath)) {
-    suffixMessage +=
-      "\n**Note:** project will be cloned for the first time, so all dependencies will be compiled from scratch; this might take a long time"
-  } else if (
-    cargoTargetDir
-      ? !fs.existsSync(cargoTargetDir)
-      : !fs.existsSync(path.join(repoPath, "target"))
-  ) {
-    suffixMessage +=
-      '\n**Note:** "target" directory does not exist, so all dependencies will be compiled from scratch; this might take a long time'
-  }
-
-  const message = await getTaskQueueMessage(ctx, commandDisplay)
-  const cancelledMessage = "Command was cancelled"
-
-  const afterTaskRun = async (result: CommandOutput) => {
+  const afterTaskRun = (result: CommandOutput | null) => {
     const wasAlive = taskIsAlive
 
-    await terminate()
+    void terminate().catch((error) => {
+      logger.error(error, "Failed to terminate task on afterTaskRun")
+    })
 
-    if (wasAlive) {
+    if (wasAlive && result !== null) {
       void onResult(result)
     }
   }
 
-  await db.put(task.id, JSON.stringify(task))
+  const additionalTaskCancelInstructions = (() => {
+    switch (task.tag) {
+      case "PullRequestTask": {
+        return `\n\nComment \`${botPullRequestCommentMention} ${botPullRequestCommentSubcommands.cancel} ${task.id}\` to cancel this command or \`${botPullRequestCommentMention} ${botPullRequestCommentSubcommands.cancel}\` to cancel all commands in this pull request.`
+      }
+      case "ApiTask": {
+        return `Send a DELETE request to ${getApiTaskEndpoint(
+          task,
+        )} for cancelling this task.`
+      }
+      default: {
+        const exhaustivenessCheck: never = task
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+        throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
+      }
+    }
+  })()
 
-  void taskQueueMutex
+  const cancelledMessage = "Task was cancelled"
+
+  void tasksRepositoryLockMutex
     .runExclusive(async () => {
       try {
         await db.put(
@@ -167,25 +185,19 @@ export const queueTask = async (
           }),
         )
 
+        const restoredTaskGitlabCtx = await restoreTaskGitlabContext(ctx, task)
+        if (restoredTaskGitlabCtx !== undefined) {
+          return restoredTaskGitlabCtx
+        }
+
         if (taskIsAlive) {
-          logger.info(
-            { task, currentTaskQueue: await getSortedTasks(ctx) },
-            `Starting task of ${commandDisplay}`,
-          )
+          logger.info(task, "Starting task")
         } else {
           logger.info(task, "Task was cancelled before it could start")
           return cancelledMessage
         }
 
-        const run = getShellCommandExecutor(ctx, {
-          projectsRoot: repositoryCloneDirectory,
-          onChild: (createdChild) => {
-            taskProcess = createdChild
-          },
-        })
-
-        const prepare = prepareBranch(task, {
-          run,
+        const prepareBranchSteps = prepareBranch(ctx, task, {
           getFetchEndpoint: () => {
             return getFetchEndpoint(
               "installationId" in task ? task.installationId : null,
@@ -193,12 +205,12 @@ export const queueTask = async (
           },
         })
         while (taskIsAlive) {
-          const next = await prepare.next()
+          const next = await prepareBranchSteps.next()
           if (next.done) {
             break
           }
 
-          taskProcess = undefined
+          activeProcess = undefined
 
           if (typeof next.value !== "string") {
             return next.value
@@ -208,40 +220,53 @@ export const queueTask = async (
           return cancelledMessage
         }
 
-        const startTime = new Date()
-        const result = await run(execPath, args, {
-          options: {
-            env: {
-              ...process.env,
-              ...task.env,
-              // https://github.com/paritytech/substrate/commit/9247e150ca0f50841a60a213ad8b15efdbd616fa
-              WASM_BUILD_WORKSPACE_HINT: repoPath,
-            },
-            cwd: repoPath,
-          },
-          shouldTrackProgress: true,
-          shouldCaptureAllStreams: true,
-        })
-        const endTime = new Date()
+        const pipelineCtx = await runCommandInGitlabPipeline(ctx, task)
 
-        const resultDisplay =
-          result instanceof Error ? displayError(result) : result
+        task.gitlab.pipeline = {
+          id: pipelineCtx.id,
+          jobWebUrl: pipelineCtx.jobWebUrl,
+          projectId: pipelineCtx.projectId,
+        }
+        await db.put(task.id, JSON.stringify(task))
 
-        return taskIsAlive
-          ? `${appName} took ${displayDuration(
-              startTime,
-              endTime,
-            )} (from ${startTime.toISOString()} to ${endTime.toISOString()} server time) for ${commandDisplay}
-              ${resultDisplay}`
-          : cancelledMessage
+        if (updateProgress) {
+          await updateProgress(
+            `@${task.requester} ${pipelineCtx.jobWebUrl} was started for your command \`${task.command}\`. Check out https://${gitlab.domain}/${gitlab.pushNamespace}/${task.gitRef.repo}/-/pipelines?page=1&scope=all&username=${gitlab.accessTokenUsername} to know what else is being executed currently. ${additionalTaskCancelInstructions}`,
+          )
+        }
+
+        return pipelineCtx
       } catch (error) {
         return intoError(error)
       }
     })
-    .then(afterTaskRun)
+    .then((taskPipeline) => {
+      if (
+        taskPipeline instanceof Error ||
+        typeof taskPipeline === "string" ||
+        taskPipeline === null
+      ) {
+        return afterTaskRun(taskPipeline)
+      }
+
+      terminateTaskExecution = taskPipeline.terminate
+
+      taskPipeline
+        .waitUntilFinished(taskEventChannel)
+        .then(() => {
+          afterTaskRun(
+            `${taskPipeline.jobWebUrl} has ${
+              taskIsAlive ? "finished" : "was cancelled"
+            }. If any artifacts were generated, you can download them from ${
+              taskPipeline.jobWebUrl
+            }/artifacts/download.`,
+          )
+        })
+        .catch(afterTaskRun)
+    })
     .catch(afterTaskRun)
 
-  return `${message}\n${suffixMessage}`
+  return `${task.command} was queued. ${additionalTaskCancelInstructions}`
 }
 
 export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
@@ -275,7 +300,7 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
           case "PullRequestTask": {
             const {
               gitRef: { owner, repo, prNumber: prNumber },
-              commentId,
+              comment,
               requester,
             } = task
 
@@ -286,7 +311,7 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
                 owner,
                 repo,
                 pull_number: prNumber,
-                comment_id: commentId,
+                comment_id: comment.id,
                 body: `@${requester} ${message}`,
               })
             }
@@ -295,6 +320,14 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
             const requeue = () => {
               return queueTask(ctx, requeuedTask, {
                 onResult: getPostPullRequestResult(ctx, octokit, requeuedTask),
+                /*
+                  Assumes the relevant progress update was already sent when
+                  the task was queued for the first time, thus there's no need
+                  to keep updating it
+                  TODO: Update the item in the database to tell when
+                  updateProgress no longer needs to be called.
+                */
+                updateProgress: null,
               })
             }
 
@@ -328,6 +361,14 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
                     logger,
                     requeuedTask,
                   ),
+                  /*
+                    Assumes the relevant progress update was already sent when
+                    the task was queued for the first time, thus there's no need
+                    to keep updating it
+                    TODO: Update the item in the database to tell when
+                    updateProgress no longer needs to be called.
+                  */
+                  updateProgress: null,
                 })
               },
             }
@@ -377,71 +418,19 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
   }
 }
 
-const getTaskQueueMessage = async (
-  ctx: Parameters<typeof getSortedTasks>[0],
-  commandDisplay: string,
-) => {
-  const items = await getSortedTasks(ctx)
-
-  if (items.length) {
-    return `
-Queued ${commandDisplay}
-
-There are other items ahead of it in the queue: ${items.reduce(
-      (acc, value, i) => {
-        return `
-
-${i + 1}:
-
-\`\`\`
-${JSON.stringify(value, null, 2)}
-\`\`\`
-
-`
-      },
-      "",
-    )}`
-  }
-
-  return `\nExecuting:\n\n\`${commandDisplay}\``
-}
-
 export const getSendTaskMatrixResult = (
   matrix: MatrixClient,
   logger: Logger,
-  { id: taskId, matrixRoom, commandDisplay }: ApiTask,
+  task: ApiTask,
 ) => {
   return async (message: CommandOutput) => {
     try {
-      const fileName = `${taskId}-log.txt`
-      const buf = message instanceof Error ? displayError(message) : message
-      const messagePrefix = `Task ID ${taskId} has finished.`
-
-      const lineCount = (buf.match(/\n/g) || "").length + 1
-      if (lineCount < 128) {
-        await matrix.sendHtmlText(
-          matrixRoom,
-          `${messagePrefix} Results will be displayed inline for <code>${escapeHtml(
-            commandDisplay,
-          )}</code>\n<hr>${escapeHtml(buf)}`,
-        )
-        return
-      }
-
-      const url = await matrix.uploadContent(
-        Buffer.from(message instanceof Error ? displayError(message) : message),
-        "text/plain",
-        fileName,
-      )
       await matrix.sendText(
-        matrixRoom,
-        `${messagePrefix} Results were uploaded as ${fileName} for ${commandDisplay}.`,
+        task.matrixRoom,
+        `Task ID ${task.id} has finished with message "${
+          message instanceof Error ? displayError(message) : message
+        }"`,
       )
-      await matrix.sendMessage(matrixRoom, {
-        msgtype: "m.file",
-        body: fileName,
-        url,
-      })
     } catch (rawError) {
       const error = intoError(rawError)
       logger.error(
@@ -450,4 +439,37 @@ export const getSendTaskMatrixResult = (
       )
     }
   }
+}
+
+export const cancelTask = async (ctx: Context, taskId: Task | string) => {
+  const {
+    taskDb: { db },
+    logger,
+  } = ctx
+
+  const task =
+    typeof taskId === "string"
+      ? await (async () => {
+          try {
+            return JSON.parse(await db.get(taskId)) as Task
+          } catch (error) {
+            if (error instanceof LevelErrors.NotFoundError) {
+              return error
+            } else {
+              throw error
+            }
+          }
+        })()
+      : taskId
+  if (task instanceof Error) {
+    return task
+  }
+
+  logger.info(task, "Cancelling task")
+
+  if (task.gitlab.pipeline !== null) {
+    await cancelGitlabPipeline(ctx, task.gitlab.pipeline)
+  }
+
+  await db.del(task.id)
 }

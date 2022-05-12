@@ -21,24 +21,20 @@ export const setup = async (
     clientId,
     clientSecret,
     privateKey,
-    deployment,
-    startDate,
     logger,
-    shouldPostPullRequestComment,
-    allowedOrganizations,
     dataPath,
     matrix: matrixConfiguration,
-    cargoTargetDir,
-    nodesAddresses,
-    masterToken,
     shouldClearTaskDatabaseOnStart,
+    isDeployment,
+    ...partialContext
   }: Pick<
     Context,
-    | "deployment"
+    | "isDeployment"
     | "shouldPostPullRequestComment"
     | "allowedOrganizations"
-    | "nodesAddresses"
     | "masterToken"
+    | "gitlab"
+    | "pipelineScripts"
   > & {
     appId: number
     clientId: string
@@ -53,22 +49,21 @@ export const setup = async (
           accessToken: string
         }
       | undefined
-    cargoTargetDir: string | undefined
     shouldClearTaskDatabaseOnStart?: boolean
   },
 ) => {
-  if (cargoTargetDir) {
-    await ensureDir(cargoTargetDir)
-  }
-
-  const repositoryCloneDirectoryPath = path.join(dataPath, "repositories")
-  const repositoryCloneDirectory = await ensureDir(repositoryCloneDirectoryPath)
+  const repositoryCloneDirectory = await ensureDir(
+    path.join(dataPath, "repositories"),
+  )
 
   const taskDbPath = await initDatabaseDir(path.join(dataPath, "db"))
   const taskDb = new TaskDB(getDb(taskDbPath))
+  const tasks = await getSortedTasks({ taskDb, logger })
+  logger.info(tasks, "Tasks found at the start of the application")
+
   if (shouldClearTaskDatabaseOnStart) {
     logger.info("Clearing the task database during setup")
-    for (const { id } of await getSortedTasks({ taskDb, logger })) {
+    for (const { id } of tasks) {
       await taskDb.db.del(id)
     }
   }
@@ -125,26 +120,20 @@ export const setup = async (
 
   const { value: matrix } = matrixClientSetup
 
-  if (deployment !== undefined && matrix === null) {
+  if (isDeployment && matrix === null) {
     throw new Error("Matrix configuration is expected for deployments")
   }
 
   const ctx: Context = {
-    appName: "try-runtime-bot",
+    ...partialContext,
     taskDb,
     accessDb,
     getFetchEndpoint,
     log: bot.log,
-    allowedOrganizations,
     logger,
-    repositoryCloneDirectory,
-    deployment,
+    isDeployment,
     matrix,
-    masterToken,
-    nodesAddresses,
-    startDate,
-    shouldPostPullRequestComment,
-    cargoTargetDir: process.env.CARGO_TARGET_DIR,
+    repositoryCloneDirectory,
   }
 
   void requeueUnterminatedTasks(ctx, bot)

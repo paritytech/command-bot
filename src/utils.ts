@@ -1,5 +1,6 @@
 import assert from "assert"
-import { differenceInMilliseconds } from "date-fns"
+import Joi from "joi"
+import fetch from "node-fetch"
 
 export const envVar = (name: string) => {
   const val = process.env[name]
@@ -31,13 +32,13 @@ export const getLines = (str: string) => {
 export const displayCommand = ({
   execPath,
   args,
-  secretsToHide,
+  itemsToRedact,
 }: {
   execPath: string
   args: string[]
-  secretsToHide: string[]
+  itemsToRedact: string[]
 }) => {
-  return redact(`${execPath} ${args.join(" ")}`, secretsToHide, "{SECRET}")
+  return redact(`${execPath} ${args.join(" ")}`, itemsToRedact)
 }
 
 export const millisecondsDelay = (milliseconds: number) => {
@@ -55,49 +56,17 @@ export const intoError = (value: unknown) => {
 
 export const displayError = (value: unknown) => {
   const error = intoError(value)
-  return `${error.toString()}${error.stack ? `\n${error.stack}` : ""}`
-}
 
-export const displayDuration = (start: Date, finish: Date) => {
-  const delta = Math.abs(differenceInMilliseconds(finish, start))
-
-  const days = Math.floor(delta / 1000 / 60 / 60 / 24)
-  const hours = Math.floor((delta / 1000 / 60 / 60) % 24)
-  const minutes = Math.floor((delta / 1000 / 60) % 60)
-  const seconds = Math.floor((delta / 1000) % 60)
-
-  const milliseconds =
-    delta -
-    days * 24 * 60 * 60 * 1000 -
-    hours * 60 * 60 * 1000 -
-    minutes * 60 * 1000 -
-    seconds * 1000
-
-  let buf = ""
-  const separator = ", "
-  for (const [name, value] of Object.entries({
-    days,
-    hours,
-    minutes,
-    seconds,
-    milliseconds,
-  })) {
-    if (!value) {
-      continue
-    }
-    buf = `${buf}${separator}${value} ${name}`
+  let errorMessage = `${error.toString()}${
+    error.stack ? `\n${error.stack}` : ""
+  }`
+  if (error instanceof Joi.ValidationError) {
+    errorMessage = `${errorMessage}\n${JSON.stringify(
+      normalizeValue(error._original),
+    )}`
   }
 
-  return buf.slice(separator.length)
-}
-
-export const escapeHtml = (str: string) => {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;")
+  return errorMessage
 }
 
 let lastIncrementalId = 0
@@ -110,7 +79,11 @@ export const getNextUniqueIncrementalId = () => {
   return nextIncrementalId
 }
 
-export const redact = (str: string, items: string[], replacement: string) => {
+export const redact = (
+  str: string,
+  items: string[],
+  replacement: string = "{SECRET}",
+) => {
   for (const item of items) {
     str = str.replaceAll(item, replacement)
   }
@@ -147,7 +120,11 @@ const normalizers = {
   string: (value: any) => {
     return value
   },
-  object: (value: any, previousObjects: unknown[] = []) => {
+  object: (
+    value: any,
+    previousObjects: unknown[] = [],
+    showTopLevel = false,
+  ) => {
     if (value === null) {
       return
     }
@@ -188,6 +165,8 @@ const normalizers = {
 
     if (Object.keys(output).length > 0) {
       return container
+    } else if (showTopLevel) {
+      return objAsArray ? [] : {}
     }
   },
 }
@@ -213,6 +192,42 @@ const setNormalizedKeyValue = (
 export const normalizeValue = (
   value: unknown,
   previousObjects: unknown[] = [],
+  showTopLevel = false,
 ): unknown => {
-  return normalizers[typeof value](value, previousObjects)
+  return normalizers[typeof value](value, previousObjects, showTopLevel)
+}
+/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+
+export const validatedFetch = async <T>(
+  response: ReturnType<typeof fetch>,
+  schema: Joi.AnySchema,
+  { decoding }: { decoding: "json" } = { decoding: "json" },
+) => {
+  const body = await (async () => {
+    switch (decoding) {
+      case "json": {
+        return (await response).json()
+      }
+      default: {
+        const exhaustivenessCheck: never = decoding
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+        throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
+      }
+    }
+  })()
+  const validation = schema.validate(body)
+  if (validation.error) {
+    throw validation.error
+  }
+  return validation.value as T
+}
+
+export const arrayify = (value: unknown) => {
+  if (value === undefined || value === null) {
+    return []
+  }
+  if (Array.isArray(value)) {
+    return value
+  }
+  return [value]
 }

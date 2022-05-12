@@ -6,7 +6,6 @@ const fs = require("fs")
 const path = require("path")
 
 /*
-
   Notes:
   - All variables are required unless explicitly told otherwise.
   - All values used for the variables are presented only for the sake of
@@ -25,6 +24,46 @@ process.env.WEBHOOK_SECRET ??= "placeholder"
 process.env.APP_ID ??= 123
 process.env.CLIENT_ID ??= "placeholder"
 process.env.CLIENT_SECRET ??= "placeholder"
+
+/*
+  The GitLab domain (e.g. gitlab.parity.io) where the CI jobs will be executed
+  in. Do not include https:// or any other prefix at the start of the value.
+*/
+process.env.GITLAB_DOMAIN ??= "placeholder"
+
+/*
+  The GitLab namespace (i.e. repository path without the repository name) where
+  the GitHub repositories are mirrored to in GitLab. e.g. for a project
+  github.com/foo which is hosted in gitlab.parity.io/nested/namespace/foo,
+  $GITLAB_PUSH_NAMESPACE would be nested/namespace.
+*/
+process.env.GITLAB_PUSH_NAMESPACE ??= "placeholder"
+
+/*
+  The default image to be used on GitLab jobs for bot commands which don't
+  specify a custom image
+*/
+process.env.GITLAB_JOB_IMAGE ??= "placeholder"
+
+/*
+  GITLAB_ACCESS_TOKEN token needs the following scopes:
+  - "write_repository"
+  - "read_api"
+
+  Instructions for generating this token are available at:
+  https://docs.gitlab.com/ee/security/token_overview.html
+*/
+process.env.GITLAB_ACCESS_TOKEN ??= "placeholder"
+process.env.GITLAB_ACCESS_TOKEN_USERNAME ??= "placeholder"
+
+/*
+  Define a $PIPELINE_SCRIPTS_REPOSITORY (full URL to a Git repository, e.g.
+  "https://github.com/paritytech/pipeline-scripts") to be cloned on GitLab
+  pipelines with ref $PIPELINE_SCRIPTS_REF. Leave it unset to disable
+  $PIPELINE_SCRIPTS.
+*/
+// process.env.PIPELINE_SCRIPTS_REPOSITORY ??= "placeholder"
+// process.env.PIPELINE_SCRIPTS_REF ??= "placeholder"
 
 /*
   This private key's file can be generated and downloaded from
@@ -53,16 +92,6 @@ process.env.ALLOWED_ORGANIZATIONS ??= "123,456"
   API tokens, but cannot be used as a normal token.
 */
 process.env.MASTER_TOKEN ??= "placeholder"
-
-/*
-  Any environment variable following the pattern `${NAME}_WEBSOCKET_ADDRESS`
-  will be registered as a possible node target at the start of the application.
-  For instance, if you define a `POLKADOT_WEBSOCKET_ADDRESS` it will be
-  possible try use `ws://polkadot` in try-runtime's arguments.
-*/
-// process.env.POLKADOT_WEBSOCKET_ADDRESS ??= "ws://0.0.0.0:9944"
-// process.env.KUSAMA_WEBSOCKET_ADDRESS ??= "ws://0.0.0.0:9945"
-// process.env.WESTEND_WEBSOCKET_ADDRESS ??= "ws://0.0.0.0:9946"
 
 /*
   NOT REQUIRED

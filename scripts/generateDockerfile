@@ -2,13 +2,9 @@
 
 set -u
 
-RUSTUP_HOME=/usr/local/rustup
-CARGO_HOME=/usr/local/cargo
 PRE_COMMIT_BUILD_DEPS="gcc python3-dev libc-dev python3-pip"
-RUST_BUILD_DEPS="curl ca-certificates"
 ROCKSDB_BUILD_DEPS="build-essential python3"
-# https://github.com/paritytech/substrate/search?q=x86_64-unknown-linux-gnu
-SUBSTRATE_HOST=x86_64-unknown-linux-gnu
+SHFMT_BUILD_DEPS="wget ca-certificates"
 APT_INSTALL="apt install --assume-yes --quiet --no-install-recommends"
 APP_DIR="/app"
 NODE_USER="node"
@@ -58,21 +54,14 @@ RUN if [ ! "\$REPO" ]; then exit 1; fi
 
 $common
 
-# Rust is needed for running the bot's commands
-RUN $APT_INSTALL $RUST_BUILD_DEPS && apt-mark auto $RUST_BUILD_DEPS
-ENV RUSTUP_HOME=$RUSTUP_HOME \
-  CARGO_HOME=$CARGO_HOME \
-  PATH=$CARGO_HOME/bin:\$PATH
-RUN curl https://sh.rustup.rs -sSf | sh -s -- \
-    -y \
-    --no-modify-path \
-    --default-host $SUBSTRATE_HOST \
-    --profile minimal && \
-  . $CARGO_HOME/env && \
-  cargo --version && rustup --version && \
-  rustup toolchain install stable-$SUBSTRATE_HOST && \
-  rustup toolchain install nightly-$SUBSTRATE_HOST && \
-  rustup target add wasm32-unknown-unknown --toolchain nightly
+# for downloading shfmt
+RUN $APT_INSTALL $SHFMT_BUILD_DEPS && apt-mark auto $SHFMT_BUILD_DEPS
+
+# shfmt is needed for shell command parsing
+RUN wget https://github.com/mvdan/sh/releases/download/v3.5.0/shfmt_v3.5.0_linux_amd64 -O /bin/shfmt && \
+  echo "8feea043364a725dfb69665432aee9e85b84c7f801a70668650e8b15452f6574  /bin/shfmt" | sha256sum --check && \
+  chmod +x /bin/shfmt && \
+  shfmt --version
 
 # Needed for building RocksDB bindings for Node.js
 RUN $APT_INSTALL $ROCKSDB_BUILD_DEPS && apt-mark auto $ROCKSDB_BUILD_DEPS
@@ -84,21 +73,15 @@ RUN mkdir $APP_DIR && \
   mv * $APP_DIR && \
   chown -R $NODE_USER:$NODE_USER $APP_DIR
 
+# clean up all build packages which are not needed to run the application
 RUN apt-get autoremove -y
-
-# The following packages are needed to Substrate-based projects at runtime due
-# to C/C++ dependencies e.g. jemalloc, RocksDB, etc.
-RUN $APT_INSTALL \
-  gcc libc-dev libssl-dev libudev-dev pkg-config build-essential clang libclang-dev && \
-  cc --version && \
-  gcc --version && \
-  g++ --version && \
-  make --version && \
-  clang --version
 
 WORKDIR $APP_DIR
 
-CMD . $CARGO_HOME/env && yarn start
+RUN git config --global user.name command-bot && \
+  git config --global user.email "<>"
+
+CMD yarn start
 EOF
     echo "$app"
     ;;

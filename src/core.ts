@@ -1,106 +1,52 @@
-import assert from "assert"
-
-import { botPullRequestCommentMention } from "./bot"
 import { ExtendedOctokit, isOrganizationMember } from "./github"
+import { CommandRunner } from "./shell"
 import { Task } from "./task"
-import { CommandExecutor, Context } from "./types"
+import { Context } from "./types"
 
-export const defaultParseTryRuntimeBotCommandOptions = {
-  baseEnv: { RUST_LOG: "remote-ext=info" },
-}
-
-export const parsePullRequestBotCommand = (
-  commandLine: string,
-  { baseEnv }: { baseEnv: Record<string, string> },
-) => {
-  const allTokens = commandLine.split(" ").filter((value) => {
-    return !!value
-  })
-
-  const [firstToken, ...tokens] = allTokens
-
-  if (firstToken !== botPullRequestCommentMention) {
-    return
+/*
+  TODO: Move command configurations to configuration repository or database so
+  that it can be updated dynamically, without redeploying the application
+*/
+export type CommandConfiguration = {
+  gitlab: {
+    job: {
+      tags: string[]
+      variables: Record<string, string>
+    }
   }
-
-  const args: string[] = []
-
-  const env: Record<string, string> = { ...baseEnv }
-  // envArgs are only collected at the start of the command line
-  let isCollectingEnvVars = true
-
-  for (const tok of tokens) {
-    if (isCollectingEnvVars) {
-      const matches = tok.match(/^([A-Za-z_]+)=(.*)/)
-      if (matches === null) {
-        isCollectingEnvVars = false
-      } else {
-        const [, name, value] = matches
-        assert(name)
-        env[name] = value
-        continue
-      }
-    }
-    args.push(tok)
-  }
-
-  return { args, env }
+  commandStart: string[]
 }
-
-export const parsePullRequestBotCommandArgs = (
-  { nodesAddresses }: Context,
-  args: string[],
-) => {
-  // This expression catches the following forms: -foo=, --foo=
-  const commandOptionExpression = /^-[^=\s]+=/
-
-  // This expression catches the following forms: ws://foo, wss://foo, etc.
-  const uriPrefixExpression = /^ws\w*:\/\//
-
-  const nodeOptionsDisplay = `Available names are: ${Object.keys(
-    nodesAddresses,
-  ).join(", ")}.`
-
-  const parsedArgs = []
-  for (const rawArg of args) {
-    const optionPrefix = commandOptionExpression.exec(rawArg)
-    const { argPrefix, arg } =
-      optionPrefix === null
-        ? { argPrefix: "", arg: rawArg }
-        : {
-            argPrefix: optionPrefix[0],
-            arg: rawArg.slice(optionPrefix[0].length),
-          }
-
-    const uriPrefixMatch = uriPrefixExpression.exec(arg)
-    if (uriPrefixMatch === null) {
-      parsedArgs.push(rawArg)
-      continue
-    }
-    const [uriPrefix] = uriPrefixMatch
-
-    const invalidNodeAddressExplanation = `Argument "${arg}" started with ${uriPrefix} and therefore it was interpreted as a node address, but it is invalid`
-
-    const node = arg.slice(uriPrefix.length)
-    if (!node) {
-      return `${invalidNodeAddressExplanation}. Must specify one address in the form \`${uriPrefix}name\`. ${nodeOptionsDisplay}`
-    }
-
-    const nodeAddress = nodesAddresses[node]
-    if (!nodeAddress) {
-      return `${invalidNodeAddressExplanation}. Nodes are referred to by name. No node named "${node}" is available. ${nodeOptionsDisplay}`
-    }
-
-    parsedArgs.push(`${argPrefix}${nodeAddress}`)
-  }
-
-  return parsedArgs
-}
-
-export const getDeploymentsLogsMessage = ({ deployment }: Context) => {
-  return deployment === undefined
-    ? ""
-    : `The logs for this command should be available on Grafana for the data source \`loki.${deployment.environment}\` and query \`{container=~"${deployment.container}"}\``
+export const commandsConfiguration: {
+  [K in "try-runtime" | "bench-bot"]: CommandConfiguration
+} = {
+  "try-runtime": {
+    gitlab: {
+      job: {
+        tags: ["linux-docker"],
+        variables: { RUST_LOG: "remote-ext=info" },
+      },
+    },
+    commandStart: [
+      "cargo",
+      "run",
+      /*
+        Requirement: always run the command in release mode.
+        See https://github.com/paritytech/try-runtime-bot/issues/26#issue-1049555966
+      */
+      "--release",
+      /*
+        "--quiet" should be kept so that the output doesn't get polluted
+        with a bunch of compilation stuff
+      */
+      "--quiet",
+      "--features=try-runtime",
+      "try-runtime",
+    ],
+  },
+  "bench-bot": {
+    gitlab: { job: { tags: ["weights"], variables: {} } },
+    commandStart: ['"$PIPELINE_SCRIPTS_DIR/bench-bot.sh"'],
+  },
 }
 
 export const isRequesterAllowed = async (
@@ -122,29 +68,27 @@ export const isRequesterAllowed = async (
 }
 
 export const prepareBranch = async function* (
+  ctx: Context,
   { repoPath, gitRef: { contributor, owner, repo, branch } }: Task,
   {
-    run,
     getFetchEndpoint,
   }: {
-    run: CommandExecutor
     getFetchEndpoint: () => Promise<{ token: string; url: string }>
   },
 ) {
-  yield run("mkdir", ["-p", repoPath])
-
   const { token, url } = await getFetchEndpoint()
 
-  const runInRepo = (...[execPath, args, options]: Parameters<typeof run>) => {
-    return run(execPath, args, {
-      ...options,
-      secretsToHide: [token, ...(options?.secretsToHide ?? [])],
-      options: { cwd: repoPath, ...options?.options },
-    })
-  }
+  const cmdRunner = new CommandRunner(ctx, { itemsToRedact: [token] })
+
+  yield cmdRunner.run("mkdir", ["-p", repoPath])
+
+  const repoCmdRunner = new CommandRunner(ctx, {
+    itemsToRedact: [token],
+    cwd: repoPath,
+  })
 
   // Clone the repository if it does not exist
-  yield runInRepo(
+  yield repoCmdRunner.run(
     "git",
     ["clone", "--quiet", `${url}/${owner}/${repo}`, repoPath],
     {
@@ -155,18 +99,16 @@ export const prepareBranch = async function* (
   )
 
   // Clean up garbage files before checkout
-  yield runInRepo("git", ["add", "."])
-  yield runInRepo("git", ["reset", "--hard"])
+  yield repoCmdRunner.run("git", ["add", "."])
+  yield repoCmdRunner.run("git", ["reset", "--hard"])
 
   // Check out to the detached head so that any branch can be deleted
-  const out = await runInRepo("git", ["rev-parse", "HEAD"], {
-    options: { cwd: repoPath },
-  })
+  const out = await repoCmdRunner.run("git", ["rev-parse", "HEAD"])
   if (out instanceof Error) {
     return out
   }
   const detachedHead = out.trim()
-  yield runInRepo("git", ["checkout", "--quiet", detachedHead], {
+  yield repoCmdRunner.run("git", ["checkout", "--quiet", detachedHead], {
     testAllowedErrorMessage: (err) => {
       // Why the hell is this not printed to stdout?
       return err.startsWith("HEAD is now at")
@@ -174,28 +116,28 @@ export const prepareBranch = async function* (
   })
 
   const prRemote = "pr"
-  yield runInRepo("git", ["remote", "remove", prRemote], {
+  yield repoCmdRunner.run("git", ["remote", "remove", prRemote], {
     testAllowedErrorMessage: (err) => {
       return err.includes("No such remote:")
     },
   })
 
-  yield runInRepo("git", [
+  yield repoCmdRunner.run("git", [
     "remote",
     "add",
     prRemote,
     `${url}/${contributor}/${repo}.git`,
   ])
 
-  yield runInRepo("git", ["fetch", "--quiet", prRemote, branch])
+  yield repoCmdRunner.run("git", ["fetch", "--quiet", prRemote, branch])
 
-  yield runInRepo("git", ["branch", "-D", branch], {
+  yield repoCmdRunner.run("git", ["branch", "-D", branch], {
     testAllowedErrorMessage: (err) => {
       return err.endsWith("not found.")
     },
   })
 
-  yield runInRepo("git", [
+  yield repoCmdRunner.run("git", [
     "checkout",
     "--quiet",
     "--track",
