@@ -15,7 +15,6 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
 
   const cmdRunner = new CommandRunner(ctx, {
     itemsToRedact: [gitlab.accessToken],
-    shouldTrackProgress: false,
     cwd: task.repoPath,
   })
 
@@ -24,8 +23,6 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
     scripts will be able to restore the branch as it was on GitHub
   */
   const headSha = await cmdRunner.run("git", ["rev-parse", "HEAD"])
-
-  const artifactsFolderPath = ".git/.artifacts"
 
   const getPipelineScriptsCloneCommand = ({
     withRef,
@@ -37,6 +34,25 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
     } "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"`
   }
 
+  const jobTaskInfoMessage = (() => {
+    switch (task.tag) {
+      case "PullRequestTask": {
+        return `The task was generated from a comment in ${task.comment.htmlUrl}`
+      }
+      case "ApiTask": {
+        return `The task was generated from an API call by ${task.requester}`
+      }
+      default: {
+        const exhaustivenessCheck: never = task
+        throw new Error(
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+          `jobTaskInfoMessage is not exhaustive: ${exhaustivenessCheck}`,
+        )
+      }
+    }
+  })()
+
+  const artifactsFolderPath = ".git/.artifacts"
   await writeFile(
     path.join(task.repoPath, ".gitlab-ci.yml"),
     yaml.stringify({
@@ -49,6 +65,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
       command: {
         ...task.gitlab.job,
         script: [
+          `echo "This job is related to task ${task.id}. ${jobTaskInfoMessage}."`,
           // prettier-ignore
           'if [ "${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then ' +
             'if [ "${PIPELINE_SCRIPTS_REF:-}" ]; then ' +
