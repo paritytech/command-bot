@@ -103,11 +103,11 @@ curl \
   -H "Accept: application/json" \
   -X POST http://command-bot/api/queue \
   -d '{
-    "job": {
-      "tags": ["linux-docker"],
-      "image": "paritytech/ci-linux:production"
+    "configuration": "bench-bot",
+    "args": ["runtime", "westend-dev", "pallet_balances"],
+    "variables": {
+      "RUST_LOG": "info"
     },
-    "command": "RUST_LOG=debug cargo run --features=foo bar",
     "gitRef": {
       "contributor": "paritytech",
       "owner": "paritytech",
