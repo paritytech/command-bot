@@ -82,7 +82,7 @@ export class Logger {
             level,
             name: this.options.name,
             context: this.options.context,
-            msg: normalizeValue(item),
+            msg: normalizeValue(item, [], true),
             description,
             extra,
           }),
@@ -99,7 +99,7 @@ export class Logger {
             ? []
             : ["~@ Context:", normalizedContext]),
           ...(extra.length === 0 ? [] : ["~@ Extra:", normalizeValue(extra)]),
-          normalizeValue(item),
+          normalizeValue(item, [], true),
         )
         break
       }
