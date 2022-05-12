@@ -11,6 +11,7 @@ export type CommandConfiguration = {
   gitlab: {
     job: {
       tags: string[]
+      variables: Record<string, string>
     }
   }
   commandStart: string[]
@@ -19,7 +20,12 @@ export const commandsConfiguration: {
   [K in "try-runtime" | "bench-bot"]: CommandConfiguration
 } = {
   "try-runtime": {
-    gitlab: { job: { tags: ["linux-docker"] } },
+    gitlab: {
+      job: {
+        tags: ["linux-docker"],
+        variables: { RUST_LOG: "remote-ext=info" },
+      },
+    },
     commandStart: [
       "cargo",
       "run",
@@ -38,7 +44,7 @@ export const commandsConfiguration: {
     ],
   },
   "bench-bot": {
-    gitlab: { job: { tags: ["weights"] } },
+    gitlab: { job: { tags: ["weights"], variables: {} } },
     commandStart: ['"$PIPELINE_SCRIPTS_DIR/bench-bot.sh"'],
   },
 }

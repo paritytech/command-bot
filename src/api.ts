@@ -206,7 +206,7 @@ export const setupApi = (ctx: Context, server: Server) => {
       gitlab: {
         job: {
           ...configuration.gitlab.job,
-          variables: variables ?? {},
+          variables: { ...configuration.gitlab.job.variables, ...variables },
           image: gitlab.jobImage,
         },
         pipeline: null,

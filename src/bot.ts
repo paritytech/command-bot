@@ -344,7 +344,10 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
               job: {
                 ...parsedCommand.configuration.gitlab.job,
                 image: gitlab.jobImage,
-                variables: parsedCommand.variables,
+                variables: {
+                  ...parsedCommand.configuration.gitlab.job.variables,
+                  ...parsedCommand.variables,
+                },
               },
               pipeline: null,
             },
