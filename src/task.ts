@@ -231,7 +231,7 @@ export const queueTask = async (
 
         if (updateProgress) {
           await updateProgress(
-            `@${task.requester} ${pipelineCtx.jobWebUrl} was started for your command \`${task.command}\`. Check out https://${gitlab.domain}/${gitlab.pushNamespace}/${task.gitRef.repo}/-/pipelines?page=1&scope=all&username=${gitlab.accessTokenUsername} to know what else is being executed currently. ${additionalTaskCancelInstructions}`,
+            `@${task.requester} ${pipelineCtx.jobWebUrl} was started for your command \`${task.command}\`. Check out https://${gitlab.domain}/${gitlab.pushNamespace}/${task.gitRef.upstream.repo}/-/pipelines?page=1&scope=all&username=${gitlab.accessTokenUsername} to know what else is being executed currently. ${additionalTaskCancelInstructions}`,
           )
         }
 
@@ -299,7 +299,7 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
         switch (task.tag) {
           case "PullRequestTask": {
             const {
-              gitRef: { owner, repo, prNumber: prNumber },
+              gitRef: { upstream, prNumber },
               comment,
               requester,
             } = task
@@ -308,8 +308,8 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
 
             const announceCancel = (message: string) => {
               return updateComment(ctx, octokit, {
-                owner,
-                repo,
+                owner: upstream.owner,
+                repo: upstream.repo,
                 pull_number: prNumber,
                 comment_id: comment.id,
                 body: `@${requester} ${message}`,

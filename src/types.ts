@@ -4,10 +4,15 @@ import type { AccessDB, TaskDB } from "./db"
 import { Logger } from "./logger"
 
 export type GitRef = {
-  contributor: string
-  owner: string
-  repo: string
-  branch: string
+  contributor: {
+    owner: string
+    repo: string
+    branch: string
+  }
+  upstream: {
+    owner: string
+    repo: string
+  }
 }
 
 export type Context = {

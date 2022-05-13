@@ -141,10 +141,15 @@ export const setupApi = (ctx: Context, server: Server) => {
           Joi.boolean(),
         ]),
         gitRef: Joi.object().keys({
-          contributor: Joi.string().required(),
-          owner: Joi.string().required(),
-          repo: Joi.string().required(),
-          branch: Joi.string().required(),
+          contributor: Joi.object().keys({
+            owner: Joi.string().required(),
+            repo: Joi.string().required(),
+            branch: Joi.string().required(),
+          }),
+          upstream: Joi.object().keys({
+            owner: Joi.string().required(),
+            repo: Joi.string().required(),
+          }),
         }),
       })
       .validate(req.body)
@@ -199,7 +204,7 @@ export const setupApi = (ctx: Context, server: Server) => {
       timesExecuted: 0,
       gitRef,
       matrixRoom,
-      repoPath: path.join(repositoryCloneDirectory, gitRef.repo),
+      repoPath: path.join(repositoryCloneDirectory, gitRef.upstream.repo),
       queuedDate: serializeTaskQueuedDate(queuedDate),
       requester: matrixRoom,
       command,
