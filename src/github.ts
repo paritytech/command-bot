@@ -288,14 +288,14 @@ export const getPostPullRequestResult = (
       logger.info({ result, task }, "Posting pull request result")
 
       const {
-        gitRef: { owner, repo, prNumber: prNumber },
+        gitRef: { upstream, prNumber },
         requester,
         command,
       } = task
 
       await createComment(ctx, octokit, {
-        owner,
-        repo,
+        owner: upstream.owner,
+        repo: upstream.repo,
         issue_number: prNumber,
         body: `@${requester} Command \`${command}\` has finished. Result: ${
           typeof result === "string"

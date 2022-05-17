@@ -69,7 +69,7 @@ export const isRequesterAllowed = async (
 
 export const prepareBranch = async function* (
   ctx: Context,
-  { repoPath, gitRef: { contributor, owner, repo, branch } }: Task,
+  { repoPath, gitRef: { contributor, upstream } }: Task,
   {
     getFetchEndpoint,
   }: {
@@ -90,7 +90,7 @@ export const prepareBranch = async function* (
   // Clone the repository if it does not exist
   yield repoCmdRunner.run(
     "git",
-    ["clone", "--quiet", `${url}/${owner}/${repo}`, repoPath],
+    ["clone", "--quiet", `${url}/${upstream.owner}/${upstream.repo}`, repoPath],
     {
       testAllowedErrorMessage: (err) => {
         return err.endsWith("already exists and is not an empty directory.")
@@ -126,12 +126,17 @@ export const prepareBranch = async function* (
     "remote",
     "add",
     prRemote,
-    `${url}/${contributor}/${repo}.git`,
+    `${url}/${contributor.owner}/${contributor.repo}.git`,
   ])
 
-  yield repoCmdRunner.run("git", ["fetch", "--quiet", prRemote, branch])
+  yield repoCmdRunner.run("git", [
+    "fetch",
+    "--quiet",
+    prRemote,
+    contributor.branch,
+  ])
 
-  yield repoCmdRunner.run("git", ["branch", "-D", branch], {
+  yield repoCmdRunner.run("git", ["branch", "-D", contributor.branch], {
     testAllowedErrorMessage: (err) => {
       return err.endsWith("not found.")
     },
@@ -141,6 +146,6 @@ export const prepareBranch = async function* (
     "checkout",
     "--quiet",
     "--track",
-    `${prRemote}/${branch}`,
+    `${prRemote}/${contributor.branch}`,
   ])
 }
