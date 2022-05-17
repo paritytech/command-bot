@@ -8,7 +8,7 @@ import yaml from "yaml"
 import { CommandRunner } from "./shell"
 import { Task, taskExecutionTerminationEvent, TaskGitlabPipeline } from "./task"
 import { Context } from "./types"
-import { validatedFetch } from "./utils"
+import { millisecondsDelay, validatedFetch } from "./utils"
 
 export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   const { logger, gitlab } = ctx
@@ -137,16 +137,74 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   */
   await cmdRunner.run("git", ["push", "--force", gitlabRemote, "HEAD"])
 
+  const gitlabProjectApi = `https://${
+    gitlab.domain
+  }/api/v4/projects/${encodeURIComponent(gitlabProjectPath)}`
+  const branchNameUrlEncoded = encodeURIComponent(branchName)
+
+  /*
+    Wait until the branch is actually present on GitLab after pushing it. We've
+    noted this measure is required in
+    https://github.com/paritytech/polkadot/pull/5524#issuecomment-1128029579
+    because the pipeline creation request was sent too soon, before GitLab
+    registered the branch, therefore causing the "Reference not found" message.
+  */
+  let wasBranchRegistered = false
+  const waitForBranchMaxTries = 3
+  const waitForBranchRetryDelay = 1024
+
+  const branchPresenceUrl = `${gitlabProjectApi}/repository/branches/${branchNameUrlEncoded}`
+  for (
+    let waitForBranchTryCount = 0;
+    waitForBranchTryCount < waitForBranchMaxTries;
+    waitForBranchTryCount++
+  ) {
+    logger.info(
+      branchPresenceUrl,
+      `Sending request to see if the branch for task ${task.id} is ready`,
+    )
+    const response = await fetch(branchPresenceUrl, {
+      headers: { "PRIVATE-TOKEN": gitlab.accessToken },
+    })
+    if (
+      // The branch was not yet registered on GitLab; wait for it...
+      response.status === 404
+    ) {
+      logger.info(
+        `Branch of task ${task.id} was not found. Waiting before retrying...`,
+      )
+      await millisecondsDelay(waitForBranchRetryDelay)
+    } else if (response.ok) {
+      wasBranchRegistered = true
+      break
+    } else {
+      throw new Error(
+        `Request to ${branchPresenceUrl} failed: ${await response.text()}`,
+      )
+    }
+  }
+
+  if (!wasBranchRegistered) {
+    throw new Error(
+      `Task's branch was not registered on GitLab after ${
+        waitForBranchMaxTries * waitForBranchRetryDelay
+      }ms`,
+    )
+  }
+
+  const pipelineCreationUrl = `${gitlabProjectApi}/pipeline?ref=${branchNameUrlEncoded}`
+  logger.info(
+    pipelineCreationUrl,
+    `Sending request to create a pipeline for task ${task.id}`,
+  )
   const pipeline = await validatedFetch<{
     id: number
     project_id: number
   }>(
-    fetch(
-      `https://${gitlab.domain}/api/v4/projects/${encodeURIComponent(
-        gitlabProjectPath,
-      )}/pipeline?ref=${encodeURIComponent(branchName)}`,
-      { method: "POST", headers: { "PRIVATE-TOKEN": gitlab.accessToken } },
-    ),
+    fetch(pipelineCreationUrl, {
+      method: "POST",
+      headers: { "PRIVATE-TOKEN": gitlab.accessToken },
+    }),
     Joi.object()
       .keys({
         id: Joi.number().required(),
@@ -156,6 +214,11 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   )
   logger.info(pipeline, `Created pipeline for task ${task.id}`)
 
+  const jobFetchUrl = `${gitlabProjectApi}/pipelines/${pipeline.id}/jobs`
+  logger.info(
+    jobFetchUrl,
+    `Sending request to fetch the GitLab job created for task ${task.id}`,
+  )
   const [job] = await validatedFetch<
     [
       {
@@ -163,10 +226,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
       },
     ]
   >(
-    fetch(
-      `https://${gitlab.domain}/api/v4/projects/${pipeline.project_id}/pipelines/${pipeline.id}/jobs`,
-      { headers: { "PRIVATE-TOKEN": gitlab.accessToken } },
-    ),
+    fetch(jobFetchUrl, { headers: { "PRIVATE-TOKEN": gitlab.accessToken } }),
     Joi.array()
       .items(
         Joi.object()
