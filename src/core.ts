@@ -17,7 +17,7 @@ export type CommandConfiguration = {
   commandStart: string[]
 }
 export const commandsConfiguration: {
-  [K in "try-runtime" | "bench-bot"]: CommandConfiguration
+  [K in "try-runtime" | "bench-bot" | "sample"]: CommandConfiguration
 } = {
   "try-runtime": {
     gitlab: {
@@ -46,6 +46,11 @@ export const commandsConfiguration: {
   "bench-bot": {
     gitlab: { job: { tags: ["weights"], variables: {} } },
     commandStart: ['"$PIPELINE_SCRIPTS_DIR/bench-bot.sh"'],
+  },
+  // "sample" is used for testing purposes only
+  sample: {
+    gitlab: { job: { tags: ["kubernetes-parity-build"], variables: {} } },
+    commandStart: ["echo"],
   },
 }
 
