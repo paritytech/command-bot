@@ -165,7 +165,6 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
     const response = await fetch(branchPresenceUrl, {
       headers: { "PRIVATE-TOKEN": gitlab.accessToken },
     })
-    logger.info({ status: response.status })
     if (
       // The branch was not yet registered on GitLab; wait for it...
       response.status === 404
