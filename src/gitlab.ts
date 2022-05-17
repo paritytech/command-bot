@@ -8,7 +8,7 @@ import yaml from "yaml"
 import { CommandRunner } from "./shell"
 import { Task, taskExecutionTerminationEvent, TaskGitlabPipeline } from "./task"
 import { Context } from "./types"
-import { validatedFetch } from "./utils"
+import { millisecondsDelay, validatedFetch } from "./utils"
 
 export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   const { logger, gitlab } = ctx
@@ -136,6 +136,59 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
     is conditional per workflow:rules
   */
   await cmdRunner.run("git", ["push", "--force", gitlabRemote, "HEAD"])
+
+  /*
+    Wait until the branch is actually present on GitLab after pushing it. We've
+    noted this measure is required in
+    https://github.com/paritytech/polkadot/pull/5524#issuecomment-1128029579
+    because the pipeline creation request was sent too soon, before GitLab
+    registered the branch, therefore causing the "Reference not found" message.
+  */
+  let wasBranchRegistered = false
+  const waitForBranchMaxTries = 3
+  const waitForBranchRetryDelay = 1024
+
+  const branchPresenceUrl = `https://${
+    gitlab.domain
+  }/api/v4/projects/${encodeURIComponent(
+    gitlabProjectPath,
+  )}/repository/branches/${encodeURIComponent(branchName)}`
+  for (
+    let waitForBranchTryCount = 0;
+    waitForBranchTryCount < waitForBranchMaxTries;
+    waitForBranchTryCount++
+  ) {
+    logger.info(
+      branchPresenceUrl,
+      `Sending request to see if the branch for task ${task.id} is ready`,
+    )
+    const response = await fetch(branchPresenceUrl, {
+      method: "GET",
+      headers: { "PRIVATE-TOKEN": gitlab.accessToken },
+    })
+    logger.info({ status: response.status })
+    if (
+      // The branch was not yet registered on GitLab; wait for it...
+      response.status === 404
+    ) {
+      await millisecondsDelay(waitForBranchRetryDelay)
+    } else if (response.ok) {
+      wasBranchRegistered = true
+      break
+    } else {
+      throw new Error(
+        `Request to ${branchPresenceUrl} failed: ${await response.text()}`,
+      )
+    }
+  }
+
+  if (!wasBranchRegistered) {
+    throw new Error(
+      `Task's branch was not registered on GitLab after ${
+        waitForBranchMaxTries * waitForBranchRetryDelay
+      }ms`,
+    )
+  }
 
   const pipelineCreationUrl = `https://${
     gitlab.domain
