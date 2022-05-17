@@ -169,6 +169,9 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
       // The branch was not yet registered on GitLab; wait for it...
       response.status === 404
     ) {
+      logger.info(
+        `Branch of task ${task.id} was not found. Waiting before retrying...`,
+      )
       await millisecondsDelay(waitForBranchRetryDelay)
     } else if (response.ok) {
       wasBranchRegistered = true
