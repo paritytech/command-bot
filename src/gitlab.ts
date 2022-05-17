@@ -218,7 +218,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
 
   const jobFetchUrl = `https://${gitlab.domain}/api/v4/projects/${pipeline.project_id}/pipelines/${pipeline.id}/jobs`
   logger.info(
-    pipelineCreationUrl,
+    jobFetchUrl,
     `Sending request to fetch the GitLab job created for task ${task.id}`,
   )
   const [job] = await validatedFetch<
