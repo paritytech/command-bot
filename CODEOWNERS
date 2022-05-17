@@ -1,0 +1,5 @@
+* @paritytech/opstooling
+
+helm @paritytech/devops
+
+.gitlab-ci.yml @paritytech/ci
