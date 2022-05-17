@@ -137,6 +137,11 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   */
   await cmdRunner.run("git", ["push", "--force", gitlabRemote, "HEAD"])
 
+  const gitlabProjectUrlByPath = `https://${
+    gitlab.domain
+  }/api/v4/projects/${encodeURIComponent(gitlabProjectPath)}`
+  const branchNameUrlEncoded = encodeURIComponent(branchName)
+
   /*
     Wait until the branch is actually present on GitLab after pushing it. We've
     noted this measure is required in
@@ -148,11 +153,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   const waitForBranchMaxTries = 3
   const waitForBranchRetryDelay = 1024
 
-  const branchPresenceUrl = `https://${
-    gitlab.domain
-  }/api/v4/projects/${encodeURIComponent(
-    gitlabProjectPath,
-  )}/repository/branches/${encodeURIComponent(branchName)}`
+  const branchPresenceUrl = `${gitlabProjectUrlByPath}/repository/branches/${branchNameUrlEncoded}`
   for (
     let waitForBranchTryCount = 0;
     waitForBranchTryCount < waitForBranchMaxTries;
@@ -191,11 +192,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
     )
   }
 
-  const pipelineCreationUrl = `https://${
-    gitlab.domain
-  }/api/v4/projects/${encodeURIComponent(
-    gitlabProjectPath,
-  )}/pipeline?ref=${encodeURIComponent(branchName)}`
+  const pipelineCreationUrl = `${gitlabProjectUrlByPath}/pipeline?ref=${branchNameUrlEncoded}`
   logger.info(
     pipelineCreationUrl,
     `Sending request to create a pipeline for task ${task.id}`,
