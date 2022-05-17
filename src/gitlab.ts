@@ -137,7 +137,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   */
   await cmdRunner.run("git", ["push", "--force", gitlabRemote, "HEAD"])
 
-  const gitlabProjectUrlByPath = `https://${
+  const gitlabProjectApi = `https://${
     gitlab.domain
   }/api/v4/projects/${encodeURIComponent(gitlabProjectPath)}`
   const branchNameUrlEncoded = encodeURIComponent(branchName)
@@ -153,7 +153,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   const waitForBranchMaxTries = 3
   const waitForBranchRetryDelay = 1024
 
-  const branchPresenceUrl = `${gitlabProjectUrlByPath}/repository/branches/${branchNameUrlEncoded}`
+  const branchPresenceUrl = `${gitlabProjectApi}/repository/branches/${branchNameUrlEncoded}`
   for (
     let waitForBranchTryCount = 0;
     waitForBranchTryCount < waitForBranchMaxTries;
@@ -192,7 +192,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
     )
   }
 
-  const pipelineCreationUrl = `${gitlabProjectUrlByPath}/pipeline?ref=${branchNameUrlEncoded}`
+  const pipelineCreationUrl = `${gitlabProjectApi}/pipeline?ref=${branchNameUrlEncoded}`
   logger.info(
     pipelineCreationUrl,
     `Sending request to create a pipeline for task ${task.id}`,
@@ -214,7 +214,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   )
   logger.info(pipeline, `Created pipeline for task ${task.id}`)
 
-  const jobFetchUrl = `https://${gitlab.domain}/api/v4/projects/${pipeline.project_id}/pipelines/${pipeline.id}/jobs`
+  const jobFetchUrl = `${gitlabProjectApi}/pipelines/${pipeline.id}/jobs`
   logger.info(
     jobFetchUrl,
     `Sending request to fetch the GitLab job created for task ${task.id}`,
