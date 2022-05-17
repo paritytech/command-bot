@@ -137,16 +137,23 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   */
   await cmdRunner.run("git", ["push", "--force", gitlabRemote, "HEAD"])
 
+  const pipelineCreationUrl = `https://${
+    gitlab.domain
+  }/api/v4/projects/${encodeURIComponent(
+    gitlabProjectPath,
+  )}/pipeline?ref=${encodeURIComponent(branchName)}`
+  logger.info(
+    pipelineCreationUrl,
+    `Sending request to create a pipeline for task ${task.id}`,
+  )
   const pipeline = await validatedFetch<{
     id: number
     project_id: number
   }>(
-    fetch(
-      `https://${gitlab.domain}/api/v4/projects/${encodeURIComponent(
-        gitlabProjectPath,
-      )}/pipeline?ref=${encodeURIComponent(branchName)}`,
-      { method: "POST", headers: { "PRIVATE-TOKEN": gitlab.accessToken } },
-    ),
+    fetch(pipelineCreationUrl, {
+      method: "POST",
+      headers: { "PRIVATE-TOKEN": gitlab.accessToken },
+    }),
     Joi.object()
       .keys({
         id: Joi.number().required(),
@@ -156,6 +163,11 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   )
   logger.info(pipeline, `Created pipeline for task ${task.id}`)
 
+  const jobFetchUrl = `https://${gitlab.domain}/api/v4/projects/${pipeline.project_id}/pipelines/${pipeline.id}/jobs`
+  logger.info(
+    pipelineCreationUrl,
+    `Sending request to fetch the GitLab job created for task ${task.id}`,
+  )
   const [job] = await validatedFetch<
     [
       {
@@ -163,10 +175,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
       },
     ]
   >(
-    fetch(
-      `https://${gitlab.domain}/api/v4/projects/${pipeline.project_id}/pipelines/${pipeline.id}/jobs`,
-      { headers: { "PRIVATE-TOKEN": gitlab.accessToken } },
-    ),
+    fetch(jobFetchUrl, { headers: { "PRIVATE-TOKEN": gitlab.accessToken } }),
     Joi.array()
       .items(
         Joi.object()
