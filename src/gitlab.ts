@@ -163,7 +163,6 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
       `Sending request to see if the branch for task ${task.id} is ready`,
     )
     const response = await fetch(branchPresenceUrl, {
-      method: "GET",
       headers: { "PRIVATE-TOKEN": gitlab.accessToken },
     })
     logger.info({ status: response.status })
