@@ -279,20 +279,46 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
             )
           }
 
-          const prResponse = await octokit.pulls.get({
+          const { data: fetchedPr } = await octokit.pulls.get({
             owner: pr.owner,
             repo: pr.repo,
             pull_number: pr.number,
           })
 
-          const contributor = prResponse.data.head?.user?.login
-          if (!contributor) {
-            return getError(`Failed to get branch owner from the Github API`)
+          const upstream = {
+            owner: fetchedPr.base.repo.owner.login,
+            repo: fetchedPr.base.repo.name,
           }
 
-          const branch = prResponse.data.head?.ref
-          if (!branch) {
-            return getError(`Failed to get branch name from the Github API`)
+          // Update pr in case the upstream repository has been renamed
+          pr.owner = upstream.owner
+          pr.repo = upstream.repo
+
+          const contributorUsername = fetchedPr.head?.user?.login
+          if (!contributorUsername) {
+            return getError(
+              "Failed to read repository owner username for contributor in pull request response",
+            )
+          }
+
+          const contributorRepository = fetchedPr.head?.repo?.name
+          if (!contributorRepository) {
+            return getError(
+              "Failed to read repository name for contributor in pull request response",
+            )
+          }
+
+          const contributorBranch = fetchedPr.head?.ref
+          if (!contributorBranch) {
+            return getError(
+              "Failed to read branch name for contributor in pull request response",
+            )
+          }
+
+          const contributor = {
+            owner: contributorUsername,
+            repo: contributorRepository,
+            branch: contributorBranch,
           }
 
           const commentBody =
@@ -301,15 +327,6 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
             ...commentParams,
             body: commentBody,
           })
-          if (createdComment.status !== 201) {
-            return getError(
-              `The GitHub API responded with unexpected status ${
-                prResponse.status
-              } when trying to create a comment in the pull request\n\`\`\`\n(${JSON.stringify(
-                createdComment.data,
-              )})\n\`\`\``,
-            )
-          }
           getError = (body: string) => {
             return new PullRequestError(pr, {
               body,
@@ -328,13 +345,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
             command: parsedCommand.command,
             comment: { id: createdComment.id, htmlUrl: createdComment.htmlUrl },
             installationId,
-            gitRef: {
-              owner: pr.owner,
-              repo: pr.repo,
-              contributor,
-              branch,
-              prNumber: pr.number,
-            },
+            gitRef: { upstream, contributor, prNumber: pr.number },
             timesRequeued: 0,
             timesRequeuedSnapshotBeforeExecution: 0,
             timesExecuted: 0,
@@ -385,8 +396,8 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
               }
             } else {
               if (
-                task.gitRef.owner !== pr.owner ||
-                task.gitRef.repo !== pr.repo ||
+                task.gitRef.upstream.owner !== pr.owner ||
+                task.gitRef.upstream.repo !== pr.repo ||
                 task.gitRef.prNumber !== pr.number
               ) {
                 continue

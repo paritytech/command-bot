@@ -86,9 +86,9 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
         },
         variables: {
           ...task.gitlab.job.variables,
-          GH_CONTRIBUTOR: task.gitRef.contributor,
-          GH_CONTRIBUTOR_REPO: task.gitRef.repo,
-          GH_CONTRIBUTOR_BRANCH: task.gitRef.branch,
+          GH_CONTRIBUTOR: task.gitRef.contributor.owner,
+          GH_CONTRIBUTOR_REPO: task.gitRef.contributor.repo,
+          GH_CONTRIBUTOR_BRANCH: task.gitRef.contributor.branch,
           GH_HEAD_SHA: headSha,
           COMMIT_MESSAGE: task.command,
           PIPELINE_SCRIPTS_REPOSITORY: ctx.pipelineScripts?.repository,
@@ -100,7 +100,9 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   )
 
   const branchName = `cmd-bot/${
-    "prNumber" in task.gitRef ? task.gitRef.prNumber : task.gitRef.branch
+    "prNumber" in task.gitRef
+      ? task.gitRef.prNumber
+      : `${task.gitRef.contributor.owner}/${task.gitRef.contributor.branch}`
   }`
   await cmdRunner.run("git", ["branch", "-D", branchName], {
     testAllowedErrorMessage: (err) => {
@@ -114,7 +116,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   await cmdRunner.run("git", ["commit", "-m", task.command])
 
   const gitlabRemote = "gitlab"
-  const gitlabProjectPath = `${gitlab.pushNamespace}/${task.gitRef.repo}`
+  const gitlabProjectPath = `${gitlab.pushNamespace}/${task.gitRef.upstream.repo}`
 
   await cmdRunner.run("git", ["remote", "remove", gitlabRemote], {
     testAllowedErrorMessage: (err) => {

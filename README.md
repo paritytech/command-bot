@@ -112,10 +112,15 @@ curl \
       "RUST_LOG": "info"
     },
     "gitRef": {
-      "contributor": "paritytech",
-      "owner": "paritytech",
-      "repo": "substrate",
-      "branch": "master"
+      "contributor": {
+        "owner": "user",
+        "repo": "substrate",
+        "branch": "benchmarking-test"
+      },
+      "upstream": {
+        "owner": "paritytech",
+        "repo": "substrate"
+      }
     }
   }'
 ```
