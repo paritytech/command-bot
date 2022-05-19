@@ -192,12 +192,6 @@ GitHub App, install it in a repository through
   - If it's not already be bundled with Node.js, install with
     `npm install -g yarn`
 - `git` for cloning branches before executing try-runtime-cli
-- Rust for being able to build the try-runtime-cli
-  - [rustup](https://rustup.rs/) is the recommended way of setting up a Rust
-    toolchain
-- try-runtime-cli's build requirements
-  - Please check the [generateDockerfile](./scripts/generateDockerfile) for the
-    relevant packages
 - RocksDB's build requirements
   - Please check the [generateDockerfile](./scripts/generateDockerfile) for the
     relevant packages
