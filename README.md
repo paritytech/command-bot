@@ -228,10 +228,10 @@ once the application starts.
 7. Trigger the [commands](#pull-request-commands) in the repositories where
   you've installed the GitHub App (Step 3) and check if it works
 
-  The `sample` configuration is available for debugging purposes
+    The `sample` configuration is available for debugging purposes.
 
-  `/cmd queue -c sample $ hi` will run `echo hi` in a GitLab job (repository
-  from Step 4)
+    `/cmd queue -c sample $ hi` will run `echo hi` in a GitLab job (GitLab
+    repository from Step 4).
 
 # Deployment <a name="deployment"></a>
 
