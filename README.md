@@ -192,12 +192,6 @@ GitHub App, install it in a repository through
   - If it's not already be bundled with Node.js, install with
     `npm install -g yarn`
 - `git` for cloning branches before executing try-runtime-cli
-- Rust for being able to build the try-runtime-cli
-  - [rustup](https://rustup.rs/) is the recommended way of setting up a Rust
-    toolchain
-- try-runtime-cli's build requirements
-  - Please check the [generateDockerfile](./scripts/generateDockerfile) for the
-    relevant packages
 - RocksDB's build requirements
   - Please check the [generateDockerfile](./scripts/generateDockerfile) for the
     relevant packages
@@ -220,19 +214,24 @@ once the application starts.
     through the `WEBHOOK_PROXY_URL` environment variable, for receiving GitHub
     Webhook Events in your local server instance.
 
-3. Set up the blockchain nodes
+3. [Install the GitHub app](#github-app-installation) in a GitHub repository
+4. Set up a GitLab repository in [`$GITLAB_PUSH_NAMESPACE`](./.env.example.cjs)
+  to run the commands for the GitHub repository (Step 3)
 
-    The following command can be used to set up a blockchain node locally (for usage
-    in [`${NAME}_WEBSOCKET_ADDRESS`](#setup-environment-variables)):
+    The GitLab repository name should match how the repository is named on
+    GitHub.
 
-    `docker run -p 9944:9944 parity/polkadot:latest --unsafe-rpc-external --unsafe-ws-external --ws-port 9944 --rpc-cors all --dev --tmp`
-
-4. Run `yarn` to install the dependencies
-5. Run `yarn dev` to start a development server or `yarn watch` for a
+5. Run `yarn` to install the dependencies
+6. Run `yarn dev` to start a development server or `yarn watch` for a
   development server which automatically restarts when you make changes to the
   source files
-6. Trigger the [commands](#pull-request-commands) in the repositories where
-  you've installed the GitHub App (Step 2) and check if it works
+7. Trigger the [commands](#pull-request-commands) in the repositories where
+  you've installed the GitHub App (Step 3) and check if it works
+
+    The `sample` configuration is available for debugging purposes.
+
+    `/cmd queue -c sample $ hi` will run `echo hi` in a GitLab job (GitLab
+    repository from Step 4).
 
 # Deployment <a name="deployment"></a>
 
