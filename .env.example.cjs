@@ -41,7 +41,7 @@ process.env.GITLAB_PUSH_NAMESPACE ??= "placeholder"
 
 /*
   The default image to be used on GitLab jobs for bot commands which don't
-  specify a custom image
+  specify a custom image (like `quay.io/buildah/stable`)
 */
 process.env.GITLAB_JOB_IMAGE ??= "placeholder"
 
@@ -49,6 +49,7 @@ process.env.GITLAB_JOB_IMAGE ??= "placeholder"
   GITLAB_ACCESS_TOKEN token needs the following scopes:
   - "write_repository"
   - "read_api"
+  - "api"
 
   Instructions for generating this token are available at:
   https://docs.gitlab.com/ee/security/token_overview.html
@@ -66,10 +67,9 @@ process.env.GITLAB_ACCESS_TOKEN_USERNAME ??= "placeholder"
 // process.env.PIPELINE_SCRIPTS_REF ??= "placeholder"
 
 /*
-  This private key's file can be generated and downloaded from
+  Download private key file from
   https://github.com/settings/apps/[app-name].
-  If you need to calculate the Base64 of the value manually, that can be done
-  with `base64 -w 0 private-key.pem`.
+  Move it to root directory of this project and rename to `githubPrivateKey.pem`
 */
 process.env.PRIVATE_KEY_BASE64 ??= Buffer.from(
   fs.readFileSync(path.join(__dirname, "githubPrivateKey.pem"), "utf-8"),
