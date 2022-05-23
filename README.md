@@ -207,28 +207,26 @@ once the application starts.
 
 ## Run the application <a name="development-run"></a>
 
-1. [Set up the GitHub App](#github-app).
+1. [Set up the GitHub App](#github-app)
 2. [Set up the command-bot application](#setup)
-
-    Along with creating app, replace *placeholders* in `.env.cjs` with required data.
 
     During development it's handy to use a [smee.io](https://smee.io/) proxy,
     through the `WEBHOOK_PROXY_URL` environment variable, for receiving GitHub
     Webhook Events in your local server instance.
 
-4. [Install the GitHub app](#github-app-installation) in a GitHub repository
-5. Create a repository in GitLab and set up [`GITLAB_PUSH_NAMESPACE`](./.env.example.cjs)
+3. [Install the GitHub app](#github-app-installation) in a GitHub repository
+4. Create a repository in GitLab and set up [`GITLAB_PUSH_NAMESPACE`](./.env.example.cjs)
   along with [`GITLAB_ACCESS_TOKEN`](./.env.example.cjs)
   to run the commands for the GitHub repository (Step 3).
 
     Note: The GitLab repository name should match how the repository is named on
     GitHub.
 
-6. Run `yarn` to install the dependencies
-7. Run `yarn dev` to start a development server or `yarn watch` for a
+5. Run `yarn` to install the dependencies
+6. Run `yarn dev` to start a development server or `yarn watch` for a
   development server which automatically restarts when you make changes to the
   source files
-8. Trigger the [commands](#pull-request-commands) in the repositories where
+7. Trigger the [commands](#pull-request-commands) in the repositories where
   you've installed the GitHub App (Step 3) and check if it works
 
     The `sample` configuration is available for debugging purposes.

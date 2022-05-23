@@ -48,7 +48,6 @@ process.env.GITLAB_JOB_IMAGE ??= "placeholder"
 /*
   GITLAB_ACCESS_TOKEN token needs the following scopes:
   - "write_repository"
-  - "read_api"
   - "api"
 
   Instructions for generating this token are available at:
