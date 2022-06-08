@@ -66,6 +66,11 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
         ...task.gitlab.job,
         script: [
           `echo "This job is related to task ${task.id}. ${jobTaskInfoMessage}."`,
+          /*
+            The scripts repository might be left over from a previous run in the
+            same Gitlab shell executor
+          */
+          'rm -rf "$PIPELINE_SCRIPTS_REPOSITORY"',
           // prettier-ignore
           'if [ "${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then ' +
             'if [ "${PIPELINE_SCRIPTS_REF:-}" ]; then ' +
@@ -75,7 +80,12 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
             "fi" + "; " +
           "fi",
           `export ARTIFACTS_DIR="$PWD/${artifactsFolderPath}"`,
-          `mkdir -p "$ARTIFACTS_DIR"`,
+          /*
+            The artifacts directory might be left over from a previous run in
+            the same Gitlab shell executor
+          */
+          'rm -rf "$ARTIFACTS_DIR"',
+          'mkdir -p "$ARTIFACTS_DIR"',
           task.command,
         ],
         artifacts: {
