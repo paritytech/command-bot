@@ -70,7 +70,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
             The scripts repository might be left over from a previous run in the
             same Gitlab shell executor
           */
-          'rm -rf "$PIPELINE_SCRIPTS_REPOSITORY"',
+          'rm -rf "$PIPELINE_SCRIPTS_DIR"',
           // prettier-ignore
           'if [ "${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then ' +
             'if [ "${PIPELINE_SCRIPTS_REF:-}" ]; then ' +
