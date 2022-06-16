@@ -6,6 +6,8 @@ updates:
     schedule:
       interval: "daily"
     ignore:
+      # @types/node should be bumped manually once we change the Node.js version used
+      - dependency-name: "@types/node"
       - dependency-name: "*"
         # Ignore minor/patch upgrades; only bother with opening the upgrade PR
         # when a new major release comes out; security updates are nevertheless
