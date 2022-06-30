@@ -12,6 +12,7 @@ export type GitRef = {
   upstream: {
     owner: string
     repo: string
+    branch?: string
   }
 }
 

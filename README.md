@@ -97,7 +97,7 @@ curl \
 ## Queue <a name="api-command-queue"></a>
 
 Use a [Personal Token](#api-create-token) for queueing a command through `POST
-/api/queue`:
+/api/queue`.
 
 ```sh
 curl \
@@ -124,6 +124,10 @@ curl \
     }
   }'
 ```
+
+For bench-bot you can optionally specify a string in `gitRef.upstream.branch`
+which is the name of the branch to be merged into the `contributor` branch
+before benchmarks.
 
 ## Cancel <a name="api-command-cancel"></a>
 

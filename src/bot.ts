@@ -288,6 +288,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           const upstream = {
             owner: fetchedPr.base.repo.owner.login,
             repo: fetchedPr.base.repo.name,
+            branch: fetchedPr.base.ref,
           }
 
           // Update pr in case the upstream repository has been renamed

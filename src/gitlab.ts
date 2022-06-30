@@ -96,6 +96,11 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
         },
         variables: {
           ...task.gitlab.job.variables,
+          GH_OWNER: task.gitRef.upstream.owner,
+          GH_OWNER_REPO: task.gitRef.upstream.repo,
+          ...(task.gitRef.upstream.branch
+            ? { GH_OWNER_BRANCH: task.gitRef.upstream.branch }
+            : {}),
           GH_CONTRIBUTOR: task.gitRef.contributor.owner,
           GH_CONTRIBUTOR_REPO: task.gitRef.contributor.repo,
           GH_CONTRIBUTOR_BRANCH: task.gitRef.contributor.branch,

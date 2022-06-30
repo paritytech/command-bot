@@ -149,6 +149,7 @@ export const setupApi = (ctx: Context, server: Server) => {
           upstream: Joi.object().keys({
             owner: Joi.string().required(),
             repo: Joi.string().required(),
+            branch: Joi.string(),
           }),
         }),
       })
