@@ -7,6 +7,12 @@ import { Context } from "./types"
   TODO: Move command configurations to configuration repository or database so
   that it can be updated dynamically, without redeploying the application
 */
+const getBenchBotCommand = ({ tags }: { tags: string[] }) => {
+  return {
+    gitlab: { job: { tags, variables: {} } },
+    commandStart: ['"$PIPELINE_SCRIPTS_DIR/bench-bot.sh"'],
+  }
+}
 export type CommandConfiguration = {
   gitlab: {
     job: {
@@ -17,7 +23,11 @@ export type CommandConfiguration = {
   commandStart: string[]
 }
 export const commandsConfiguration: {
-  [K in "try-runtime" | "bench-bot" | "sample"]: CommandConfiguration
+  [K in
+    | "try-runtime"
+    | "bench-bot"
+    | "test-bench-bot"
+    | "sample"]: CommandConfiguration
 } = {
   "try-runtime": {
     gitlab: {
@@ -43,10 +53,8 @@ export const commandsConfiguration: {
       "try-runtime",
     ],
   },
-  "bench-bot": {
-    gitlab: { job: { tags: ["bench-bot"], variables: {} } },
-    commandStart: ['"$PIPELINE_SCRIPTS_DIR/bench-bot.sh"'],
-  },
+  "bench-bot": getBenchBotCommand({ tags: ["bench-bot"] }),
+  "test-bench-bot": getBenchBotCommand({ tags: ["test-bench-bot"] }),
   // "sample" is used for testing purposes only
   sample: {
     gitlab: { job: { tags: ["kubernetes-parity-build"], variables: {} } },
