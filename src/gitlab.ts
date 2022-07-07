@@ -63,6 +63,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
         ],
       },
       command: {
+        timeout: "24 hours",
         ...task.gitlab.job,
         script: [
           `echo "This job is related to task ${task.id}. ${jobTaskInfoMessage}."`,
