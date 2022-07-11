@@ -29,7 +29,7 @@
     "yargs": "^17.5.0"
   },
   "devDependencies": {
-    "@octokit/auth-app": "3.6.1",
+    "@octokit/auth-app": "4.0.4",
     "@resolritter/tsc-files": "^1.1.4",
     "@types/abstract-leveldown": "7.2.0",
     "@types/levelup": "5.1.1",
