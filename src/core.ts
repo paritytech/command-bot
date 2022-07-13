@@ -31,7 +31,7 @@ export const commandsConfiguration: {
 } = {
   "try-runtime": {
     gitlab: { job: { tags: ["linux-docker"], variables: {} } },
-    commandStart: ['"$PIPELINE_SCRIPTS_DIR/try-runtime-bot"'],
+    commandStart: ['"$PIPELINE_SCRIPTS_DIR/try-runtime-bot.sh"'],
   },
   "bench-bot": getBenchBotCommand({ tags: ["bench-bot"] }),
   "test-bench-bot": getBenchBotCommand({ tags: ["test-bench-bot"] }),
