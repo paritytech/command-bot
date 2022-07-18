@@ -30,28 +30,8 @@ export const commandsConfiguration: {
     | "sample"]: CommandConfiguration
 } = {
   "try-runtime": {
-    gitlab: {
-      job: {
-        tags: ["linux-docker"],
-        variables: { RUST_LOG: "remote-ext=info" },
-      },
-    },
-    commandStart: [
-      "cargo",
-      "run",
-      /*
-        Requirement: always run the command in release mode.
-        See https://github.com/paritytech/try-runtime-bot/issues/26#issue-1049555966
-      */
-      "--release",
-      /*
-        "--quiet" should be kept so that the output doesn't get polluted
-        with a bunch of compilation stuff
-      */
-      "--quiet",
-      "--features=try-runtime",
-      "try-runtime",
-    ],
+    gitlab: { job: { tags: ["linux-docker"], variables: {} } },
+    commandStart: ['"$PIPELINE_SCRIPTS_DIR/try-runtime-bot.sh"'],
   },
   "bench-bot": getBenchBotCommand({ tags: ["bench-bot"] }),
   "test-bench-bot": getBenchBotCommand({ tags: ["test-bench-bot"] }),
