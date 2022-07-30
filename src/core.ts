@@ -27,11 +27,16 @@ export const commandsConfiguration: {
     | "try-runtime"
     | "bench-bot"
     | "test-bench-bot"
+	| "fmt"
     | "sample"]: CommandConfiguration
 } = {
   "try-runtime": {
     gitlab: { job: { tags: ["linux-docker"], variables: {} } },
     commandStart: ['"$PIPELINE_SCRIPTS_DIR/try-runtime-bot.sh"'],
+  },
+  "fmt": {
+	gitlab: { job: { tags: ["linux-docker"], variables: {} } },
+    commandStart: ['"$PIPELINE_SCRIPTS_DIR/fmt.sh"'],
   },
   "bench-bot": getBenchBotCommand({ tags: ["bench-bot"] }),
   "test-bench-bot": getBenchBotCommand({ tags: ["test-bench-bot"] }),
