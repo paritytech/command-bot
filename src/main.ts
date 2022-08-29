@@ -44,12 +44,7 @@ const main = async () => {
       }
     }
   })()
-  const logger = new Logger({
-    name: "command-bot",
-    minLogLevel,
-    logFormat,
-    impl: console,
-  })
+  const logger = new Logger({ name: "command-bot", minLogLevel, logFormat, impl: console })
 
   const masterToken = envVar("MASTER_TOKEN")
 
@@ -117,10 +112,7 @@ const main = async () => {
   }
 
   const appId = envNumberVar("APP_ID")
-  const privateKey = Buffer.from(
-    envVar("PRIVATE_KEY_BASE64"),
-    "base64",
-  ).toString()
+  const privateKey = Buffer.from(envVar("PRIVATE_KEY_BASE64"), "base64").toString()
   const clientId = envVar("CLIENT_ID")
   const clientSecret = envVar("CLIENT_SECRET")
   const webhookSecret = envVar("WEBHOOK_SECRET")
@@ -128,12 +120,7 @@ const main = async () => {
   let probotLogger: ProbotLogger | undefined = undefined
   switch (logFormat) {
     case "json": {
-      probotLogger = getLog({
-        level: "error",
-        logFormat: "json",
-        logLevelInString: true,
-        logMessageKey: "msg",
-      })
+      probotLogger = getLog({ level: "error", logFormat: "json", logLevelInString: true, logMessageKey: "msg" })
       break
     }
     case null: {
@@ -150,23 +137,17 @@ const main = async () => {
     privateKey,
     secret: webhookSecret,
     logLevel: "info",
-    ...(probotLogger === undefined
-      ? {}
-      : { log: probotLogger.child({ name: "probot" }) }),
+    ...(probotLogger === undefined ? {} : { log: probotLogger.child({ name: "probot" }) }),
   })
   const server = new Server({
     Probot: bot,
-    ...(probotLogger === undefined
-      ? {}
-      : { log: probotLogger.child({ name: "server" }) }),
+    ...(probotLogger === undefined ? {} : { log: probotLogger.child({ name: "server" }) }),
     webhookProxy: process.env.WEBHOOK_PROXY_URL,
   })
 
   const allowedOrganizations = envVar("ALLOWED_ORGANIZATIONS")
     .split(",")
-    .filter((value) => {
-      return value.length !== 0
-    })
+    .filter((value) => value.length !== 0)
     .map((value) => {
       const parsedValue = parseInt(value)
       assert(parsedValue)
@@ -176,10 +157,7 @@ const main = async () => {
 
   const matrix = (() => {
     if (process.env.MATRIX_HOMESERVER) {
-      return {
-        homeServer: process.env.MATRIX_HOMESERVER,
-        accessToken: envVar("MATRIX_ACCESS_TOKEN"),
-      }
+      return { homeServer: process.env.MATRIX_HOMESERVER, accessToken: envVar("MATRIX_ACCESS_TOKEN") }
     } else {
       return undefined
     }
@@ -194,10 +172,7 @@ const main = async () => {
   const pipelineScripts = (() => {
     const pipelineScriptsRepository = process.env.PIPELINE_SCRIPTS_REPOSITORY
     if (pipelineScriptsRepository) {
-      return {
-        repository: pipelineScriptsRepository,
-        ref: process.env.PIPELINE_SCRIPTS_REF,
-      }
+      return { repository: pipelineScriptsRepository, ref: process.env.PIPELINE_SCRIPTS_REF }
     }
   })()
 

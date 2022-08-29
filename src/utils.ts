@@ -2,7 +2,7 @@ import assert from "assert"
 import Joi from "joi"
 import fetch from "node-fetch"
 
-export const envVar = (name: string) => {
+export const envVar = (name: string): string => {
   const val = process.env[name]
   if (typeof val !== "string") {
     throw new Error(`${name} was not found in the environment variables`)
@@ -10,7 +10,7 @@ export const envVar = (name: string) => {
   return val
 }
 
-export const envNumberVar = (name: string) => {
+export const envNumberVar = (name: string): number => {
   const val = process.env[name]
   assert(val, `${name} was not found in the environment variables`)
   const valNumber = parseInt(val)
@@ -18,16 +18,11 @@ export const envNumberVar = (name: string) => {
   return valNumber
 }
 
-export const getLines = (str: string) => {
-  return str
+export const getLines = (str: string): string[] =>
+  str
     .split("\n")
-    .map((line) => {
-      return line.trim()
-    })
-    .filter((line) => {
-      return !!line
-    })
-}
+    .map((line) => line.trim())
+    .filter((line) => !!line)
 
 export const displayCommand = ({
   execPath,
@@ -37,53 +32,39 @@ export const displayCommand = ({
   execPath: string
   args: string[]
   itemsToRedact: string[]
-}) => {
-  return redact(`${execPath} ${args.join(" ")}`, itemsToRedact)
-}
+}): string => redact(`${execPath} ${args.join(" ")}`, itemsToRedact)
 
-export const millisecondsDelay = (milliseconds: number) => {
-  return new Promise<void>((resolve) => {
+export const millisecondsDelay = (milliseconds: number): Promise<void> =>
+  new Promise<void>((resolve) => {
     setTimeout(resolve, milliseconds)
   })
-}
 
-export const intoError = (value: unknown) => {
+export const intoError = (value: unknown): Error => {
   if (value instanceof Error) {
     return value
   }
   return new Error(String(value))
 }
 
-export const displayError = (value: unknown) => {
+export const displayError = (value: unknown): string => {
   const error = intoError(value)
 
-  let errorMessage = `${error.toString()}${
-    error.stack ? `\n${error.stack}` : ""
-  }`
+  let errorMessage = `${error.toString()}${error.stack ? `\n${error.stack}` : ""}`
   if (error instanceof Joi.ValidationError) {
-    errorMessage = `${errorMessage}\n${JSON.stringify(
-      normalizeValue(error._original),
-    )}`
+    errorMessage = `${errorMessage}\n${JSON.stringify(normalizeValue(error._original))}`
   }
 
   return errorMessage
 }
 
 let lastIncrementalId = 0
-export const getNextUniqueIncrementalId = () => {
+export const getNextUniqueIncrementalId = (): number => {
   const nextIncrementalId = ++lastIncrementalId
-  assert(
-    Number.isSafeInteger(nextIncrementalId),
-    "getNextUniqueIncrementalId overflowed the next ID",
-  )
+  assert(Number.isSafeInteger(nextIncrementalId), "getNextUniqueIncrementalId overflowed the next ID")
   return nextIncrementalId
 }
 
-export const redact = (
-  str: string,
-  items: string[],
-  replacement: string = "{SECRET}",
-) => {
+export const redact = (str: string, items: string[], replacement: string = "{SECRET}"): string => {
   for (const item of items) {
     str = str.replaceAll(item, replacement)
   }
@@ -93,38 +74,21 @@ export const redact = (
 export class Ok<T> {
   constructor(public value: T) {}
 }
+
 export class Err<T> {
   constructor(public value: T) {}
 }
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any */
 const normalizers = {
-  symbol: (value: any) => {
-    return value.toString()
-  },
-  bigint: (value: any) => {
-    return value.toString()
-  },
-  undefined: () => {
-    return undefined
-  },
-  function: () => {
-    return undefined
-  },
-  boolean: (value: any) => {
-    return value
-  },
-  number: (value: any) => {
-    return value
-  },
-  string: (value: any) => {
-    return value
-  },
-  object: (
-    value: any,
-    previousObjects: unknown[] = [],
-    showTopLevel = false,
-  ) => {
+  symbol: (value: any) => value.toString(),
+  bigint: (value: any) => value.toString(),
+  undefined: () => undefined,
+  function: () => undefined,
+  boolean: (value: any) => value,
+  number: (value: any) => value,
+  string: (value: any) => value,
+  object: (value: any, previousObjects: unknown[] = [], showTopLevel = false) => {
     if (value === null) {
       return
     }
@@ -133,17 +97,11 @@ const normalizers = {
 
     const isArray = Array.isArray(value)
     const isIterable = !isArray && Symbol.iterator in value
-    const objAsArray = isArray
-      ? value
-      : isIterable
-      ? Array.from(value as Iterable<unknown>)
-      : undefined
+    const objAsArray = isArray ? value : isIterable ? Array.from(value as Iterable<unknown>) : undefined
 
     if (objAsArray === undefined && !(value instanceof Error)) {
       const asString =
-        typeof value.toString === "function" && value.toString.length === 0
-          ? value.toString()
-          : undefined
+        typeof value.toString === "function" && value.toString.length === 0 ? value.toString() : undefined
       if (typeof asString === "string" && asString !== "[object Object]") {
         return asString
       }
@@ -171,12 +129,7 @@ const normalizers = {
   },
 }
 
-const setNormalizedKeyValue = (
-  source: any,
-  output: any,
-  key: any,
-  previousObjects: unknown[],
-) => {
+const setNormalizedKeyValue = (source: any, output: any, key: any, previousObjects: unknown[]) => {
   if (previousObjects.indexOf(source[key]) !== -1) {
     return "[Circular]"
   }
@@ -189,24 +142,19 @@ const setNormalizedKeyValue = (
   output[key] = value
 }
 
-export const normalizeValue = (
-  value: unknown,
-  previousObjects: unknown[] = [],
-  showTopLevel = false,
-): unknown => {
-  return normalizers[typeof value](value, previousObjects, showTopLevel)
-}
-/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+export const normalizeValue = (value: unknown, previousObjects: unknown[] = [], showTopLevel = false): unknown =>
+  normalizers[typeof value](value, previousObjects, showTopLevel)
+/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any */
 
 export const validatedFetch = async <T>(
   response: ReturnType<typeof fetch>,
   schema: Joi.AnySchema,
   { decoding }: { decoding: "json" } = { decoding: "json" },
-) => {
+): Promise<T> => {
   const body = await (async () => {
     switch (decoding) {
       case "json": {
-        return (await response).json()
+        return await (await response).json()
       }
       default: {
         const exhaustivenessCheck: never = decoding
@@ -222,7 +170,7 @@ export const validatedFetch = async <T>(
   return validation.value as T
 }
 
-export const arrayify = (value: unknown) => {
+export const arrayify = <T>(value: undefined | null | T | T[]): T[] => {
   if (value === undefined || value === null) {
     return []
   }

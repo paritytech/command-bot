@@ -10,13 +10,10 @@ import { Task, taskExecutionTerminationEvent, TaskGitlabPipeline } from "./task"
 import { Context } from "./types"
 import { millisecondsDelay, validatedFetch } from "./utils"
 
-export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
+export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Promise<GitlabTaskContext> => {
   const { logger, gitlab } = ctx
 
-  const cmdRunner = new CommandRunner(ctx, {
-    itemsToRedact: [gitlab.accessToken],
-    cwd: task.repoPath,
-  })
+  const cmdRunner = new CommandRunner(ctx, { itemsToRedact: [gitlab.accessToken], cwd: task.repoPath })
 
   /*
     Save the head SHA before doing any modifications to the branch so that
@@ -24,15 +21,10 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   */
   const headSha = await cmdRunner.run("git", ["rev-parse", "HEAD"])
 
-  const getPipelineScriptsCloneCommand = ({
-    withRef,
-  }: {
-    withRef: boolean
-  }) => {
-    return `git clone --depth 1 ${
+  const getPipelineScriptsCloneCommand = ({ withRef }: { withRef: boolean }) =>
+    `git clone --depth 1 ${
       withRef ? `--branch "$PIPELINE_SCRIPTS_REF"` : ""
     } "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"`
-  }
 
   const jobTaskInfoMessage = (() => {
     switch (task.tag) {
@@ -56,12 +48,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   await writeFile(
     path.join(task.repoPath, ".gitlab-ci.yml"),
     yaml.stringify({
-      workflow: {
-        rules: [
-          { if: `$CI_PIPELINE_SOURCE == "api"` },
-          { if: `$CI_PIPELINE_SOURCE == "web"` },
-        ],
-      },
+      workflow: { rules: [{ if: `$CI_PIPELINE_SOURCE == "api"` }, { if: `$CI_PIPELINE_SOURCE == "web"` }] },
       command: {
         timeout: "24 hours",
         ...task.gitlab.job,
@@ -99,9 +86,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
           ...task.gitlab.job.variables,
           GH_OWNER: task.gitRef.upstream.owner,
           GH_OWNER_REPO: task.gitRef.upstream.repo,
-          ...(task.gitRef.upstream.branch
-            ? { GH_OWNER_BRANCH: task.gitRef.upstream.branch }
-            : {}),
+          ...(task.gitRef.upstream.branch ? { GH_OWNER_BRANCH: task.gitRef.upstream.branch } : {}),
           GH_CONTRIBUTOR: task.gitRef.contributor.owner,
           GH_CONTRIBUTOR_REPO: task.gitRef.contributor.repo,
           GH_CONTRIBUTOR_BRANCH: task.gitRef.contributor.branch,
@@ -121,9 +106,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
       : `${task.gitRef.contributor.owner}/${task.gitRef.contributor.branch}`
   }`
   await cmdRunner.run("git", ["branch", "-D", branchName], {
-    testAllowedErrorMessage: (err) => {
-      return err.endsWith("not found.")
-    },
+    testAllowedErrorMessage: (err) => err.endsWith("not found."),
   })
   await cmdRunner.run("git", ["checkout", "-b", branchName])
 
@@ -135,9 +118,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   const gitlabProjectPath = `${gitlab.pushNamespace}/${task.gitRef.upstream.repo}`
 
   await cmdRunner.run("git", ["remote", "remove", gitlabRemote], {
-    testAllowedErrorMessage: (err) => {
-      return err.includes("No such remote:")
-    },
+    testAllowedErrorMessage: (err) => err.includes("No such remote:"),
   })
 
   await cmdRunner.run("git", [
@@ -153,9 +134,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   */
   await cmdRunner.run("git", ["push", "--force", gitlabRemote, "HEAD"])
 
-  const gitlabProjectApi = `https://${
-    gitlab.domain
-  }/api/v4/projects/${encodeURIComponent(gitlabProjectPath)}`
+  const gitlabProjectApi = `https://${gitlab.domain}/api/v4/projects/${encodeURIComponent(gitlabProjectPath)}`
   const branchNameUrlEncoded = encodeURIComponent(branchName)
 
   /*
@@ -170,71 +149,44 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   const waitForBranchRetryDelay = 1024
 
   const branchPresenceUrl = `${gitlabProjectApi}/repository/branches/${branchNameUrlEncoded}`
-  for (
-    let waitForBranchTryCount = 0;
-    waitForBranchTryCount < waitForBranchMaxTries;
-    waitForBranchTryCount++
-  ) {
-    logger.info(
-      branchPresenceUrl,
-      `Sending request to see if the branch for task ${task.id} is ready`,
-    )
-    const response = await fetch(branchPresenceUrl, {
-      headers: { "PRIVATE-TOKEN": gitlab.accessToken },
-    })
+  for (let waitForBranchTryCount = 0; waitForBranchTryCount < waitForBranchMaxTries; waitForBranchTryCount++) {
+    logger.info(branchPresenceUrl, `Sending request to see if the branch for task ${task.id} is ready`)
+    const response = await fetch(branchPresenceUrl, { headers: { "PRIVATE-TOKEN": gitlab.accessToken } })
     if (
       // The branch was not yet registered on GitLab; wait for it...
       response.status === 404
     ) {
-      logger.info(
-        `Branch of task ${task.id} was not found. Waiting before retrying...`,
-      )
+      logger.info(`Branch of task ${task.id} was not found. Waiting before retrying...`)
       await millisecondsDelay(waitForBranchRetryDelay)
     } else if (response.ok) {
       wasBranchRegistered = true
       break
     } else {
-      throw new Error(
-        `Request to ${branchPresenceUrl} failed: ${await response.text()}`,
-      )
+      throw new Error(`Request to ${branchPresenceUrl} failed: ${await response.text()}`)
     }
   }
 
   if (!wasBranchRegistered) {
     throw new Error(
-      `Task's branch was not registered on GitLab after ${
-        waitForBranchMaxTries * waitForBranchRetryDelay
-      }ms`,
+      `Task's branch was not registered on GitLab after ${waitForBranchMaxTries * waitForBranchRetryDelay}ms`,
     )
   }
 
   const pipelineCreationUrl = `${gitlabProjectApi}/pipeline?ref=${branchNameUrlEncoded}`
-  logger.info(
-    pipelineCreationUrl,
-    `Sending request to create a pipeline for task ${task.id}`,
-  )
+  logger.info(pipelineCreationUrl, `Sending request to create a pipeline for task ${task.id}`)
   const pipeline = await validatedFetch<{
     id: number
     project_id: number
   }>(
-    fetch(pipelineCreationUrl, {
-      method: "POST",
-      headers: { "PRIVATE-TOKEN": gitlab.accessToken },
-    }),
+    fetch(pipelineCreationUrl, { method: "POST", headers: { "PRIVATE-TOKEN": gitlab.accessToken } }),
     Joi.object()
-      .keys({
-        id: Joi.number().required(),
-        project_id: Joi.number().required(),
-      })
+      .keys({ id: Joi.number().required(), project_id: Joi.number().required() })
       .options({ allowUnknown: true }),
   )
   logger.info(pipeline, `Created pipeline for task ${task.id}`)
 
   const jobFetchUrl = `${gitlabProjectApi}/pipelines/${pipeline.id}/jobs`
-  logger.info(
-    jobFetchUrl,
-    `Sending request to fetch the GitLab job created for task ${task.id}`,
-  )
+  logger.info(jobFetchUrl, `Sending request to fetch the GitLab job created for task ${task.id}`)
   const [job] = await validatedFetch<
     [
       {
@@ -244,27 +196,19 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task) => {
   >(
     fetch(jobFetchUrl, { headers: { "PRIVATE-TOKEN": gitlab.accessToken } }),
     Joi.array()
-      .items(
-        Joi.object()
-          .keys({ web_url: Joi.string().required() })
-          .options({ allowUnknown: true }),
-      )
+      .items(Joi.object().keys({ web_url: Joi.string().required() }).options({ allowUnknown: true }))
       .length(1)
       .required(),
   )
   logger.info(job, `Fetched job for task ${task.id}`)
 
-  return getAliveTaskGitlabContext(ctx, {
-    id: pipeline.id,
-    projectId: pipeline.project_id,
-    jobWebUrl: job.web_url,
-  })
+  return getAliveTaskGitlabContext(ctx, { id: pipeline.id, projectId: pipeline.project_id, jobWebUrl: job.web_url })
 }
 
 export const cancelGitlabPipeline = async (
   { gitlab, logger }: Context,
   pipeline: TaskGitlabPipeline,
-) => {
+): Promise<void> => {
   logger.info(pipeline, "Cancelling GitLab pipeline")
   await validatedFetch(
     fetch(
@@ -275,28 +219,20 @@ export const cancelGitlabPipeline = async (
       `https://${gitlab.domain}/api/v4/projects/${pipeline.projectId}/pipelines/${pipeline.id}/cancel`,
       { method: "POST", headers: { "PRIVATE-TOKEN": gitlab.accessToken } },
     ),
-    Joi.object()
-      .keys({ id: Joi.number().required() })
-      .options({ allowUnknown: true }),
+    Joi.object().keys({ id: Joi.number().required() }).options({ allowUnknown: true }),
   )
 }
 
-const isPipelineFinished = async (
-  ctx: Context,
-  pipeline: TaskGitlabPipeline,
-) => {
+const isPipelineFinished = async (ctx: Context, pipeline: TaskGitlabPipeline) => {
   const { gitlab } = ctx
 
   const { status } = await validatedFetch<{
     status: string
   }>(
-    fetch(
-      `https://${gitlab.domain}/api/v4/projects/${pipeline.projectId}/pipelines/${pipeline.id}`,
-      { headers: { "PRIVATE-TOKEN": gitlab.accessToken } },
-    ),
-    Joi.object()
-      .keys({ status: Joi.string().required() })
-      .options({ allowUnknown: true }),
+    fetch(`https://${gitlab.domain}/api/v4/projects/${pipeline.projectId}/pipelines/${pipeline.id}`, {
+      headers: { "PRIVATE-TOKEN": gitlab.accessToken },
+    }),
+    Joi.object().keys({ status: Joi.string().required() }).options({ allowUnknown: true }),
   )
   switch (status) {
     case "success":
@@ -308,7 +244,11 @@ const isPipelineFinished = async (
   }
 }
 
-export const restoreTaskGitlabContext = async (ctx: Context, task: Task) => {
+// FIXME: apparently, null and undefined here are different, and lead to different execution paths later
+export const restoreTaskGitlabContext = async (
+  ctx: Context,
+  task: Task,
+): Promise<GitlabTaskContext | null | undefined> => {
   const { pipeline } = task.gitlab
   if (!pipeline) {
     return
@@ -321,13 +261,12 @@ export const restoreTaskGitlabContext = async (ctx: Context, task: Task) => {
   return getAliveTaskGitlabContext(ctx, pipeline)
 }
 
-const getAliveTaskGitlabContext = (
-  ctx: Context,
-  pipeline: TaskGitlabPipeline,
-): TaskGitlabPipeline & {
+type GitlabTaskContext = TaskGitlabPipeline & {
   terminate: () => Promise<Error | undefined>
   waitUntilFinished: (taskEventChannel: EventEmitter) => Promise<unknown>
-} => {
+}
+
+const getAliveTaskGitlabContext = (ctx: Context, pipeline: TaskGitlabPipeline): GitlabTaskContext => {
   const { logger } = ctx
 
   let wasTerminated = false
@@ -338,8 +277,8 @@ const getAliveTaskGitlabContext = (
       await cancelGitlabPipeline(ctx, pipeline)
       return undefined
     },
-    waitUntilFinished: (taskEventChannel) => {
-      return Promise.race([
+    waitUntilFinished: (taskEventChannel) =>
+      Promise.race([
         new Promise<void>((resolve) => {
           taskEventChannel.on(taskExecutionTerminationEvent, () => {
             wasTerminated = true
@@ -377,7 +316,6 @@ const getAliveTaskGitlabContext = (
           }
           void pollPipelineCompletion()
         }),
-      ])
-    },
+      ]),
   }
 }

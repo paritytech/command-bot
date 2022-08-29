@@ -8,10 +8,7 @@ import { Context } from "./types"
   that it can be updated dynamically, without redeploying the application
 */
 const getBenchBotCommand = ({ tags }: { tags: string[] }) => {
-  return {
-    gitlab: { job: { tags, variables: {} } },
-    commandStart: ['"$PIPELINE_SCRIPTS_DIR/bench-bot.sh"'],
-  }
+  return { gitlab: { job: { tags, variables: {} } }, commandStart: ['"$PIPELINE_SCRIPTS_DIR/bench-bot.sh"'] }
 }
 export type CommandConfiguration = {
   gitlab: {
@@ -23,41 +20,28 @@ export type CommandConfiguration = {
   commandStart: string[]
 }
 export const commandsConfiguration: {
-  [K in
-    | "try-runtime"
-    | "bench-bot"
-    | "test-bench-bot"
-    | "fmt"
-    | "sample"]: CommandConfiguration
+  [K in "try-runtime" | "bench-bot" | "test-bench-bot" | "fmt" | "sample"]: CommandConfiguration
 } = {
   "try-runtime": {
     gitlab: { job: { tags: ["linux-docker"], variables: {} } },
     commandStart: ['"$PIPELINE_SCRIPTS_DIR/try-runtime-bot.sh"'],
   },
-  fmt: {
-    gitlab: { job: { tags: ["linux-docker"], variables: {} } },
-    commandStart: ['"$PIPELINE_SCRIPTS_DIR/fmt.sh"'],
-  },
+  fmt: { gitlab: { job: { tags: ["linux-docker"], variables: {} } }, commandStart: ['"$PIPELINE_SCRIPTS_DIR/fmt.sh"'] },
   "bench-bot": getBenchBotCommand({ tags: ["bench-bot"] }),
   "test-bench-bot": getBenchBotCommand({ tags: ["test-bench-bot"] }),
   // "sample" is used for testing purposes only
-  sample: {
-    gitlab: { job: { tags: ["kubernetes-parity-build"], variables: {} } },
-    commandStart: ["echo"],
-  },
+  sample: { gitlab: { job: { tags: ["kubernetes-parity-build"], variables: {} } }, commandStart: ["echo"] },
 }
 
 export const isRequesterAllowed = async (
   ctx: Context,
   octokit: ExtendedOctokit,
   username: string,
-) => {
+): Promise<boolean> => {
   const { allowedOrganizations } = ctx
 
   for (const organizationId of allowedOrganizations) {
-    if (
-      await isOrganizationMember(ctx, { organizationId, username, octokit })
-    ) {
+    if (await isOrganizationMember(ctx, { organizationId, username, octokit })) {
       return true
     }
   }
@@ -65,6 +49,9 @@ export const isRequesterAllowed = async (
   return false
 }
 
+/* TODO: this whole generator doesn't make much sense,
+     as in the only place of usage, all intermediate values are being dropped */
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const prepareBranch = async function* (
   ctx: Context,
   { repoPath, gitRef: { contributor, upstream } }: Task,
@@ -80,21 +67,12 @@ export const prepareBranch = async function* (
 
   yield cmdRunner.run("mkdir", ["-p", repoPath])
 
-  const repoCmdRunner = new CommandRunner(ctx, {
-    itemsToRedact: [token],
-    cwd: repoPath,
-  })
+  const repoCmdRunner = new CommandRunner(ctx, { itemsToRedact: [token], cwd: repoPath })
 
   // Clone the repository if it does not exist
-  yield repoCmdRunner.run(
-    "git",
-    ["clone", "--quiet", `${url}/${upstream.owner}/${upstream.repo}`, repoPath],
-    {
-      testAllowedErrorMessage: (err) => {
-        return err.endsWith("already exists and is not an empty directory.")
-      },
-    },
-  )
+  yield repoCmdRunner.run("git", ["clone", "--quiet", `${url}/${upstream.owner}/${upstream.repo}`, repoPath], {
+    testAllowedErrorMessage: (err) => err.endsWith("already exists and is not an empty directory."),
+  })
 
   // Clean up garbage files before checkout
   yield repoCmdRunner.run("git", ["add", "."])
@@ -107,43 +85,23 @@ export const prepareBranch = async function* (
   }
   const detachedHead = out.trim()
   yield repoCmdRunner.run("git", ["checkout", "--quiet", detachedHead], {
-    testAllowedErrorMessage: (err) => {
+    testAllowedErrorMessage: (err) =>
       // Why the hell is this not printed to stdout?
-      return err.startsWith("HEAD is now at")
-    },
+      err.startsWith("HEAD is now at"),
   })
 
   const prRemote = "pr"
   yield repoCmdRunner.run("git", ["remote", "remove", prRemote], {
-    testAllowedErrorMessage: (err) => {
-      return err.includes("No such remote:")
-    },
+    testAllowedErrorMessage: (err) => err.includes("No such remote:"),
   })
 
-  yield repoCmdRunner.run("git", [
-    "remote",
-    "add",
-    prRemote,
-    `${url}/${contributor.owner}/${contributor.repo}.git`,
-  ])
+  yield repoCmdRunner.run("git", ["remote", "add", prRemote, `${url}/${contributor.owner}/${contributor.repo}.git`])
 
-  yield repoCmdRunner.run("git", [
-    "fetch",
-    "--quiet",
-    prRemote,
-    contributor.branch,
-  ])
+  yield repoCmdRunner.run("git", ["fetch", "--quiet", prRemote, contributor.branch])
 
   yield repoCmdRunner.run("git", ["branch", "-D", contributor.branch], {
-    testAllowedErrorMessage: (err) => {
-      return err.endsWith("not found.")
-    },
+    testAllowedErrorMessage: (err) => err.endsWith("not found."),
   })
 
-  yield repoCmdRunner.run("git", [
-    "checkout",
-    "--quiet",
-    "--track",
-    `${prRemote}/${contributor.branch}`,
-  ])
+  yield repoCmdRunner.run("git", ["checkout", "--quiet", "--track", `${prRemote}/${contributor.branch}`])
 }
