@@ -11,17 +11,10 @@ import { Probot } from "probot"
 import { getSortedTasks } from "src/db"
 
 import { getApiTaskEndpoint } from "./api"
-import {
-  botPullRequestCommentMention,
-  botPullRequestCommentSubcommands,
-} from "./bot"
+import { botPullRequestCommentMention, botPullRequestCommentSubcommands } from "./bot"
 import { prepareBranch } from "./core"
 import { getPostPullRequestResult, updateComment } from "./github"
-import {
-  cancelGitlabPipeline,
-  restoreTaskGitlabContext,
-  runCommandInGitlabPipeline,
-} from "./gitlab"
+import { cancelGitlabPipeline, restoreTaskGitlabContext, runCommandInGitlabPipeline } from "./gitlab"
 import { Logger } from "./logger"
 import { CommandOutput, Context, GitRef } from "./types"
 import { displayError, getNextUniqueIncrementalId, intoError } from "./utils"
@@ -70,17 +63,11 @@ export type ApiTask = TaskBase<"ApiTask"> & {
 
 export type Task = PullRequestTask | ApiTask
 
-export const getNextTaskId = () => {
-  return `${getNextUniqueIncrementalId()}-${randomUUID()}`
-}
+export const getNextTaskId = (): string => `${getNextUniqueIncrementalId()}-${randomUUID()}`
 
-export const serializeTaskQueuedDate = (date: Date) => {
-  return date.toISOString()
-}
+export const serializeTaskQueuedDate = (date: Date): string => date.toISOString()
 
-export const parseTaskQueuedDate = (str: string) => {
-  return parseISO(str)
-}
+export const parseTaskQueuedDate = (str: string): Date => parseISO(str)
 
 /*
   A Mutex is necessary because otherwise operations from two different commands
@@ -101,18 +88,12 @@ export const queueTask = async (
     onResult: (result: CommandOutput) => Promise<unknown>
     updateProgress: ((message: string) => Promise<unknown>) | null
   },
-) => {
-  assert(
-    !queuedTasks.has(task.id),
-    `Attempted to queue task ${task.id} when it's already registered in the taskMap`,
-  )
+): Promise<string> => {
+  assert(!queuedTasks.has(task.id), `Attempted to queue task ${task.id} when it's already registered in the taskMap`)
   const taskEventChannel = new EventEmitter()
   queuedTasks.set(task.id, taskEventChannel)
 
-  const ctx = {
-    ...parentCtx,
-    logger: parentCtx.logger.child({ taskId: task.id }),
-  }
+  const ctx = { ...parentCtx, logger: parentCtx.logger.child({ taskId: task.id }) }
   const { logger, taskDb, getFetchEndpoint, gitlab } = ctx
   const { db } = taskDb
 
@@ -159,9 +140,7 @@ export const queueTask = async (
         return `\n\nComment \`${botPullRequestCommentMention} ${botPullRequestCommentSubcommands.cancel} ${task.id}\` to cancel this command or \`${botPullRequestCommentMention} ${botPullRequestCommentSubcommands.cancel}\` to cancel all commands in this pull request.`
       }
       case "ApiTask": {
-        return `Send a DELETE request to ${getApiTaskEndpoint(
-          task,
-        )} for cancelling this task.`
+        return `Send a DELETE request to ${getApiTaskEndpoint(task)} for cancelling this task.`
       }
       default: {
         const exhaustivenessCheck: never = task
@@ -198,11 +177,7 @@ export const queueTask = async (
         }
 
         const prepareBranchSteps = prepareBranch(ctx, task, {
-          getFetchEndpoint: () => {
-            return getFetchEndpoint(
-              "installationId" in task ? task.installationId : null,
-            )
-          },
+          getFetchEndpoint: () => getFetchEndpoint("installationId" in task ? task.installationId : null),
         })
         while (taskIsAlive) {
           const next = await prepareBranchSteps.next()
@@ -241,11 +216,7 @@ export const queueTask = async (
       }
     })
     .then((taskPipeline) => {
-      if (
-        taskPipeline instanceof Error ||
-        typeof taskPipeline === "string" ||
-        taskPipeline === null
-      ) {
+      if (taskPipeline instanceof Error || typeof taskPipeline === "string" || taskPipeline === null) {
         return afterTaskRun(taskPipeline)
       }
 
@@ -269,7 +240,7 @@ export const queueTask = async (
   return `${task.command} was queued. ${additionalTaskCancelInstructions}`
 }
 
-export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
+export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot): Promise<void> => {
   const { taskDb, logger, matrix } = ctx
   const { db } = taskDb
 
@@ -306,19 +277,18 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
 
             const octokit = await bot.auth(task.installationId)
 
-            const announceCancel = (message: string) => {
-              return updateComment(ctx, octokit, {
+            const announceCancel = (message: string) =>
+              updateComment(ctx, octokit, {
                 owner: upstream.owner,
                 repo: upstream.repo,
                 pull_number: prNumber,
                 comment_id: comment.id,
                 body: `@${requester} ${message}`,
               })
-            }
 
             const requeuedTask = prepareRequeuedTask(task)
-            const requeue = () => {
-              return queueTask(ctx, requeuedTask, {
+            const requeue = () =>
+              queueTask(ctx, requeuedTask, {
                 onResult: getPostPullRequestResult(ctx, octokit, requeuedTask),
                 /*
                   Assumes the relevant progress update was already sent when
@@ -329,7 +299,6 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
                 */
                 updateProgress: null,
               })
-            }
 
             return { requeue, announceCancel }
           }
@@ -337,30 +306,21 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
             if (matrix === null) {
               return {
                 announceCancel: () => {
-                  logger.warn(
-                    task,
-                    "ApiTask cannot be requeued because Matrix client is missing",
-                  )
+                  logger.warn(task, "ApiTask cannot be requeued because Matrix client is missing")
                 },
                 requeue: () => {},
               }
             }
 
             const { matrixRoom } = task
-            const sendMatrixMessage = (msg: string) => {
-              return matrix.sendText(matrixRoom, msg)
-            }
+            const sendMatrixMessage = (msg: string) => matrix.sendText(matrixRoom, msg)
 
             const requeuedTask = prepareRequeuedTask(task)
             return {
               announceCancel: sendMatrixMessage,
-              requeue: () => {
-                return queueTask(ctx, requeuedTask, {
-                  onResult: getSendTaskMatrixResult(
-                    matrix,
-                    logger,
-                    requeuedTask,
-                  ),
+              requeue: () =>
+                queueTask(ctx, requeuedTask, {
+                  onResult: getSendTaskMatrixResult(matrix, logger, requeuedTask),
                   /*
                     Assumes the relevant progress update was already sent when
                     the task was queued for the first time, thus there's no need
@@ -369,8 +329,7 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
                     updateProgress no longer needs to be called.
                   */
                   updateProgress: null,
-                })
-              },
+                }),
             }
           }
           default: {
@@ -418,30 +377,21 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot) => {
   }
 }
 
-export const getSendTaskMatrixResult = (
-  matrix: MatrixClient,
-  logger: Logger,
-  task: ApiTask,
-) => {
-  return async (message: CommandOutput) => {
+export const getSendTaskMatrixResult =
+  (matrix: MatrixClient, logger: Logger, task: ApiTask) =>
+  async (message: CommandOutput): Promise<void> => {
     try {
       await matrix.sendText(
         task.matrixRoom,
-        `Task ID ${task.id} has finished with message "${
-          message instanceof Error ? displayError(message) : message
-        }"`,
+        `Task ID ${task.id} has finished with message "${message instanceof Error ? displayError(message) : message}"`,
       )
     } catch (rawError) {
       const error = intoError(rawError)
-      logger.error(
-        extractRequestError(error),
-        "Caught error when sending Matrix message",
-      )
+      logger.error(extractRequestError(error), "Caught error when sending Matrix message")
     }
   }
-}
 
-export const cancelTask = async (ctx: Context, taskId: Task | string) => {
+export const cancelTask = async (ctx: Context, taskId: Task | string): Promise<Error | undefined> => {
   const {
     taskDb: { db },
     logger,

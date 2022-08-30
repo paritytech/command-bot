@@ -8,19 +8,17 @@ import { Logger } from "./logger"
 import { Context, ToString } from "./types"
 import { displayCommand, redact } from "./utils"
 
-export const ensureDir = async (dir: string) => {
+export const ensureDir = async (dir: string): Promise<void> => {
   // mkdir doesn't throw an error if the directory already exists
   await mkdir(dir, { recursive: true })
-  return dir
 }
 
-export const initDatabaseDir = async (dir: string) => {
-  dir = await ensureDir(dir)
+export const initDatabaseDir = async (dir: string): Promise<void> => {
+  await ensureDir(dir)
   await rm(path.join(dir, "LOCK"), {
     // ignore error if the file does not exist
     force: true,
   })
-  return dir
 }
 
 export class CommandRunner {
@@ -52,11 +50,10 @@ export class CommandRunner {
       shouldCaptureAllStreams?: boolean
       stdinInput?: string
     } = {},
-  ) {
+  ): Promise<string | Error> {
     const { logger } = this
-    return new Promise<string | Error>((resolve, reject) => {
-      const { cwd, itemsToRedact, onChild, shouldTrackProgress } =
-        this.configuration
+    return await new Promise<string | Error>((resolve, reject) => {
+      const { cwd, itemsToRedact, onChild, shouldTrackProgress } = this.configuration
 
       const commandDisplayed = displayCommand({ execPath, args, itemsToRedact })
       logger.info(`Executing command ${commandDisplayed}`)
@@ -74,35 +71,24 @@ export class CommandRunner {
       }
 
       const commandOutputBuffer: ["stdout" | "stderr", string][] = []
-      const getStreamHandler = (channel: "stdout" | "stderr") => {
-        return (data: ToString) => {
-          const str =
-            itemsToRedact === undefined
-              ? data.toString()
-              : redact(data.toString(), itemsToRedact)
-          const strTrim = str.trim()
+      const getStreamHandler = (channel: "stdout" | "stderr") => (data: ToString) => {
+        const str = itemsToRedact === undefined ? data.toString() : redact(data.toString(), itemsToRedact)
+        const strTrim = str.trim()
 
-          if (shouldTrackProgress && strTrim) {
-            logger.info(strTrim, channel)
-          }
-
-          commandOutputBuffer.push([channel, str])
+        if (shouldTrackProgress && strTrim) {
+          logger.info(strTrim, channel)
         }
+
+        commandOutputBuffer.push([channel, str])
       }
       child.stdout.on("data", getStreamHandler("stdout"))
       child.stderr.on("data", getStreamHandler("stderr"))
 
       child.on("close", (exitCode, signal) => {
-        logger.info(
-          `Process finished with exit code ${exitCode ?? "??"}${
-            signal ? `and signal ${signal}` : ""
-          }`,
-        )
+        logger.info(`Process finished with exit code ${exitCode ?? "??"}${signal ? `and signal ${signal}` : ""}`)
 
         if (signal) {
-          return resolve(
-            new Error(`Process got terminated by signal ${signal}`),
-          )
+          return resolve(new Error(`Process got terminated by signal ${signal}`))
         }
 
         if (exitCode) {
@@ -115,23 +101,17 @@ export class CommandRunner {
               }
             }, "")
             .trim()
-          const stderr =
-            itemsToRedact === undefined
-              ? rawStderr
-              : redact(rawStderr, itemsToRedact)
+          const stderr = itemsToRedact === undefined ? rawStderr : redact(rawStderr, itemsToRedact)
           if (
             !allowedErrorCodes?.includes(exitCode) &&
-            (testAllowedErrorMessage === undefined ||
-              !testAllowedErrorMessage(stderr))
+            (testAllowedErrorMessage === undefined || !testAllowedErrorMessage(stderr))
           ) {
             return reject(new Error(stderr))
           }
         }
 
         const outputBuf = shouldCaptureAllStreams
-          ? commandOutputBuffer.reduce((acc, [_, value]) => {
-              return `${acc}${value}`
-            }, "")
+          ? commandOutputBuffer.reduce((acc, [_, value]) => `${acc}${value}`, "")
           : commandOutputBuffer.reduce((acc, [stream, value]) => {
               if (stream === "stdout") {
                 return `${acc}${value}`
@@ -140,10 +120,7 @@ export class CommandRunner {
               }
             }, "")
         const rawOutput = outputBuf.trim()
-        const output =
-          itemsToRedact === undefined
-            ? rawOutput
-            : redact(rawOutput, itemsToRedact)
+        const output = itemsToRedact === undefined ? rawOutput : redact(rawOutput, itemsToRedact)
 
         resolve(output)
       })
@@ -151,15 +128,10 @@ export class CommandRunner {
   }
 }
 
-export const validateSingleShellCommand = async (
-  ctx: Context,
-  command: string,
-) => {
+export const validateSingleShellCommand = async (ctx: Context, command: string): Promise<string | Error> => {
   const { logger } = ctx
   const cmdRunner = new CommandRunner(ctx, { itemsToRedact: [] })
-  const commandAstText = await cmdRunner.run("shfmt", ["--tojson"], {
-    stdinInput: command,
-  })
+  const commandAstText = await cmdRunner.run("shfmt", ["--tojson"], { stdinInput: command })
   if (commandAstText instanceof Error) {
     return new Error(`Command AST could not be parsed for "${command}"`)
   }
@@ -167,13 +139,8 @@ export const validateSingleShellCommand = async (
     Stmts: { Cmd: { Type?: string } }[]
   }
   logger.info(commandAst.Stmts[0].Cmd, `Parsed AST for "${command}"`)
-  if (
-    commandAst.Stmts.length !== 1 ||
-    commandAst.Stmts[0].Cmd.Type !== "CallExpr"
-  ) {
-    return new Error(
-      `Command "${command}" failed validation: the resulting command line should have a single command`,
-    )
+  if (commandAst.Stmts.length !== 1 || commandAst.Stmts[0].Cmd.Type !== "CallExpr") {
+    return new Error(`Command "${command}" failed validation: the resulting command line should have a single command`)
   }
   return command
 }

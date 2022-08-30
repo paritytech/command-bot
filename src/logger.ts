@@ -1,7 +1,11 @@
 import { normalizeValue } from "./utils"
 
+// TODO: replace this module with logger from opstooling-js
+
 type LoggingImplementation = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   log: (...args: any[]) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   error: (...args: any[]) => void
 }
 
@@ -20,11 +24,12 @@ export class Logger {
       logFormat: "json" | null
       minLogLevel: LoggingLevels
       impl: LoggingImplementation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       context?: Record<string, any>
     },
   ) {}
 
-  child(context: Record<string, unknown>) {
+  child(context: Record<string, unknown>): Logger {
     /*
       Adjust keys in order to prevent overriding existing data in the context
       with the same key
@@ -41,18 +46,11 @@ export class Logger {
     }
     return new Logger({
       ...this.options,
-      context: currentContextKeys.length
-        ? { ...this.options.context, ...adjustedContext }
-        : undefined,
+      context: currentContextKeys.length ? { ...this.options.context, ...adjustedContext } : undefined,
     })
   }
 
-  protected log<T = string>(
-    level: LoggingLevels,
-    item: unknown,
-    description?: T,
-    ...extra: unknown[]
-  ) {
+  protected log<T = string>(level: LoggingLevels, item: unknown, description?: T, ...extra: unknown[]): void {
     if (LoggingLevel[level] < LoggingLevel[this.options.minLogLevel]) {
       return
     }
@@ -95,9 +93,7 @@ export class Logger {
         loggingFunction(
           tag,
           ...(description === undefined ? [] : [description]),
-          ...(normalizedContext === undefined
-            ? []
-            : ["~@ Context:", normalizedContext]),
+          ...(normalizedContext === undefined ? [] : ["~@ Context:", normalizedContext]),
           ...(extra.length === 0 ? [] : ["~@ Extra:", normalizeValue(extra)]),
           normalizeValue(item, [], true),
         )
@@ -112,13 +108,8 @@ export class Logger {
   }
 
   private loggerCallback(level: LoggingLevels) {
-    return <T = string>(
-      item: unknown,
-      description?: T,
-      ...extra: unknown[]
-    ) => {
-      return this.log(level, item, description, ...extra)
-    }
+    return <T = string>(item: unknown, description?: T, ...extra: unknown[]) =>
+      this.log(level, item, description, ...extra)
   }
   info = this.loggerCallback("info")
   warn = this.loggerCallback("warn")

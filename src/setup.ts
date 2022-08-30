@@ -51,12 +51,13 @@ export const setup = async (
       | undefined
     shouldClearTaskDatabaseOnStart?: boolean
   },
-) => {
-  const repositoryCloneDirectory = await ensureDir(
-    path.join(dataPath, "repositories"),
-  )
+): Promise<void> => {
+  const repositoryCloneDirectory = path.join(dataPath, "repositories")
+  await ensureDir(repositoryCloneDirectory)
 
-  const taskDbPath = await initDatabaseDir(path.join(dataPath, "db"))
+  const taskDbPath = path.join(dataPath, "db")
+  await initDatabaseDir(taskDbPath)
+
   const taskDb = new TaskDB(getDb(taskDbPath))
   const tasks = await getSortedTasks({ taskDb, logger })
   logger.info(tasks, "Tasks found at the start of the application")
@@ -68,22 +69,17 @@ export const setup = async (
     }
   }
 
-  const accessDbPath = await initDatabaseDir(path.join(dataPath, "access_db"))
+  const accessDbPath = path.join(dataPath, "access_db")
+  await initDatabaseDir(accessDbPath)
   const accessDb = new AccessDB(getDb(accessDbPath))
 
-  const authInstallation = createAppAuth({
-    appId,
-    privateKey,
-    clientId,
-    clientSecret,
-  })
+  const authInstallation = createAppAuth({ appId, privateKey, clientId, clientSecret })
   const getFetchEndpoint = async (installationId: number | null) => {
     let token: string
     let url: string
 
     if (installationId) {
-      token = (await authInstallation({ type: "installation", installationId }))
-        .token
+      token = (await authInstallation({ type: "installation", installationId })).token
       url = `https://x-access-token:${token}@github.com`
     } else {
       token = ""
@@ -93,27 +89,24 @@ export const setup = async (
     return { url, token }
   }
 
-  const matrixClientSetup: Ok<MatrixClient | null> | Err<unknown> =
-    await (matrixConfiguration === undefined
-      ? Promise.resolve(new Ok(null))
-      : new Promise((resolve) => {
-          const matrixClient = new MatrixClient(
-            matrixConfiguration.homeServer,
-            matrixConfiguration.accessToken,
-            new SimpleFsStorageProvider(path.join(dataPath, "matrix.json")),
-          )
-          matrixClient
-            .start()
-            .then(() => {
-              logger.info(
-                `Connected to Matrix homeserver ${matrixConfiguration.homeServer}`,
-              )
-              resolve(new Ok(matrixClient))
-            })
-            .catch((error) => {
-              resolve(new Err(error))
-            })
-        }))
+  const matrixClientSetup: Ok<MatrixClient | null> | Err<unknown> = await (matrixConfiguration === undefined
+    ? Promise.resolve(new Ok(null))
+    : new Promise((resolve) => {
+        const matrixClient = new MatrixClient(
+          matrixConfiguration.homeServer,
+          matrixConfiguration.accessToken,
+          new SimpleFsStorageProvider(path.join(dataPath, "matrix.json")),
+        )
+        matrixClient
+          .start()
+          .then(() => {
+            logger.info(`Connected to Matrix homeserver ${matrixConfiguration.homeServer}`)
+            resolve(new Ok(matrixClient))
+          })
+          .catch((error) => {
+            resolve(new Err(error))
+          })
+      }))
   if (matrixClientSetup instanceof Err) {
     throw matrixClientSetup.value
   }

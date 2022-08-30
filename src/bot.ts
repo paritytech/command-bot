@@ -4,27 +4,11 @@ import path from "path"
 import { Probot } from "probot"
 import yargs from "yargs"
 
-import {
-  CommandConfiguration,
-  commandsConfiguration,
-  isRequesterAllowed,
-} from "./core"
+import { CommandConfiguration, commandsConfiguration, isRequesterAllowed } from "./core"
 import { getSortedTasks } from "./db"
-import {
-  createComment,
-  ExtendedOctokit,
-  getOctokit,
-  getPostPullRequestResult,
-  updateComment,
-} from "./github"
+import { createComment, ExtendedOctokit, getOctokit, getPostPullRequestResult, updateComment } from "./github"
 import { validateSingleShellCommand } from "./shell"
-import {
-  cancelTask,
-  getNextTaskId,
-  PullRequestTask,
-  queueTask,
-  serializeTaskQueuedDate,
-} from "./task"
+import { cancelTask, getNextTaskId, PullRequestTask, queueTask, serializeTaskQueuedDate } from "./task"
 import { Context, PullRequestError } from "./types"
 import { arrayify, displayError, getLines } from "./utils"
 
@@ -44,10 +28,7 @@ type ParsedBotCommand =
       subcommand: "cancel"
       taskId: string
     }
-const parsePullRequestBotCommandLine = async (
-  ctx: Context,
-  rawCommandLine: string,
-) => {
+const parsePullRequestBotCommandLine = async (ctx: Context, rawCommandLine: string) => {
   const { logger } = ctx
 
   let commandLine = rawCommandLine.trim()
@@ -70,9 +51,7 @@ const parsePullRequestBotCommandLine = async (
         return nextToken
       }
       default: {
-        return new Error(
-          `Invalid subcommand "${nextToken}" in line ${rawCommandLine}.`,
-        )
+        return new Error(`Invalid subcommand "${nextToken}" in line ${rawCommandLine}.`)
       }
     }
   })()
@@ -87,14 +66,10 @@ const parsePullRequestBotCommandLine = async (
       const commandStartSymbol = " $ "
       const indexOfCommandStart = commandLine.indexOf(commandStartSymbol)
       if (indexOfCommandStart === -1) {
-        return new Error(
-          `Could not find start of command ("${commandStartSymbol}")`,
-        )
+        return new Error(`Could not find start of command ("${commandStartSymbol}")`)
       }
 
-      const commandLinePart = commandLine.slice(
-        indexOfCommandStart + commandStartSymbol.length,
-      )
+      const commandLinePart = commandLine.slice(indexOfCommandStart + commandStartSymbol.length)
 
       const botOptionsLinePart = commandLine.slice(0, indexOfCommandStart)
       const botArgs = await yargs(
@@ -107,8 +82,7 @@ const parsePullRequestBotCommandLine = async (
 
       const configurationNameLongArg = "configuration"
       const configurationNameShortArg = "c"
-      const configurationName =
-        botArgs[configurationNameLongArg] ?? botArgs[configurationNameShortArg]
+      const configurationName = botArgs[configurationNameLongArg] ?? botArgs[configurationNameShortArg]
       if (typeof configurationName !== "string") {
         return new Error(
           `Configuration ("-${configurationNameShortArg}" or "--${configurationNameLongArg}") should be specified exactly once`,
@@ -117,9 +91,7 @@ const parsePullRequestBotCommandLine = async (
 
       const configuration =
         configurationName in commandsConfiguration
-          ? commandsConfiguration[
-              configurationName as keyof typeof commandsConfiguration
-            ]
+          ? commandsConfiguration[configurationName as keyof typeof commandsConfiguration]
           : undefined
       if (!configuration) {
         return new Error(
@@ -136,29 +108,18 @@ const parsePullRequestBotCommandLine = async (
           case "string": {
             const valueSeparatorIndex = tok.indexOf(variableValueSeparator)
             if (valueSeparatorIndex === -1) {
-              return new Error(
-                `Variable token "${tok}" doesn't have a value separator ('${variableValueSeparator}')`,
-              )
+              return new Error(`Variable token "${tok}" doesn't have a value separator ('${variableValueSeparator}')`)
             }
-            variables[tok.slice(0, valueSeparatorIndex)] = tok.slice(
-              valueSeparatorIndex + 1,
-            )
+            variables[tok.slice(0, valueSeparatorIndex)] = tok.slice(valueSeparatorIndex + 1)
             break
           }
           default: {
-            return new Error(
-              `Variable token "${String(
-                tok,
-              )}" should be a string of the form NAME=VALUE`,
-            )
+            return new Error(`Variable token "${String(tok)}" should be a string of the form NAME=VALUE`)
           }
         }
       }
 
-      const command = await validateSingleShellCommand(
-        ctx,
-        [...configuration.commandStart, commandLinePart].join(" "),
-      )
+      const command = await validateSingleShellCommand(ctx, [...configuration.commandStart, commandLinePart].join(" "))
       if (command instanceof Error) {
         return command
       }
@@ -178,8 +139,7 @@ const parsePullRequestBotCommandLine = async (
 
 type WebhookEvents = Extract<EmitterWebhookEventName, "issue_comment.created">
 
-type WebhookEventPayload<E extends WebhookEvents> =
-  E extends "issue_comment.created" ? IssueCommentCreatedEvent : never
+type WebhookEventPayload<E extends WebhookEvents> = E extends "issue_comment.created" ? IssueCommentCreatedEvent : never
 
 type WebhookHandler<E extends WebhookEvents> = (
   ctx: Context,
@@ -187,20 +147,13 @@ type WebhookHandler<E extends WebhookEvents> = (
   event: WebhookEventPayload<E>,
 ) => Promise<PullRequestError | undefined>
 
-const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
-  ctx,
-  octokit,
-  payload,
-) => {
+const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ctx, octokit, payload) => {
   const { logger, repositoryCloneDirectory, gitlab } = ctx
 
   const { issue, comment, repository, installation } = payload
 
   if (!("pull_request" in issue)) {
-    logger.info(
-      payload,
-      `Skipping payload because it's not from a pull request`,
-    )
+    logger.info(payload, `Skipping payload because it's not from a pull request`)
     return
   }
 
@@ -212,35 +165,19 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
   }
 
   if (payload.action !== "created") {
-    logger.info(
-      payload,
-      "Skipping payload because it's not for created comments",
-    )
+    logger.info(payload, "Skipping payload because it's not for created comments")
     return
   }
 
   if (comment.user?.type !== "User") {
-    logger.info(
-      payload,
-      `Skipping payload because comment.user.type (${comment.user?.type}) is not "User"`,
-    )
+    logger.info(payload, `Skipping payload because comment.user.type (${comment.user?.type}) is not "User"`)
     return
   }
 
-  const pr = {
-    owner: repository.owner.login,
-    repo: repository.name,
-    number: issue.number,
-  }
-  const commentParams = {
-    owner: pr.owner,
-    repo: pr.repo,
-    issue_number: pr.number,
-  }
+  const pr = { owner: repository.owner.login, repo: repository.name, number: issue.number }
+  const commentParams = { owner: pr.owner, repo: pr.repo, issue_number: pr.number }
 
-  let getError = (body: string) => {
-    return new PullRequestError(pr, { body, requester })
-  }
+  let getError = (body: string) => new PullRequestError(pr, { body, requester })
 
   try {
     const commands: ParsedBotCommand[] = []
@@ -263,9 +200,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
     }
 
     if (!(await isRequesterAllowed(ctx, octokit, requester))) {
-      return getError(
-        "Requester could not be detected as a member of an allowed organization.",
-      )
+      return getError("Requester could not be detected as a member of an allowed organization.")
     }
 
     for (const parsedCommand of commands) {
@@ -274,9 +209,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
         case "queue": {
           const installationId = installation?.id
           if (!installationId) {
-            return getError(
-              "Github Installation ID was not found in webhook payload",
-            )
+            return getError("Github Installation ID was not found in webhook payload")
           }
 
           const { data: fetchedPr } = await octokit.pulls.get({
@@ -297,44 +230,24 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
 
           const contributorUsername = fetchedPr.head?.user?.login
           if (!contributorUsername) {
-            return getError(
-              "Failed to read repository owner username for contributor in pull request response",
-            )
+            return getError("Failed to read repository owner username for contributor in pull request response")
           }
 
           const contributorRepository = fetchedPr.head?.repo?.name
           if (!contributorRepository) {
-            return getError(
-              "Failed to read repository name for contributor in pull request response",
-            )
+            return getError("Failed to read repository name for contributor in pull request response")
           }
 
           const contributorBranch = fetchedPr.head?.ref
           if (!contributorBranch) {
-            return getError(
-              "Failed to read branch name for contributor in pull request response",
-            )
+            return getError("Failed to read branch name for contributor in pull request response")
           }
 
-          const contributor = {
-            owner: contributorUsername,
-            repo: contributorRepository,
-            branch: contributorBranch,
-          }
+          const contributor = { owner: contributorUsername, repo: contributorRepository, branch: contributorBranch }
 
-          const commentBody =
-            `Preparing command "${parsedCommand.command}". This comment will be updated later.`.trim()
-          const createdComment = await createComment(ctx, octokit, {
-            ...commentParams,
-            body: commentBody,
-          })
-          getError = (body: string) => {
-            return new PullRequestError(pr, {
-              body,
-              requester,
-              commentId: createdComment.id,
-            })
-          }
+          const commentBody = `Preparing command "${parsedCommand.command}". This comment will be updated later.`.trim()
+          const createdComment = await createComment(ctx, octokit, { ...commentParams, body: commentBody })
+          getError = (body: string) => new PullRequestError(pr, { body, requester, commentId: createdComment.id })
 
           const queuedDate = new Date()
 
@@ -356,22 +269,14 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
               job: {
                 ...parsedCommand.configuration.gitlab.job,
                 image: gitlab.jobImage,
-                variables: {
-                  ...parsedCommand.configuration.gitlab.job.variables,
-                  ...parsedCommand.variables,
-                },
+                variables: { ...parsedCommand.configuration.gitlab.job.variables, ...parsedCommand.variables },
               },
               pipeline: null,
             },
           }
 
-          const updateProgress = (message: string) => {
-            return updateComment(ctx, octokit, {
-              ...commentParams,
-              comment_id: createdComment.id,
-              body: message,
-            })
-          }
+          const updateProgress = (message: string) =>
+            updateComment(ctx, octokit, { ...commentParams, comment_id: createdComment.id, body: message })
           const queueMessage = await queueTask(ctx, task, {
             onResult: getPostPullRequestResult(ctx, octokit, task),
             updateProgress,
@@ -423,9 +328,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
                 ...commentParams,
                 comment_id: cancelledTask.comment.id,
                 body: `@${requester} \`${cancelledTask.command}\`${
-                  cancelledTask.gitlab.pipeline === null
-                    ? ""
-                    : ` (${cancelledTask.gitlab.pipeline.jobWebUrl})`
+                  cancelledTask.gitlab.pipeline === null ? "" : ` (${cancelledTask.gitlab.pipeline.jobWebUrl})`
                 } was cancelled in ${comment.html_url}`,
               })
             } catch (error) {
@@ -439,13 +342,9 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
           if (failedToCancelTasks.length) {
             return getError(
               `Successfully cancelled the following tasks: ${JSON.stringify(
-                cancelledTasks.map((task) => {
-                  return task.id
-                }),
+                cancelledTasks.map((task) => task.id),
               )}\n\nFailed to cancel the following tasks: ${JSON.stringify(
-                failedToCancelTasks.map((task) => {
-                  return task.id
-                }),
+                failedToCancelTasks.map((task) => task.id),
               )}`,
             )
           }
@@ -468,9 +367,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (
       }
     }
   } catch (rawError) {
-    return getError(
-      `Exception caught in webhook handler\n${displayError(rawError)}`,
-    )
+    return getError(`Exception caught in webhook handler\n${displayError(rawError)}`)
   }
 }
 
@@ -488,9 +385,7 @@ const setupEvent = <E extends WebhookEvents>(
     eventLogger.info({ event, eventName }, "Received bot event")
 
     const installationId: number | undefined =
-      "installation" in event.payload
-        ? event.payload.installation?.id
-        : undefined
+      "installation" in event.payload ? event.payload.installation?.id : undefined
     const octokit = getOctokit(ctx, await bot.auth(installationId))
 
     void handler(ctx, octokit, event.payload as WebhookEventPayload<E>)
@@ -502,16 +397,11 @@ const setupEvent = <E extends WebhookEvents>(
             owner: pr.owner,
             repo: pr.repo,
             issue_number: pr.number,
-            body: `${comment.requester ? `@${comment.requester} ` : ""}${
-              comment.body
-            }`,
+            body: `${comment.requester ? `@${comment.requester} ` : ""}${comment.body}`,
           }
 
           if (comment.commentId) {
-            await updateComment(ctx, octokit, {
-              ...sharedCommentParams,
-              comment_id: comment.commentId,
-            })
+            await updateComment(ctx, octokit, { ...sharedCommentParams, comment_id: comment.commentId })
           } else {
             await createComment(ctx, octokit, sharedCommentParams)
           }
@@ -523,6 +413,6 @@ const setupEvent = <E extends WebhookEvents>(
   })
 }
 
-export const setupBot = (ctx: Context, bot: Probot) => {
+export const setupBot = (ctx: Context, bot: Probot): void => {
   setupEvent(ctx, bot, "issue_comment.created", onIssueCommentCreated)
 }
