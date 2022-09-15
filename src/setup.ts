@@ -1,4 +1,5 @@
 import { createAppAuth } from "@octokit/auth-app"
+import { request } from "@octokit/request"
 import { MatrixClient, SimpleFsStorageProvider } from "matrix-bot-sdk"
 import path from "path"
 import { Probot, Server } from "probot"
@@ -73,16 +74,26 @@ export const setup = async (
   await initDatabaseDir(accessDbPath)
   const accessDb = new AccessDB(getDb(accessDbPath))
 
-  const authInstallation = createAppAuth({ appId, privateKey, clientId, clientSecret })
+  const authInstallation = createAppAuth({
+    appId,
+    privateKey,
+    clientId,
+    clientSecret,
+    request: request.defaults({
+      // GITHUB_BASE_URL variable allows us to mock requests to GitHub from integration tests
+      ...(process.env.GITHUB_BASE_URL ? { baseUrl: process.env.GITHUB_BASE_URL } : {}),
+    }),
+  })
   const getFetchEndpoint = async (installationId: number | null) => {
-    let token: string
+    let token: string | null = null
     let url: string
 
-    if (installationId) {
+    if (process.env.GITHUB_REMOTE_URL) {
+      url = process.env.GITHUB_REMOTE_URL
+    } else if (installationId) {
       token = (await authInstallation({ type: "installation", installationId })).token
       url = `https://x-access-token:${token}@github.com`
     } else {
-      token = ""
       url = "http://github.com"
     }
 

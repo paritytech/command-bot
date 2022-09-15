@@ -58,19 +58,24 @@ export const prepareBranch = async function* (
   {
     getFetchEndpoint,
   }: {
-    getFetchEndpoint: () => Promise<{ token: string; url: string }>
+    getFetchEndpoint: () => Promise<{ token: string | null; url: string }>
   },
 ) {
   const { token, url } = await getFetchEndpoint()
 
-  const cmdRunner = new CommandRunner(ctx, { itemsToRedact: [token] })
+  const itemsToRedact: string[] = []
+  if (typeof token === "string") {
+    itemsToRedact.push(token)
+  }
+
+  const cmdRunner = new CommandRunner(ctx, { itemsToRedact })
 
   yield cmdRunner.run("mkdir", ["-p", repoPath])
 
-  const repoCmdRunner = new CommandRunner(ctx, { itemsToRedact: [token], cwd: repoPath })
+  const repoCmdRunner = new CommandRunner(ctx, { itemsToRedact, cwd: repoPath })
 
   // Clone the repository if it does not exist
-  yield repoCmdRunner.run("git", ["clone", "--quiet", `${url}/${upstream.owner}/${upstream.repo}`, repoPath], {
+  yield repoCmdRunner.run("git", ["clone", "--quiet", `${url}/${upstream.owner}/${upstream.repo}.git`, repoPath], {
     testAllowedErrorMessage: (err) => err.endsWith("already exists and is not an empty directory."),
   })
 

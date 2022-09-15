@@ -5,3 +5,6 @@ build/
 git/
 data/
 .idea
+
+/test/.test-ca.pem
+/test/.test-ca.key

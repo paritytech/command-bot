@@ -20,7 +20,7 @@ export type Context = {
   startDate: Date
   taskDb: TaskDB
   accessDb: AccessDB
-  getFetchEndpoint: (installationId: number | null) => Promise<{ token: string; url: string }>
+  getFetchEndpoint: (installationId: number | null) => Promise<{ token: string | null; url: string }>
   log: (str: string) => void
   allowedOrganizations: number[]
   logger: Logger
