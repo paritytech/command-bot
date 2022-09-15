@@ -1,7 +1,6 @@
 import { createHmac } from "crypto"
-import { MaybePromise } from "mockttp"
 import fetch from "node-fetch"
-import { delay, ensureDefined } from "opstooling-js"
+import { ensureDefined } from "opstooling-js"
 
 import { webhookFixtures } from "./fixtures"
 import { getWebhookPort } from "./setup/bot"
@@ -74,24 +73,4 @@ export class DetachedExpectation {
   public satisfy(): void {
     this.resolve?.()
   }
-}
-
-export async function until(
-  cb: () => MaybePromise<boolean>,
-  interval: number,
-  maxRetries: number = Infinity,
-  timeoutMessage?: string,
-): Promise<void> {
-  let retryCount: number = 0
-
-  while (retryCount < maxRetries) {
-    const res = await cb()
-    if (res) {
-      return
-    }
-    await delay(interval)
-    retryCount++
-  }
-
-  throw new Error(timeoutMessage ?? "Maximun retry count reached")
 }

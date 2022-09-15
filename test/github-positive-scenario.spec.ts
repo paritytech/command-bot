@@ -1,10 +1,10 @@
 import { beforeAll, describe, expect, test } from "@jest/globals"
 import { CompletedRequest, MockedEndpoint, requestHandlerDefinitions } from "mockttp"
-import { ensureDefined } from "opstooling-js"
+import { ensureDefined, until } from "opstooling-js"
 
 import { getRestFixtures } from "./fixtures"
 import { getIssueCommentPayload } from "./fixtures/github/issueComments"
-import { DetachedExpectation, triggerWebhook, until } from "./helpers"
+import { DetachedExpectation, triggerWebhook } from "./helpers"
 import { initRepo, startGitDaemons } from "./setup/gitDaemons"
 import { getMockServers } from "./setup/mockServers"
 
