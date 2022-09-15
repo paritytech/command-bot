@@ -77,6 +77,9 @@ export const getOctokit = ({ logger }: Context, octokit: Octokit): ExtendedOctok
             }
 
             const { status, message } = error
+            logger.error(
+              `Error while querying GitHub API: url: ${error.request.url}, status: ${status}, message: ${message}`,
+            )
             const isApiRateLimitResponse = message.startsWith("You have exceeded a secondary rate limit.")
             /*
               4XX status codes indicates a "client error", thus we assume the
@@ -134,12 +137,12 @@ export const getOctokit = ({ logger }: Context, octokit: Octokit): ExtendedOctok
                       }
                     } else if (
                       /*
-                  If this is an API Rate Limit response error and we
-                  haven't been able to parse the precise required wait
-                  duration, it's not sane to try to recover from this
-                  error by using a fallback wait duration because it might
-                  be imprecise
-                */
+            If this is an API Rate Limit response error and we
+            haven't been able to parse the precise required wait
+            duration, it's not sane to try to recover from this
+            error by using a fallback wait duration because it might
+            be imprecise
+          */
                       !isApiRateLimitResponse
                     ) {
                       logger.info(

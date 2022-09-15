@@ -2,6 +2,7 @@ import EventEmitter from "events"
 import { writeFile } from "fs/promises"
 import Joi from "joi"
 import fetch from "node-fetch"
+import { envNumberVar } from "opstooling-js"
 import path from "path"
 import yaml from "yaml"
 
@@ -9,6 +10,11 @@ import { CommandRunner } from "./shell"
 import { Task, taskExecutionTerminationEvent, TaskGitlabPipeline } from "./task"
 import { Context } from "./types"
 import { millisecondsDelay, validatedFetch } from "./utils"
+
+// Integration tests don't like waiting for 16 seconds
+const pipelineUpdateInterval = process.env.GITLAB_PIPELINE_UPDATE_INTERVAL
+  ? envNumberVar("GITLAB_PIPELINE_UPDATE_INTERVAL")
+  : 16384
 
 export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Promise<GitlabTaskContext> => {
   const { logger, gitlab } = ctx
@@ -61,7 +67,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
           'rm -rf "$PIPELINE_SCRIPTS_DIR"',
           // prettier-ignore
           'if [ "${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then ' +
-            'if [ "${PIPELINE_SCRIPTS_REF:-}" ]; then ' +
+          'if [ "${PIPELINE_SCRIPTS_REF:-}" ]; then ' +
               getPipelineScriptsCloneCommand({ withRef: true }) + "; " +
             "else " +
               getPipelineScriptsCloneCommand({ withRef: false }) + "; " +
@@ -117,16 +123,19 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
   const gitlabRemote = "gitlab"
   const gitlabProjectPath = `${gitlab.pushNamespace}/${task.gitRef.upstream.repo}`
 
+  let gitlabRemoteUrl: string
+  // This variable is set by integration tests
+  if (process.env.GITLAB_REMOTE_URL) {
+    gitlabRemoteUrl = `${process.env.GITLAB_REMOTE_URL}/${gitlabProjectPath}.git`
+  } else {
+    gitlabRemoteUrl = `https://token:${gitlab.accessToken}@${gitlab.domain}/${gitlabProjectPath}.git`
+  }
+
   await cmdRunner.run("git", ["remote", "remove", gitlabRemote], {
     testAllowedErrorMessage: (err) => err.includes("No such remote:"),
   })
 
-  await cmdRunner.run("git", [
-    "remote",
-    "add",
-    gitlabRemote,
-    `https://token:${gitlab.accessToken}@${gitlab.domain}/${gitlabProjectPath}.git`,
-  ])
+  await cmdRunner.run("git", ["remote", "add", gitlabRemote, gitlabRemoteUrl])
 
   /*
     It's not necessary to say "--option ci.skip" because the pipeline execution
@@ -312,7 +321,7 @@ const getAliveTaskGitlabContext = (ctx: Context, pipeline: TaskGitlabPipeline): 
             }
             setTimeout(() => {
               void pollPipelineCompletion()
-            }, 16384)
+            }, pipelineUpdateInterval)
           }
           void pollPipelineCompletion()
         }),

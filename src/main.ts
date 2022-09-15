@@ -76,14 +76,14 @@ const main = async () => {
           } catch (error) {
             if (
               /*
-              Test for the following error:
-                [Error: ENOENT: no such file or directory, open '/foo'] {
-                  errno: -2,
-                  code: 'ENOENT',
-                  syscall: 'unlink',
-                  path: '/foo'
-                }
-              */
+      Test for the following error:
+        [Error: ENOENT: no such file or directory, open '/foo'] {
+          errno: -2,
+          code: 'ENOENT',
+          syscall: 'unlink',
+          path: '/foo'
+        }
+      */
               !(error instanceof Error) ||
               (error as { code?: string })?.code !== "ENOENT"
             ) {
@@ -138,10 +138,14 @@ const main = async () => {
     secret: webhookSecret,
     logLevel: "info",
     ...(probotLogger === undefined ? {} : { log: probotLogger.child({ name: "probot" }) }),
+    // GITHUB_BASE_URL variable allows us to mock requests to GitHub from integration tests
+    ...(process.env.GITHUB_BASE_URL ? { baseUrl: process.env.GITHUB_BASE_URL } : {}),
   })
   const server = new Server({
     Probot: bot,
     ...(probotLogger === undefined ? {} : { log: probotLogger.child({ name: "server" }) }),
+    // WEBHOOK_PORT is expected to be used only in tests, for now. It allows us to escape port allocation erros
+    ...(process.env.WEBHOOK_PORT ? { port: parseInt(process.env.WEBHOOK_PORT) } : {}),
     webhookProxy: process.env.WEBHOOK_PROXY_URL,
   })
 
@@ -176,33 +180,38 @@ const main = async () => {
     }
   })()
 
-  await server.load((probot) => {
-    void setup(probot, server, {
-      appId,
-      clientId,
-      clientSecret,
-      privateKey,
-      logger,
-      startDate,
-      shouldPostPullRequestComment,
-      allowedOrganizations,
-      dataPath,
-      matrix,
-      masterToken,
-      shouldClearTaskDatabaseOnStart,
-      isDeployment: !!process.env.IS_DEPLOYMENT,
-      pipelineScripts,
-      gitlab: {
-        accessToken: gitlabAccessToken,
-        accessTokenUsername: gitlabAccessTokenUsername,
-        domain: gitlabDomain,
-        pushNamespace: gitlabPushNamespace,
-        jobImage: gitlabJobImage,
-      },
-    })
+  await new Promise((resolve, reject) => {
+    server
+      .load(
+        (probot) =>
+          void setup(probot, server, {
+            appId,
+            clientId,
+            clientSecret,
+            privateKey,
+            logger,
+            startDate,
+            shouldPostPullRequestComment,
+            allowedOrganizations,
+            dataPath,
+            matrix,
+            masterToken,
+            shouldClearTaskDatabaseOnStart,
+            isDeployment: !!process.env.IS_DEPLOYMENT,
+            pipelineScripts,
+            gitlab: {
+              accessToken: gitlabAccessToken,
+              accessTokenUsername: gitlabAccessTokenUsername,
+              domain: gitlabDomain,
+              pushNamespace: gitlabPushNamespace,
+              jobImage: gitlabJobImage,
+            },
+          }).then(resolve, reject),
+      )
+      .catch(reject)
   })
 
-  void server.start()
+  await server.start()
   logger.info("Probot has started!")
 }
 

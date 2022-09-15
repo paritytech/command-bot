@@ -85,7 +85,11 @@ export class CommandRunner {
       child.stderr.on("data", getStreamHandler("stderr"))
 
       child.on("close", (exitCode, signal) => {
-        logger.info(`Process finished with exit code ${exitCode ?? "??"}${signal ? `and signal ${signal}` : ""}`)
+        logger.info(
+          `Command "${commandDisplayed}" finished with exit code ${exitCode ?? "??"}${
+            signal ? `and signal ${signal}` : ""
+          }`,
+        )
 
         if (signal) {
           return resolve(new Error(`Process got terminated by signal ${signal}`))
