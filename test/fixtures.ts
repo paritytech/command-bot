@@ -6,13 +6,21 @@ import { getGitLabBranchesPayload } from "./fixtures/gitlab/branches"
 import { getPipelineJobsPayload } from "./fixtures/gitlab/job"
 import { getPipelinePayload } from "./fixtures/gitlab/pipeline"
 
-export const webhookFixtures: Record<string, string> = {
-  queueCommandComment: getCommentWebhookPayload({
-    body: "/cmd queue -c sample $ hi",
-    org: "tripleightech",
-    repo: "command-bot-test",
-    login: "somedev123",
-  }),
+export const webhookFixtures: Record<string, (...parms: string[]) => string> = {
+  queueCommandComment: () =>
+    getCommentWebhookPayload({
+      body: "/cmd queue -c sample $ hi",
+      org: "tripleightech",
+      repo: "command-bot-test",
+      login: "somedev123",
+    }),
+  cancelCommandComment: (id) =>
+    getCommentWebhookPayload({
+      body: `/cmd cancel ${id}`,
+      org: "tripleightech",
+      repo: "command-bot-test",
+      login: "somedev123",
+    }),
 }
 
 export type RestFixturesParams = {
@@ -38,6 +46,7 @@ export type RestFixtures = {
     branches: string
     pendingPipeline: string
     successPipeline: string
+    failedPipeline: string
     cancelledPipeline: string
     jobs: string
   }
@@ -63,6 +72,7 @@ export function getRestFixtures(params: RestFixturesParams): RestFixtures {
       branches: getGitLabBranchesPayload({ branchName: params.gitlab.cmdBranch }),
       pendingPipeline: getPipelinePayload({ status: "pending" }),
       successPipeline: getPipelinePayload({ status: "success" }),
+      failedPipeline: getPipelinePayload({ status: "failed" }),
       cancelledPipeline: getPipelinePayload({ status: "canceled" }),
       jobs: getPipelineJobsPayload({ status: "running" }),
     },

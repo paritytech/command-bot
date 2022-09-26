@@ -5,8 +5,8 @@ import { ensureDefined } from "opstooling-js"
 import { webhookFixtures } from "./fixtures"
 import { getWebhookPort } from "./setup/bot"
 
-export async function triggerWebhook(fixture: keyof typeof webhookFixtures): Promise<void> {
-  const body = webhookFixtures[fixture]
+export async function triggerWebhook(fixture: keyof typeof webhookFixtures, ...args: string[]): Promise<void> {
+  const body = webhookFixtures[fixture](...args)
   const normalisedBody = toNormalizedJsonString(JSON.parse(body) as object)
   const signature1 = createHmac("sha1", "webhook_secret_value").update(normalisedBody).digest("hex")
   const signature256 = createHmac("sha256", "webhook_secret_value").update(normalisedBody).digest("hex")
