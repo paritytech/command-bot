@@ -22,7 +22,7 @@
     "lodash": "4.17.21",
     "matrix-bot-sdk": "0.5.19",
     "node-fetch": "^3.2.10",
-    "opstooling-js": "https://github.com/paritytech/opstooling-js#v0.0.10",
+    "opstooling-js": "https://github.com/paritytech/opstooling-js#v0.0.12",
     "probot": "^12.2.5",
     "stoppable": "1.1.0",
     "ts-node": "^10.7.0",
