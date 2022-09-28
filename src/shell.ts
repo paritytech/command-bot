@@ -6,7 +6,7 @@ import path from "path"
 import { Readable as ReadableStream } from "stream"
 
 import { logger } from "./logger"
-import { Context, ToString } from "./types"
+import { ToString } from "./types"
 import { displayCommand, redact } from "./utils"
 
 export const ensureDir = async (dir: string): Promise<void> => {

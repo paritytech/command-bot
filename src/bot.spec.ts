@@ -1,10 +1,5 @@
-import { jest } from "@jest/globals"
-
 import { ParsedBotCommand, parsePullRequestBotCommandLine } from "./bot"
 import { logger } from "./logger"
-import { commandsConfiguration } from "./core"
-import ProvidesCallback = jest.ProvidesCallback
-import DoneCallback = jest.DoneCallback
 
 logger.options.minLogLevel = "fatal"
 

@@ -1,7 +1,7 @@
 import { MatrixClient } from "matrix-bot-sdk"
+import { Logger } from "opstooling-js"
 
 import type { AccessDB, TaskDB } from "./db"
-import { Logger } from "opstooling-js"
 
 export type GitRef = {
   contributor: {

@@ -3,8 +3,8 @@ import fetch from "node-fetch"
 import { ensureDefined } from "opstooling-js"
 
 import { webhookFixtures } from "./fixtures"
-import { getWebhookPort } from "./setup/bot"
 import { CommentWebhookParams } from "./fixtures/github/commentWebhook"
+import { getWebhookPort } from "./setup/bot"
 
 export async function triggerWebhook(
   fixture: keyof typeof webhookFixtures,

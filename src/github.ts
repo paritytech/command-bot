@@ -249,12 +249,9 @@ export const isOrganizationMember = async ({
   }
 }
 
-export const getPostPullRequestResult = (
-  ctx: Context,
-  octokit: Octokit,
-  task: PullRequestTask,
-): ((result: CommandOutput) => Promise<void>) => {
-  return async (result: CommandOutput) => {
+export const getPostPullRequestResult =
+  (ctx: Context, octokit: Octokit, task: PullRequestTask): ((result: CommandOutput) => Promise<void>) =>
+  async (result: CommandOutput) => {
     try {
       logger.info({ result, task }, "Posting pull request result")
 
@@ -276,4 +273,3 @@ export const getPostPullRequestResult = (
       logger.error({ error, result, task }, "Caught error while trying to post pull request result")
     }
   }
-}
