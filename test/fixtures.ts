@@ -1,25 +1,21 @@
 import { getAppInstallationTokenPayload } from "./fixtures/github/appInstallationToken"
-import { getCommentWebhookPayload } from "./fixtures/github/commentWebhook"
+import { CommentWebhookParams, getCommentWebhookPayload } from "./fixtures/github/commentWebhook"
 import { getIssueCommentsPayload } from "./fixtures/github/issueComments"
 import { getPullRequestPayload } from "./fixtures/github/pullRequest"
 import { getGitLabBranchesPayload } from "./fixtures/gitlab/branches"
 import { getPipelineJobsPayload } from "./fixtures/gitlab/job"
 import { getPipelinePayload } from "./fixtures/gitlab/pipeline"
 
-export const webhookFixtures: Record<string, (...parms: string[]) => string> = {
-  queueCommandComment: () =>
+export const webhookFixtures: Record<string, (params: CommentWebhookParams) => string> = {
+  queueCommandComment: (params) =>
     getCommentWebhookPayload({
-      body: "/cmd queue -c sample $ hi",
-      org: "tripleightech",
-      repo: "command-bot-test",
-      login: "somedev123",
+      ...{ body: "/cmd queue -c sample $ hi", org: "tripleightech", repo: "command-bot-test", login: "somedev123" },
+      ...params,
     }),
-  cancelCommandComment: (id) =>
+  cancelCommandComment: (params) =>
     getCommentWebhookPayload({
-      body: `/cmd cancel ${id}`,
-      org: "tripleightech",
-      repo: "command-bot-test",
-      login: "somedev123",
+      ...{ body: "/cmd cancel", org: "tripleightech", repo: "command-bot-test", login: "somedev123" },
+      ...params,
     }),
 }
 

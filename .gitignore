@@ -8,3 +8,5 @@ data/
 
 /test/.test-ca.pem
 /test/.test-ca.key
+
+coverage

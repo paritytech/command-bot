@@ -8,7 +8,7 @@ import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db"
 
 import { setupApi } from "./api"
 import { setupBot } from "./bot"
-import { Logger } from "./logger"
+import { logger } from "./logger"
 import { ensureDir, initDatabaseDir } from "./shell"
 import { requeueUnterminatedTasks } from "./task"
 import { Context } from "./types"
@@ -22,7 +22,6 @@ export const setup = async (
     clientId,
     clientSecret,
     privateKey,
-    logger,
     dataPath,
     matrix: matrixConfiguration,
     shouldClearTaskDatabaseOnStart,
@@ -42,7 +41,6 @@ export const setup = async (
     clientSecret: string
     privateKey: string
     startDate: Date
-    logger: Logger
     dataPath: string
     matrix:
       | {

@@ -1,9 +1,11 @@
-export function getPullRequestPayload(params: {
+export type PullRequestParams = {
   login: string
   org: string
   repo: string
   headBranch: string
-}): string {
+}
+
+export function getPullRequestPayload(params: PullRequestParams): string {
   return JSON.stringify({
     url: `https://api.github.com/repos/${params.org}/${params.repo}/pulls/4`,
     id: 1008271935,

@@ -18,6 +18,8 @@ export type CommandConfiguration = {
     }
   }
   commandStart: string[]
+  // allows to be run without arguments after " $ "
+  optionalCommandArgs?: boolean
 }
 export const commandsConfiguration: {
   [K in "try-runtime" | "bench-bot" | "test-bench-bot" | "fmt" | "sample"]: CommandConfiguration
@@ -26,7 +28,11 @@ export const commandsConfiguration: {
     gitlab: { job: { tags: ["linux-docker"], variables: {} } },
     commandStart: ['"$PIPELINE_SCRIPTS_DIR/try-runtime-bot.sh"'],
   },
-  fmt: { gitlab: { job: { tags: ["linux-docker"], variables: {} } }, commandStart: ['"$PIPELINE_SCRIPTS_DIR/fmt.sh"'] },
+  fmt: {
+    gitlab: { job: { tags: ["linux-docker"], variables: {} } },
+    commandStart: ['"$PIPELINE_SCRIPTS_DIR/fmt.sh"'],
+    optionalCommandArgs: true,
+  },
   "bench-bot": getBenchBotCommand({ tags: ["bench-bot"] }),
   "test-bench-bot": getBenchBotCommand({ tags: ["test-bench-bot"] }),
   // "sample" is used for testing purposes only
@@ -41,7 +47,7 @@ export const isRequesterAllowed = async (
   const { allowedOrganizations } = ctx
 
   for (const organizationId of allowedOrganizations) {
-    if (await isOrganizationMember(ctx, { organizationId, username, octokit })) {
+    if (await isOrganizationMember({ organizationId, username, octokit })) {
       return true
     }
   }
@@ -68,11 +74,11 @@ export const prepareBranch = async function* (
     itemsToRedact.push(token)
   }
 
-  const cmdRunner = new CommandRunner(ctx, { itemsToRedact })
+  const cmdRunner = new CommandRunner({ itemsToRedact })
 
   yield cmdRunner.run("mkdir", ["-p", repoPath])
 
-  const repoCmdRunner = new CommandRunner(ctx, { itemsToRedact, cwd: repoPath })
+  const repoCmdRunner = new CommandRunner({ itemsToRedact, cwd: repoPath })
 
   // Clone the repository if it does not exist
   yield repoCmdRunner.run("git", ["clone", "--quiet", `${url}/${upstream.owner}/${upstream.repo}.git`, repoPath], {

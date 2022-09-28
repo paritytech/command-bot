@@ -4,6 +4,7 @@ import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types"
 import { Mutex } from "async-mutex"
 import { Probot } from "probot"
 
+import { logger } from "./logger"
 import { PullRequestTask } from "./task"
 import { CommandOutput, Context } from "./types"
 import { displayError, Err, millisecondsDelay, Ok } from "./utils"
@@ -34,7 +35,7 @@ let requestDelay = Promise.resolve()
 const rateLimitRemainingHeader = "x-ratelimit-remaining"
 const rateLimitResetHeader = "x-ratelimit-reset"
 const retryAfterHeader = "retry-after"
-export const getOctokit = ({ logger }: Context, octokit: Octokit): ExtendedOctokit => {
+export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
   /*
     Check that this Octokit instance has not been augmented before because
     side-effects of this function should not be stacked; e.g. registering
@@ -193,7 +194,7 @@ export type Comment = {
   data: unknown | null // TODO: quite a complex type inside
 }
 export const createComment = async (
-  { shouldPostPullRequestComment, logger }: Context,
+  { shouldPostPullRequestComment }: Context,
   octokit: Octokit,
   ...args: Parameters<typeof octokit.issues.createComment>
 ): Promise<Comment> => {
@@ -207,7 +208,7 @@ export const createComment = async (
 }
 
 export const updateComment = async (
-  { shouldPostPullRequestComment, logger }: Context,
+  { shouldPostPullRequestComment }: Context,
   octokit: Octokit,
   ...args: Parameters<typeof octokit.issues.updateComment>
 ): Promise<void> => {
@@ -218,18 +219,15 @@ export const updateComment = async (
   }
 }
 
-export const isOrganizationMember = async (
-  { logger }: Context,
-  {
-    organizationId,
-    username,
-    octokit,
-  }: {
-    organizationId: number
-    username: string
-    octokit: ExtendedOctokit
-  },
-): Promise<boolean> => {
+export const isOrganizationMember = async ({
+  organizationId,
+  username,
+  octokit,
+}: {
+  organizationId: number
+  username: string
+  octokit: ExtendedOctokit
+}): Promise<boolean> => {
   try {
     const response = await octokit.orgs.userMembershipByOrganizationId({ organization_id: organizationId, username })
     return (response.status as number) === 204
@@ -256,8 +254,6 @@ export const getPostPullRequestResult = (
   octokit: Octokit,
   task: PullRequestTask,
 ): ((result: CommandOutput) => Promise<void>) => {
-  const { logger } = ctx
-
   return async (result: CommandOutput) => {
     try {
       logger.info({ result, task }, "Posting pull request result")

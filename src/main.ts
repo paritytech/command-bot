@@ -6,45 +6,13 @@ import { Logger as ProbotLogger, Probot, Server } from "probot"
 import { getLog } from "probot/lib/helpers/get-log"
 import stoppable from "stoppable"
 
-import { Logger } from "./logger"
+import { logFormat, logger } from "./logger"
 import { setup } from "./setup"
 import { ensureDir } from "./shell"
 import { envNumberVar, envVar } from "./utils"
 
 const main = async () => {
   const startDate = new Date()
-
-  const logFormat = (() => {
-    const value = process.env.LOG_FORMAT
-    switch (value) {
-      case "json": {
-        return value
-      }
-      case undefined: {
-        return null
-      }
-      default: {
-        throw new Error(`Invalid $LOG_FORMAT: ${value}`)
-      }
-    }
-  })()
-  const minLogLevel = (() => {
-    const value = process.env.MIN_LOG_LEVEL
-    switch (value) {
-      case undefined: {
-        return "info"
-      }
-      case "info":
-      case "warn":
-      case "error": {
-        return value
-      }
-      default: {
-        throw new Error(`Invalid $MIN_LOG_LEVEL: ${value}`)
-      }
-    }
-  })()
-  const logger = new Logger({ name: "command-bot", minLogLevel, logFormat, impl: console })
 
   const masterToken = envVar("MASTER_TOKEN")
 
@@ -76,14 +44,14 @@ const main = async () => {
           } catch (error) {
             if (
               /*
-      Test for the following error:
-        [Error: ENOENT: no such file or directory, open '/foo'] {
-          errno: -2,
-          code: 'ENOENT',
-          syscall: 'unlink',
-          path: '/foo'
-        }
-      */
+              Test for the following error:
+                [Error: ENOENT: no such file or directory, open '/foo'] {
+                  errno: -2,
+                  code: 'ENOENT',
+                  syscall: 'unlink',
+                  path: '/foo'
+                }
+              */
               !(error instanceof Error) ||
               (error as { code?: string })?.code !== "ENOENT"
             ) {
@@ -132,6 +100,7 @@ const main = async () => {
       throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
     }
   }
+
   const bot = Probot.defaults({
     appId,
     privateKey,
@@ -189,7 +158,6 @@ const main = async () => {
             clientId,
             clientSecret,
             privateKey,
-            logger,
             startDate,
             shouldPostPullRequestComment,
             allowedOrganizations,

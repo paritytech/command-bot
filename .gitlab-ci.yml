@@ -33,7 +33,7 @@ default:
 stages:
   - install_deps
   - lint
-  - after_lint
+  - test
   - containerize
   - deploy
 
@@ -54,6 +54,12 @@ lint:
   stage: lint
   script:
     - pre-commit run --color=always --all
+
+test:
+  <<: *on-pr-and-master
+  stage: test
+  script:
+    - yarn test
 
 #### App deployment
 

@@ -4,9 +4,14 @@ import { ensureDefined } from "opstooling-js"
 
 import { webhookFixtures } from "./fixtures"
 import { getWebhookPort } from "./setup/bot"
+import { CommentWebhookParams } from "./fixtures/github/commentWebhook"
 
-export async function triggerWebhook(fixture: keyof typeof webhookFixtures, ...args: string[]): Promise<void> {
-  const body = webhookFixtures[fixture](...args)
+export async function triggerWebhook(
+  fixture: keyof typeof webhookFixtures,
+  params?: Partial<CommentWebhookParams>,
+): Promise<void> {
+  const body = webhookFixtures[fixture]({ ...params } as CommentWebhookParams)
+  // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
   const normalisedBody = toNormalizedJsonString(JSON.parse(body) as object)
   const signature1 = createHmac("sha1", "webhook_secret_value").update(normalisedBody).digest("hex")
   const signature256 = createHmac("sha256", "webhook_secret_value").update(normalisedBody).digest("hex")

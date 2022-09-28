@@ -15,7 +15,7 @@ import { botPullRequestCommentMention, botPullRequestCommentSubcommands } from "
 import { prepareBranch } from "./core"
 import { getPostPullRequestResult, updateComment } from "./github"
 import { cancelGitlabPipeline, restoreTaskGitlabContext, runCommandInGitlabPipeline } from "./gitlab"
-import { Logger } from "./logger"
+import { logger } from "./logger"
 import { CommandOutput, Context, GitRef } from "./types"
 import { displayError, getNextUniqueIncrementalId, intoError } from "./utils"
 
@@ -94,7 +94,7 @@ export const queueTask = async (
   queuedTasks.set(task.id, taskEventChannel)
 
   const ctx = { ...parentCtx, logger: parentCtx.logger.child({ taskId: task.id }) }
-  const { logger, taskDb, getFetchEndpoint, gitlab } = ctx
+  const { taskDb, getFetchEndpoint, gitlab } = ctx
   const { db } = taskDb
 
   await db.put(task.id, JSON.stringify(task))
@@ -241,7 +241,7 @@ export const queueTask = async (
 }
 
 export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot): Promise<void> => {
-  const { taskDb, logger, matrix } = ctx
+  const { taskDb, matrix } = ctx
   const { db } = taskDb
 
   /*
@@ -320,7 +320,7 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot): Promi
               announceCancel: sendMatrixMessage,
               requeue: () =>
                 queueTask(ctx, requeuedTask, {
-                  onResult: getSendTaskMatrixResult(matrix, logger, requeuedTask),
+                  onResult: getSendTaskMatrixResult(matrix, requeuedTask),
                   /*
                     Assumes the relevant progress update was already sent when
                     the task was queued for the first time, thus there's no need
@@ -378,7 +378,7 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot): Promi
 }
 
 export const getSendTaskMatrixResult =
-  (matrix: MatrixClient, logger: Logger, task: ApiTask) =>
+  (matrix: MatrixClient, task: ApiTask) =>
   async (message: CommandOutput): Promise<void> => {
     try {
       await matrix.sendText(
@@ -394,7 +394,6 @@ export const getSendTaskMatrixResult =
 export const cancelTask = async (ctx: Context, taskId: Task | string): Promise<Error | undefined> => {
   const {
     taskDb: { db },
-    logger,
   } = ctx
 
   const task =
