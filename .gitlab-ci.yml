@@ -43,7 +43,11 @@ install-deps:
   script:
     - git --version
     - apt-get update
-    - apt-get install wget ca-certificates git-all -y
+    - apt-get install wget ca-certificates -y
+    - apt-get remove git
+    - add-apt-repository ppa:git-core/ppa -y
+    - apt-get update
+    - apt-get install git -y
     - git --version
     - wget https://github.com/mvdan/sh/releases/download/v3.5.0/shfmt_v3.5.0_linux_amd64 -O /bin/shfmt &&
       echo "8feea043364a725dfb69665432aee9e85b84c7f801a70668650e8b15452f6574  /bin/shfmt" | sha256sum --check &&
