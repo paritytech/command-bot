@@ -41,6 +41,7 @@ install-deps:
   <<: *on-pr-and-master
   stage: install_deps
   script:
+    - apt-key list
     - yarn --immutable
   artifacts:
     name:       "${CI_JOB_ID}_${CI_COMMIT_REF_NAME}"
