@@ -1,5 +1,3 @@
-import { jest } from "@jest/globals"
-
 import { ParsedBotCommand, parsePullRequestBotCommandLine } from "./bot"
 import { logger } from "./logger"
 
@@ -116,12 +114,7 @@ const dataProvider: DataProvider[] = [
   },
 ]
 
-afterEach(() => {
-  jest.useRealTimers()
-})
-
 describe("parsePullRequestBotCommandLine", () => {
-  jest.useFakeTimers({ legacyFakeTimers: true })
   for (const { suitName, commandLine, expectedResponse } of dataProvider) {
     test(`test commandLine: ${commandLine} [${suitName}]`, async () => {
       const res = await parsePullRequestBotCommandLine(commandLine)

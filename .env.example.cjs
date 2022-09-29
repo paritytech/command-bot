@@ -41,7 +41,7 @@ process.env.GITLAB_PUSH_NAMESPACE ??= "placeholder"
 
 /*
   The default image to be used on GitLab jobs for bot commands which don't
-  specify a custom image (like `quay.io/buildah/stable`)
+  specify a custom image (like `quay.io/buildah/stable` or `paritytech/ci-linux:production`)
 */
 process.env.GITLAB_JOB_IMAGE ??= "placeholder"
 

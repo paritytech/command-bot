@@ -10,5 +10,4 @@ module.exports = {
   moduleNameMapper: { "^src/(.*)$": `${process.cwd()}/src/$1` },
   collectCoverage: false,
   coverageDirectory: "coverage",
-  testTimeout: 30000,
 }

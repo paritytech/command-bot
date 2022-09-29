@@ -41,7 +41,7 @@ install-deps:
   <<: *on-pr-and-master
   stage: install_deps
   script:
-    - yarn install --frozen-lockfile
+    - yarn --immutable
   artifacts:
     name:       "${CI_JOB_ID}_${CI_COMMIT_REF_NAME}"
     when:       on_success
@@ -59,6 +59,11 @@ test:
   <<: *on-pr-and-master
   stage: test
   script:
+    - apk add wget ca-certificates
+    - wget https://github.com/mvdan/sh/releases/download/v3.5.0/shfmt_v3.5.0_linux_amd64 -O /bin/shfmt &&
+      echo "8feea043364a725dfb69665432aee9e85b84c7f801a70668650e8b15452f6574  /bin/shfmt" | sha256sum --check &&
+      chmod +x /bin/shfmt &&
+      shfmt --version
     - yarn test
 
 #### App deployment
