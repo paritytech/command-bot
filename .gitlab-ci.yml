@@ -43,10 +43,10 @@ install-deps:
   script:
     - git --version
     - apt-get update
-    - apt-get install gpg curl gnupg2 software-properties-common -y
+    - apt-get install gpg curl gnupg2 software-properties-common wget ca-certificates -y
     - curl -LfSs "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x9D4B2B6EB8F97156D19669A9FF0812D491B96798&options=mr&exact=on" | gpg --import - && gpg --list-keys
     - add-apt-repository -y ppa:git-core/ppa
-    - apt-get install --assume-yes git wget ca-certificates
+    - apt-get install --assume-yes git 
     - git --version
     - wget https://github.com/mvdan/sh/releases/download/v3.5.0/shfmt_v3.5.0_linux_amd64 -O /bin/shfmt &&
       echo "8feea043364a725dfb69665432aee9e85b84c7f801a70668650e8b15452f6574  /bin/shfmt" | sha256sum --check &&
