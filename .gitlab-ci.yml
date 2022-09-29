@@ -59,12 +59,12 @@ test:
   <<: *on-pr-and-master
   stage: test
   script:
-#    - git --version
+    - git --version
     - apt-get update
-#    - apt-get install software-properties-common -y
-#    - apt-key adv --keyserver keyserver.ubuntu.com --recv-keys  C2518248EEA14886
-#    - add-apt-repository -y ppa:git-core/ppa
+    - apt-get install software-properties-common -y
+    - add-apt-repository -y ppa:git-core/ppa
     - apt-get install --assume-yes git wget ca-certificates
+    - git --version
     - wget https://github.com/mvdan/sh/releases/download/v3.5.0/shfmt_v3.5.0_linux_amd64 -O /bin/shfmt &&
       echo "8feea043364a725dfb69665432aee9e85b84c7f801a70668650e8b15452f6574  /bin/shfmt" | sha256sum --check &&
       chmod +x /bin/shfmt &&
