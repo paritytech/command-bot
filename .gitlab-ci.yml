@@ -41,6 +41,8 @@ install-deps:
   <<: *on-pr-and-master
   stage: install_deps
   script:
+    - apt-get update
+    - apg-get install gnupg2 -y
     - apt-key list
     - yarn --immutable
   artifacts:
