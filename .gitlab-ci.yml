@@ -44,7 +44,7 @@ install-deps:
     - git --version
     - apt-get update
     - apt-get install gpg gnupg2 software-properties-common -y
-    - apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+    - curl -LfSs "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x9D4B2B6EB8F97156D19669A9FF0812D491B96798&options=mr&exact=on" | gpg --import - && gpg --list-keys
     - add-apt-repository -y ppa:git-core/ppa
     - apt-get install --assume-yes git wget ca-certificates
     - git --version
