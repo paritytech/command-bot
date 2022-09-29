@@ -41,8 +41,17 @@ install-deps:
   <<: *on-pr-and-master
   stage: install_deps
   script:
+    - git --version
     - apt-get update
-    - apt-get install gnupg2 -y
+    - apt-get install gpg gnupg2 software-properties-common -y
+    - apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+    - add-apt-repository -y ppa:git-core/ppa
+    - apt-get install --assume-yes git wget ca-certificates
+    - git --version
+    - wget https://github.com/mvdan/sh/releases/download/v3.5.0/shfmt_v3.5.0_linux_amd64 -O /bin/shfmt &&
+      echo "8feea043364a725dfb69665432aee9e85b84c7f801a70668650e8b15452f6574  /bin/shfmt" | sha256sum --check &&
+      chmod +x /bin/shfmt &&
+      shfmt --version
     - apt-key list
     - yarn --immutable
   artifacts:
@@ -62,16 +71,6 @@ test:
   <<: *on-pr-and-master
   stage: test
   script:
-    - git --version
-    - apt-get update
-    - apt-get install gpg software-properties-common -y
-    - add-apt-repository -y ppa:git-core/ppa
-    - apt-get install --assume-yes git wget ca-certificates
-    - git --version
-    - wget https://github.com/mvdan/sh/releases/download/v3.5.0/shfmt_v3.5.0_linux_amd64 -O /bin/shfmt &&
-      echo "8feea043364a725dfb69665432aee9e85b84c7f801a70668650e8b15452f6574  /bin/shfmt" | sha256sum --check &&
-      chmod +x /bin/shfmt &&
-      shfmt --version
     - yarn test
 
 #### App deployment
