@@ -61,7 +61,7 @@ test:
   script:
     - git --version
     - apt-get update
-    - apt-get install software-properties-common -y
+    - apt-get install gpg software-properties-common -y
     - add-apt-repository -y ppa:git-core/ppa
     - apt-get install --assume-yes git wget ca-certificates
     - git --version
