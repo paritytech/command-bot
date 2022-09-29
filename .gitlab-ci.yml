@@ -44,6 +44,7 @@ install-deps:
     - git --version
     - apt-get update
     - apt-get install wget gpg ca-certificates software-properties-common -y
+    - apt-key del A1715D88E1DF1F24
     - apt-key adv --keyserver keyserver.ubuntu.com --recv-key 40976EAF437D05B5
     - gpg --keyserver keyserver.ubuntu.com --receive-keys 40976EAF437D05B5
     - wget -q -O - "https://keyserver.ubuntu.com/pks/lookup?op=get&fingerprint=on&search=0x40976EAF437D05B5" | apt-key add -
