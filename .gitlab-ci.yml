@@ -44,7 +44,6 @@ install-deps:
     - git --version
     - apt-get update
     - apt-get install wget ca-certificates software-properties-common -y
-    - apt-get remove git
     - add-apt-repository ppa:git-core/ppa -y
     - apt-get update
     - apt-get install git -y
