@@ -31,15 +31,13 @@ default:
     - if: $CI_COMMIT_REF_NAME == "master"
 
 stages:
-  - install_deps
-  - lint
   - test
   - containerize
   - deploy
 
-install-deps:
+test:
   <<: *on-pr-and-master
-  stage: install_deps
+  stage: test
   script:
     - echo deb http://deb.debian.org/debian buster-backports main | tee /etc/apt/sources.list.d/buster-backports.list
     - apt-get update
@@ -52,23 +50,7 @@ install-deps:
       shfmt --version
     - apt-key list
     - yarn --immutable
-  artifacts:
-    name:       "${CI_JOB_ID}_${CI_COMMIT_REF_NAME}"
-    when:       on_success
-    expire_in:  1 hour
-    paths:
-      - ./node_modules
-
-lint:
-  <<: *on-pr-and-master
-  stage: lint
-  script:
     - pre-commit run --color=always --all
-
-test:
-  <<: *on-pr-and-master
-  stage: test
-  script:
     - yarn test
 
 #### App deployment
