@@ -19,7 +19,7 @@ export type GitDaemons = {
   gitLab: GitDaemon
 }
 
-const gitDaemons: GitDaemons | null = null
+let gitDaemons: GitDaemons | null = null
 
 async function startDaemon(name: string, port: number): Promise<GitDaemon> {
   const rootPath = path.join(process.cwd(), "data", `test-git-${name}`)
@@ -43,12 +43,12 @@ export async function startGitDaemons(): Promise<GitDaemons> {
 
   const freePorts = await findFreePorts(2)
 
-  console.log(freePorts)
-
-  return {
+  gitDaemons = {
     gitHub: await startDaemon("github", ensureDefined(freePorts[0])),
     gitLab: await startDaemon("gitlab", ensureDefined(freePorts[1])),
   }
+
+  return gitDaemons
 }
 
 export function stopGitDaemons(): void {
