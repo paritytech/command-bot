@@ -51,6 +51,8 @@ test:
     - apt-key list
     - yarn --immutable
     - pre-commit run --color=always --all
+    - git config --global user.email "ci@parity.io"
+    - git config --global user.name "ci_parity_io"
     - yarn test
 
 #### App deployment
