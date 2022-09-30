@@ -66,19 +66,6 @@ const main = async () => {
       })(process.env.TASK_DB_VERSION.trim())
     : false
 
-  if (process.env.PING_PORT) {
-    // Signal that we have started listening until Probot kicks in
-    const pingPort = parseInt(process.env.PING_PORT)
-    const pingServer = stoppable(
-      http.createServer((_, res) => {
-        res.writeHead(200)
-        res.end()
-      }),
-      0,
-    )
-    pingServer.listen(pingPort)
-  }
-
   const appId = envNumberVar("APP_ID")
   const privateKey = Buffer.from(envVar("PRIVATE_KEY_BASE64"), "base64").toString()
   const clientId = envVar("CLIENT_ID")
@@ -181,6 +168,19 @@ const main = async () => {
 
   await server.start()
   logger.info("Probot has started!")
+
+  if (process.env.PING_PORT) {
+    // Signal that we have started listening until Probot kicks in
+    const pingPort = parseInt(process.env.PING_PORT)
+    const pingServer = stoppable(
+      http.createServer((_, res) => {
+        res.writeHead(200)
+        res.end()
+      }),
+      0,
+    )
+    pingServer.listen(pingPort)
+  }
 }
 
 void main()
