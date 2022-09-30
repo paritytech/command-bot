@@ -21,8 +21,10 @@ export type GitDaemons = {
 
 const gitDaemons: GitDaemons | null = null
 
-function startDaemon(name: string, port: number): GitDaemon {
+async function startDaemon(name: string, port: number): Promise<GitDaemon> {
   const rootPath = path.join(process.cwd(), "data", `test-git-${name}`)
+
+  await fs.mkdir(rootPath, { recursive: true })
 
   // // initialising mocks for both fork and target repo
   const instance = spawn(
@@ -44,8 +46,8 @@ export async function startGitDaemons(): Promise<GitDaemons> {
   console.log(freePorts)
 
   return {
-    gitHub: startDaemon("github", ensureDefined(freePorts[0])),
-    gitLab: startDaemon("gitlab", ensureDefined(freePorts[1])),
+    gitHub: await startDaemon("github", ensureDefined(freePorts[0])),
+    gitLab: await startDaemon("gitlab", ensureDefined(freePorts[1])),
   }
 }
 
