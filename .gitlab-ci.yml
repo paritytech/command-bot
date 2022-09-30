@@ -41,7 +41,7 @@ test:
   script:
     - echo deb http://deb.debian.org/debian buster-backports main | tee /etc/apt/sources.list.d/buster-backports.list
     - apt-get update
-    - apt-get install -t buster-backports git -y
+    - apt-get install -t buster-backports git openssl -y
     - apt-get install wget gpg ca-certificates software-properties-common -y
     - git --version
     - wget https://github.com/mvdan/sh/releases/download/v3.5.0/shfmt_v3.5.0_linux_amd64 -O /bin/shfmt &&
