@@ -3,6 +3,7 @@ import { afterAll, beforeAll } from "@jest/globals"
 import { getBotInstance, launchBot } from "./bot"
 import { startGitDaemons, stopGitDaemons } from "./gitDaemons"
 import { ensureCert, startMockServers, stopMockServers } from "./mockServers"
+import { killAndWait } from "./util"
 
 beforeAll(async () => {
   await ensureCert()
@@ -13,8 +14,14 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await new Promise((resolve) => getBotInstance()?.on("exit", resolve))
   getBotInstance()?.kill()
-  stopGitDaemons()
+  const botInstance = getBotInstance()
+
+  if (botInstance) {
+    await killAndWait(botInstance)
+  }
+  await stopGitDaemons()
 
   await stopMockServers()
 })

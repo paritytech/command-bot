@@ -1,3 +1,4 @@
+import { ChildProcess } from "child_process"
 import net from "net"
 
 /**
@@ -35,4 +36,12 @@ export async function findFreePorts(amount: number): Promise<number[]> {
   )
   await Promise.all(servers.map((srv) => new Promise<void>((res) => srv.close(() => res()))))
   return ports
+}
+
+export async function killAndWait(cp: ChildProcess): Promise<void> {
+  if (cp.signalCode === null) return
+
+  const p = await new Promise((resolve) => cp.on("exit", resolve))
+  cp.kill()
+  await p
 }

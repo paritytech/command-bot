@@ -4,7 +4,7 @@ import { ensureDefined } from "opstooling-js"
 import path from "path"
 import { promisify } from "util"
 
-import { findFreePorts } from "./util"
+import { findFreePorts, killAndWait } from "./util"
 
 const execFilePromise = promisify(execFile)
 
@@ -51,9 +51,10 @@ export async function startGitDaemons(): Promise<GitDaemons> {
   return gitDaemons
 }
 
-export function stopGitDaemons(): void {
-  gitDaemons?.gitHub.instance.kill()
-  gitDaemons?.gitLab.instance.kill()
+export async function stopGitDaemons(): Promise<void> {
+  if (!gitDaemons) return
+
+  await Promise.all([killAndWait(gitDaemons.gitHub.instance), killAndWait(gitDaemons.gitLab.instance)])
 }
 
 export async function initRepo(
