@@ -35,12 +35,18 @@ stages:
   - test
   - deploy
 
-test-lint-unit:
+test-lint:
   <<: *on-pr-and-master
   stage: test
   script:
     - yarn --immutable
     - pre-commit run --color=always --all
+
+test-unit:
+  <<: *on-pr-and-master
+  stage: test
+  script:
+    - yarn --immutable
     - yarn test:unit
 
 test-integration:
