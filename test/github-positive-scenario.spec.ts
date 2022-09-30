@@ -80,6 +80,32 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   },
 ]
 
+
+beforeAll(async () => {
+  const gitDaemons = await startGitDaemons()
+
+  await initRepo(gitDaemons.gitHub, "tripleightech", "command-bot-test.git", [])
+  await initRepo(gitDaemons.gitHub, "somedev123", "command-bot-test.git", ["prBranch1"])
+  await initRepo(gitDaemons.gitLab, "tripleightech", "command-bot-test.git", [])
+
+  const mockServers = ensureDefined(getMockServers())
+
+  await mockServers.gitHub
+    .forPost("/app/installations/25299948/access_tokens")
+    .thenReply(200, restFixtures.github.appInstallationToken, jsonResponseHeaders)
+
+  await mockServers.gitHub.forGet("/organizations/123/members/somedev123").thenReply(204)
+
+  await mockServers.gitHub
+    .forGet("/repos/tripleightech/command-bot-test/pulls/4")
+    .thenReply(200, restFixtures.github.pullRequest, jsonResponseHeaders)
+
+  mockedEndpoints.pipeline = await mockServers.gitLab
+    .forGet("/api/v4/projects/tripleightech%2Fcommand-bot-test/repository/branches/cmd-bot%2F4")
+    .thenReply(200, restFixtures.gitlab.branches, jsonResponseHeaders)
+})
+
+
 describe.each(commandsDataProvider)(
   "$suitName: Positive scenario (GitHub webhook)",
   // eslint-disable-next-line unused-imports/no-unused-vars-ts
@@ -89,30 +115,6 @@ describe.each(commandsDataProvider)(
       body: string
       id: number
     } | null = null
-
-    beforeAll(async () => {
-      const gitDaemons = await startGitDaemons()
-
-      await initRepo(gitDaemons.gitHub, "tripleightech", "command-bot-test.git", [])
-      await initRepo(gitDaemons.gitHub, "somedev123", "command-bot-test.git", ["prBranch1"])
-      await initRepo(gitDaemons.gitLab, "tripleightech", "command-bot-test.git", [])
-
-      const mockServers = ensureDefined(getMockServers())
-
-      await mockServers.gitHub
-        .forPost("/app/installations/25299948/access_tokens")
-        .thenReply(200, restFixtures.github.appInstallationToken, jsonResponseHeaders)
-
-      await mockServers.gitHub.forGet("/organizations/123/members/somedev123").thenReply(204)
-
-      await mockServers.gitHub
-        .forGet("/repos/tripleightech/command-bot-test/pulls/4")
-        .thenReply(200, restFixtures.github.pullRequest, jsonResponseHeaders)
-
-      mockedEndpoints.pipeline = await mockServers.gitLab
-        .forGet("/api/v4/projects/tripleightech%2Fcommand-bot-test/repository/branches/cmd-bot%2F4")
-        .thenReply(200, restFixtures.gitlab.branches, jsonResponseHeaders)
-    })
 
     test("Phase 1: cmd-bot creates comment", async () => {
       const mockServers = ensureDefined(getMockServers())

@@ -1,5 +1,6 @@
 import { ChildProcess } from "child_process"
 import net from "net"
+import { until } from "opstooling-js"
 
 /**
  * As we need to find unused ports for our bot, we also need to know them in the test environment,
@@ -39,9 +40,7 @@ export async function findFreePorts(amount: number): Promise<number[]> {
 }
 
 export async function killAndWait(cp: ChildProcess): Promise<void> {
-  if (cp.signalCode === null) return
-
-  const p = await new Promise((resolve) => cp.on("exit", resolve))
+  const p = new Promise((resolve) => cp.on("exit", resolve))
   cp.kill()
-  await p
+  await Promise.race([until(() => cp.exitCode !== null, 100), p])
 }
