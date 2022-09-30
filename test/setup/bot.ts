@@ -23,10 +23,10 @@ export async function launchBot(gitHubUrl: string, gitLabUrl: string, gitDaemons
   ;[webhookPort, pingPort] = await findFreePorts(2)
 
   const botEnv = getBotEnv(gitHubUrl, gitLabUrl, gitDaemons.gitHub.url, gitDaemons.gitLab.url)
-  console.log(`Launching bot with 
-    GitHub HTTP: ${gitHubUrl}, 
-    GitLab HTTP: ${gitLabUrl}, 
-    GitHub git: ${gitDaemons.gitHub.url}, 
+  console.log(`Launching bot with
+    GitHub HTTP: ${gitHubUrl},
+    GitLab HTTP: ${gitLabUrl},
+    GitHub git: ${gitDaemons.gitHub.url},
     GitLab git: ${gitDaemons.gitLab.url}`)
 
   bot = spawn("yarn", ["start"], { env: Object.assign({}, process.env, botEnv), stdio: "pipe" })
