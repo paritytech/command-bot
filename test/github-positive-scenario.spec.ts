@@ -80,7 +80,6 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   },
 ]
 
-
 beforeAll(async () => {
   const gitDaemons = await startGitDaemons()
 
@@ -104,7 +103,6 @@ beforeAll(async () => {
     .forGet("/api/v4/projects/tripleightech%2Fcommand-bot-test/repository/branches/cmd-bot%2F4")
     .thenReply(200, restFixtures.gitlab.branches, jsonResponseHeaders)
 })
-
 
 describe.each(commandsDataProvider)(
   "$suitName: Positive scenario (GitHub webhook)",
