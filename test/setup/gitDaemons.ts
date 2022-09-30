@@ -25,13 +25,11 @@ function startDaemon(name: string, port: number): GitDaemon {
   const rootPath = path.join(process.cwd(), "data", `test-git-${name}`)
 
   // // initialising mocks for both fork and target repo
-  const instance = spawn("git", [
-    "daemon",
-    `--port=${port}`,
-    `--base-path=${rootPath}`,
-    "--export-all",
-    "--enable=receive-pack",
-  ])
+  const instance = spawn(
+    "git",
+    ["daemon", "--verbose", `--port=${port}`, `--base-path=${rootPath}`, "--export-all", "--enable=receive-pack"],
+    { stdio: "inherit" },
+  )
 
   return { url: `git://localhost:${port}`, rootPath, instance }
 }
