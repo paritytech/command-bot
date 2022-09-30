@@ -43,6 +43,8 @@ export async function startGitDaemons(): Promise<GitDaemons> {
 
   const freePorts = await findFreePorts(2)
 
+  console.log(freePorts)
+
   return {
     gitHub: startDaemon("github", ensureDefined(freePorts[0])),
     gitLab: startDaemon("gitlab", ensureDefined(freePorts[1])),
