@@ -6,22 +6,28 @@ import { ensureCert, startMockServers, stopMockServers } from "./mockServers"
 import { killAndWait } from "./util"
 
 beforeAll(async () => {
+  console.log("beforeAll start")
   await ensureCert()
+
   const mockServers = await startMockServers()
+  console.log("MockServers launched")
+
   const gitDaemons = await startGitDaemons()
+  console.log("GitDaemons launched")
 
   await launchBot(mockServers.gitHub.url, mockServers.gitLab.url, gitDaemons)
+  console.log("Bot launched")
 })
 
 afterAll(async () => {
-  await new Promise((resolve) => getBotInstance()?.on("exit", resolve))
-  getBotInstance()?.kill()
   const botInstance = getBotInstance()
-
   if (botInstance) {
     await killAndWait(botInstance)
+    console.log("Bot stopped")
   }
   await stopGitDaemons()
+  console.log("GitDaemons stopped")
 
   await stopMockServers()
+  console.log("MockServers stopped")
 })
