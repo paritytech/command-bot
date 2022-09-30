@@ -31,7 +31,7 @@ RUN wget https://github.com/mvdan/sh/releases/download/v3.5.0/shfmt_v3.5.0_linux
 RUN $APT_INSTALL $ROCKSDB_BUILD_DEPS && apt-mark auto $ROCKSDB_BUILD_DEPS
 
 RUN git config --global user.name command-bot && \
-  git config --global user.email "<>"
+  git config --global user.email "opstooling+commandbot@parity.io"
 
 # Git is needed for both pre-commit and also for cloning repositories before
 # running the bot's commands
