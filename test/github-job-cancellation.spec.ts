@@ -108,7 +108,7 @@ describe("Job cancellation (GitHub webhook)", () => {
       .thenReply(200, restFixures.gitlab.cancelledPipeline, jsonResponseHeaders)
 
     const commandId = ensureDefined(lastCommentBody.match(cancelCommandRegex)?.[1])
-    await triggerWebhook("cancelCommandComment", commandId)
+    await triggerWebhook("cancelCommandComment", { body: `/cmd cancel ${commandId}` })
 
     await until(async () => !(await mockedEndpoint.isPending()), 100, 50)
   })

@@ -1,11 +1,12 @@
 import { ChildProcess, spawn } from "child_process"
 import { randomUUID } from "crypto"
 import { mkdir, rm } from "fs/promises"
+import { Logger } from "opstooling-js"
 import path from "path"
 import { Readable as ReadableStream } from "stream"
 
-import { Logger } from "./logger"
-import { Context, ToString } from "./types"
+import { logger } from "./logger"
+import { ToString } from "./types"
 import { displayCommand, redact } from "./utils"
 
 export const ensureDir = async (dir: string): Promise<void> => {
@@ -25,7 +26,6 @@ export class CommandRunner {
   private logger: Logger
 
   constructor(
-    ctx: Context,
     private configuration: {
       itemsToRedact: string[]
       shouldTrackProgress?: boolean
@@ -33,7 +33,7 @@ export class CommandRunner {
       onChild?: (child: ChildProcess) => void
     },
   ) {
-    this.logger = ctx.logger.child({ commandId: randomUUID() })
+    this.logger = logger.child({ commandId: randomUUID() })
   }
 
   async run(
@@ -51,12 +51,12 @@ export class CommandRunner {
       stdinInput?: string
     } = {},
   ): Promise<string | Error> {
-    const { logger } = this
+    const { logger: log } = this
     return await new Promise<string | Error>((resolve, reject) => {
       const { cwd, itemsToRedact, onChild, shouldTrackProgress } = this.configuration
 
       const commandDisplayed = displayCommand({ execPath, args, itemsToRedact })
-      logger.info(`Executing command ${commandDisplayed}`)
+      log.info(`Executing command ${commandDisplayed}`)
 
       const child = spawn(execPath, args, { cwd, stdio: "pipe" })
       if (onChild) {
@@ -76,7 +76,7 @@ export class CommandRunner {
         const strTrim = str.trim()
 
         if (shouldTrackProgress && strTrim) {
-          logger.info(strTrim, channel)
+          log.info(strTrim, channel)
         }
 
         commandOutputBuffer.push([channel, str])
@@ -85,7 +85,7 @@ export class CommandRunner {
       child.stderr.on("data", getStreamHandler("stderr"))
 
       child.on("close", (exitCode, signal) => {
-        logger.info(
+        log.info(
           `Command "${commandDisplayed}" finished with exit code ${exitCode ?? "??"}${
             signal ? `and signal ${signal}` : ""
           }`,
@@ -132,9 +132,8 @@ export class CommandRunner {
   }
 }
 
-export const validateSingleShellCommand = async (ctx: Context, command: string): Promise<string | Error> => {
-  const { logger } = ctx
-  const cmdRunner = new CommandRunner(ctx, { itemsToRedact: [] })
+export const validateSingleShellCommand = async (command: string): Promise<string | Error> => {
+  const cmdRunner = new CommandRunner({ itemsToRedact: [] })
   const commandAstText = await cmdRunner.run("shfmt", ["--tojson"], { stdinInput: command })
   if (commandAstText instanceof Error) {
     return new Error(`Command AST could not be parsed for "${command}"`)
@@ -146,5 +145,5 @@ export const validateSingleShellCommand = async (ctx: Context, command: string):
   if (commandAst.Stmts.length !== 1 || commandAst.Stmts[0].Cmd.Type !== "CallExpr") {
     return new Error(`Command "${command}" failed validation: the resulting command line should have a single command`)
   }
-  return command
+  return command.trim()
 }

@@ -19,7 +19,7 @@ const pipelineUpdateInterval = process.env.GITLAB_PIPELINE_UPDATE_INTERVAL
 export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Promise<GitlabTaskContext> => {
   const { logger, gitlab } = ctx
 
-  const cmdRunner = new CommandRunner(ctx, { itemsToRedact: [gitlab.accessToken], cwd: task.repoPath })
+  const cmdRunner = new CommandRunner({ itemsToRedact: [gitlab.accessToken], cwd: task.repoPath })
 
   /*
     Save the head SHA before doing any modifications to the branch so that
@@ -28,7 +28,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
   const headSha = await cmdRunner.run("git", ["rev-parse", "HEAD"])
 
   const getPipelineScriptsCloneCommand = ({ withRef }: { withRef: boolean }) =>
-    `git clone --depth 1 ${
+    `git clone --progress --verbose --depth 1 ${
       withRef ? `--branch "$PIPELINE_SCRIPTS_REF"` : ""
     } "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"`
 

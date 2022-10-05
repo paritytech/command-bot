@@ -4,7 +4,7 @@ import { ensureDefined } from "opstooling-js"
 import path from "path"
 import { promisify } from "util"
 
-import { findFreePorts } from "./util"
+import { findFreePorts, killAndWait } from "./util"
 
 const execFilePromise = promisify(execFile)
 
@@ -19,19 +19,19 @@ export type GitDaemons = {
   gitLab: GitDaemon
 }
 
-const gitDaemons: GitDaemons | null = null
+let gitDaemons: GitDaemons | null = null
 
-function startDaemon(name: string, port: number): GitDaemon {
+async function startDaemon(name: string, port: number): Promise<GitDaemon> {
   const rootPath = path.join(process.cwd(), "data", `test-git-${name}`)
 
+  await fs.mkdir(rootPath, { recursive: true })
+
   // // initialising mocks for both fork and target repo
-  const instance = spawn("git", [
-    "daemon",
-    `--port=${port}`,
-    `--base-path=${rootPath}`,
-    "--export-all",
-    "--enable=receive-pack",
-  ])
+  const instance = spawn(
+    "git",
+    ["daemon", "--verbose", `--port=${port}`, `--base-path=${rootPath}`, "--export-all", "--enable=receive-pack"],
+    { stdio: "inherit" },
+  )
 
   return { url: `git://localhost:${port}`, rootPath, instance }
 }
@@ -43,15 +43,18 @@ export async function startGitDaemons(): Promise<GitDaemons> {
 
   const freePorts = await findFreePorts(2)
 
-  return {
-    gitHub: startDaemon("github", ensureDefined(freePorts[0])),
-    gitLab: startDaemon("gitlab", ensureDefined(freePorts[1])),
+  gitDaemons = {
+    gitHub: await startDaemon("github", ensureDefined(freePorts[0])),
+    gitLab: await startDaemon("gitlab", ensureDefined(freePorts[1])),
   }
+
+  return gitDaemons
 }
 
-export function stopGitDaemons(): void {
-  gitDaemons?.gitHub.instance.kill()
-  gitDaemons?.gitLab.instance.kill()
+export async function stopGitDaemons(): Promise<void> {
+  if (!gitDaemons) return
+
+  await Promise.all([killAndWait(gitDaemons.gitHub.instance), killAndWait(gitDaemons.gitLab.instance)])
 }
 
 export async function initRepo(

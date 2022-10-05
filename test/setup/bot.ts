@@ -1,6 +1,7 @@
 import { ChildProcess, spawn } from "child_process"
 import { readFileSync, rmSync } from "fs"
-import { ensureDefined } from "opstooling-js"
+import fetch from "node-fetch"
+import { ensureDefined, until } from "opstooling-js"
 import path from "path"
 
 import { GitDaemons } from "./gitDaemons"
@@ -13,16 +14,23 @@ export const getBotInstance = (): ChildProcess | null => bot
 let webhookPort: number | null = null
 export const getWebhookPort = (): number | null => webhookPort
 
+let pingPort: number | null = null
+export const getPingPort = (): number | null => pingPort
+
 export async function launchBot(gitHubUrl: string, gitLabUrl: string, gitDaemons: GitDaemons): Promise<ChildProcess> {
   rmSync(path.join(process.cwd(), "data", "access_db"), { recursive: true, force: true })
   rmSync(path.join(process.cwd(), "data", "db"), { recursive: true, force: true })
+  ;[webhookPort, pingPort] = await findFreePorts(2)
 
-  webhookPort = (await findFreePorts(1))[0]
   const botEnv = getBotEnv(gitHubUrl, gitLabUrl, gitDaemons.gitHub.url, gitDaemons.gitLab.url)
+  console.log(`Launching bot with
+    GitHub HTTP: ${gitHubUrl},
+    GitLab HTTP: ${gitLabUrl},
+    GitHub git: ${gitDaemons.gitHub.url},
+    GitLab git: ${gitDaemons.gitLab.url}`)
 
   bot = spawn("yarn", ["start"], { env: Object.assign({}, process.env, botEnv), stdio: "pipe" })
 
-  // waiting for "Probot has started!" message
   await new Promise<void>((resolve, reject) => {
     const crashHandler = (code: number | null, signal: string | null) => {
       const message = "bot exited with " + (code === null ? `signal ${String(signal)}` : `code ${String(code)}`)
@@ -31,6 +39,20 @@ export async function launchBot(gitHubUrl: string, gitLabUrl: string, gitDaemons
     }
 
     const instance = ensureDefined<ChildProcess>(bot)
+
+    until(
+      async () => {
+        try {
+          await fetch(`http://localhost:${ensureDefined(pingPort)}`)
+          return true
+        } catch (e) {
+          return false
+        }
+      },
+      500,
+      50,
+      `bot did not start to listen on ping port: ${ensureDefined(pingPort)}`,
+    ).then(resolve, reject)
 
     instance.stdout?.on("data", (dataBuf: Buffer) => {
       const data: string = dataBuf.toString()
@@ -69,6 +91,9 @@ function getBotEnv(
 
     WEBHOOK_SECRET: "webhook_secret_value",
     WEBHOOK_PORT: String(webhookPort),
+
+    PING_PORT: String(pingPort),
+
     APP_ID: "123",
     CLIENT_ID: "client_id_value",
     CLIENT_SECRET: "client_secret_value",

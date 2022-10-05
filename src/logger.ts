@@ -1,118 +1,36 @@
-import { normalizeValue } from "./utils"
+import { Logger, LoggerOptions } from "opstooling-js"
 
-// TODO: replace this module with logger from opstooling-js
-
-type LoggingImplementation = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  log: (...args: any[]) => void
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  error: (...args: any[]) => void
-}
-
-enum LoggingLevel {
-  info,
-  warn,
-  error,
-  fatal,
-}
-type LoggingLevels = keyof typeof LoggingLevel
-
-export class Logger {
-  constructor(
-    public options: {
-      name: string
-      logFormat: "json" | null
-      minLogLevel: LoggingLevels
-      impl: LoggingImplementation
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      context?: Record<string, any>
-    },
-  ) {}
-
-  child(context: Record<string, unknown>): Logger {
-    /*
-      Adjust keys in order to prevent overriding existing data in the context
-      with the same key
-    */
-    const currentContextKeys = Object.keys(this.options.context ?? {})
-    const adjustedContext: { [key: string]: unknown } = {}
-    for (const [key, value] of Object.entries(context)) {
-      let suggestedName = key
-      while (currentContextKeys.includes(suggestedName)) {
-        suggestedName = `${suggestedName} (${new Date().toISOString()})`
-      }
-      adjustedContext[suggestedName] = value
-      currentContextKeys.push(suggestedName)
+export const logFormat = ((): "json" | null => {
+  const value = process.env.LOG_FORMAT
+  switch (value) {
+    case "json": {
+      return value
     }
-    return new Logger({
-      ...this.options,
-      context: currentContextKeys.length ? { ...this.options.context, ...adjustedContext } : undefined,
-    })
-  }
-
-  protected log<T = string>(level: LoggingLevels, item: unknown, description?: T, ...extra: unknown[]): void {
-    if (LoggingLevel[level] < LoggingLevel[this.options.minLogLevel]) {
-      return
+    case undefined: {
+      return null
     }
-
-    const loggingFunction = (() => {
-      switch (level) {
-        case "info":
-        case "warn": {
-          return this.options.impl.log
-        }
-        case "fatal":
-        case "error": {
-          return this.options.impl.error
-        }
-        default: {
-          const exhaustivenessCheck: never = level
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
-        }
-      }
-    })()
-
-    switch (this.options.logFormat) {
-      case "json": {
-        loggingFunction(
-          JSON.stringify({
-            level,
-            name: this.options.name,
-            context: this.options.context,
-            msg: normalizeValue(item, [], true),
-            description,
-            extra,
-          }),
-        )
-        break
-      }
-      case null: {
-        const tag = `${level.toUpperCase()} (${this.options.name}):`
-        const normalizedContext = normalizeValue(this.options.context)
-        loggingFunction(
-          tag,
-          ...(description === undefined ? [] : [description]),
-          ...(normalizedContext === undefined ? [] : ["~@ Context:", normalizedContext]),
-          ...(extra.length === 0 ? [] : ["~@ Extra:", normalizeValue(extra)]),
-          normalizeValue(item, [], true),
-        )
-        break
-      }
-      default: {
-        const exhaustivenessCheck: never = this.options.logFormat
-        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-        throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
-      }
+    default: {
+      throw new Error(`Invalid $LOG_FORMAT: ${value}`)
     }
   }
-
-  private loggerCallback(level: LoggingLevels) {
-    return <T = string>(item: unknown, description?: T, ...extra: unknown[]) =>
-      this.log(level, item, description, ...extra)
+})()
+export const minLogLevel = ((): "info" | "warn" | "error" => {
+  const value: string | undefined = process.env.MIN_LOG_LEVEL
+  switch (value) {
+    case undefined: {
+      return "info"
+    }
+    case "info":
+    case "warn":
+    case "error": {
+      return value
+    }
+    default: {
+      throw new Error(`Invalid $MIN_LOG_LEVEL: ${value}`)
+    }
   }
-  info = this.loggerCallback("info")
-  warn = this.loggerCallback("warn")
-  error = this.loggerCallback("error")
-  fatal = this.loggerCallback("fatal")
-}
+})()
+
+const loggerOptions: LoggerOptions = { name: "command-bot", minLogLevel, logFormat, impl: console }
+
+export const logger = new Logger(loggerOptions)

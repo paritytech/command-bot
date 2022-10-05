@@ -18,8 +18,8 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "useUnknownInCatchVariables": true,
-    "types": ["node"],
-    "typeRoots": ["./node_modules/@types", "./src"]
+    "types": ["node", "jest"],
+    "typeRoots": ["./node_modules/@types", "./src", "opstooling-js"]
   },
   "include": ["src", "test"],
   "ts-node": {

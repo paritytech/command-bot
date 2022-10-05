@@ -49,7 +49,7 @@ export async function ensureCert(): Promise<void> {
       throw e
     }
 
-    const pems = selfsigned.generate()
+    const pems = selfsigned.generate([], { keySize: 4096 })
     await fs.writeFile(selfSignedKeyPath, pems.private)
     await fs.writeFile(selfSignedCertPath, pems.cert)
   }

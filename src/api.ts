@@ -143,7 +143,7 @@ export const setupApi = (ctx: Context, server: Server): void => {
       )
     }
 
-    const command = await validateSingleShellCommand(ctx, [...configuration.commandStart, ...args].join(" "))
+    const command = await validateSingleShellCommand([...configuration.commandStart, ...args].join(" "))
     if (command instanceof Error) {
       return errorResponse(res, next, 422, command.message)
     }
@@ -173,7 +173,7 @@ export const setupApi = (ctx: Context, server: Server): void => {
       },
     }
 
-    const updateProgress = getSendTaskMatrixResult(matrix, logger, task)
+    const updateProgress = getSendTaskMatrixResult(matrix, task)
     const queueMessage = await queueTask(ctx, task, { onResult: updateProgress, updateProgress })
 
     response(res, next, 201, { task, queueMessage })

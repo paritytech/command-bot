@@ -7,6 +7,7 @@ import yargs from "yargs"
 import { CommandConfiguration, commandsConfiguration, isRequesterAllowed } from "./core"
 import { getSortedTasks } from "./db"
 import { createComment, ExtendedOctokit, getOctokit, getPostPullRequestResult, updateComment } from "./github"
+import { logger } from "./logger"
 import { validateSingleShellCommand } from "./shell"
 import { cancelTask, getNextTaskId, PullRequestTask, queueTask, serializeTaskQueuedDate } from "./task"
 import { Context, PullRequestError } from "./types"
@@ -17,7 +18,7 @@ export const botPullRequestCommentSubcommands: {
   [Subcommand in "queue" | "cancel"]: Subcommand
 } = { queue: "queue", cancel: "cancel" }
 
-type ParsedBotCommand =
+export type ParsedBotCommand =
   | {
       subcommand: "queue"
       configuration: CommandConfiguration
@@ -28,9 +29,10 @@ type ParsedBotCommand =
       subcommand: "cancel"
       taskId: string
     }
-const parsePullRequestBotCommandLine = async (ctx: Context, rawCommandLine: string) => {
-  const { logger } = ctx
 
+export const parsePullRequestBotCommandLine = async (
+  rawCommandLine: string,
+): Promise<undefined | Error | ParsedBotCommand> => {
   let commandLine = rawCommandLine.trim()
 
   // Add trailing whitespace so that /cmd can be differentiated from /cmd-[?]
@@ -38,6 +40,7 @@ const parsePullRequestBotCommandLine = async (ctx: Context, rawCommandLine: stri
     return
   }
 
+  // remove "/cmd "
   commandLine = commandLine.slice(botPullRequestCommentMention.length).trim()
 
   const subcommand = (() => {
@@ -64,14 +67,8 @@ const parsePullRequestBotCommandLine = async (ctx: Context, rawCommandLine: stri
   switch (subcommand) {
     case "queue": {
       const commandStartSymbol = " $ "
-      const indexOfCommandStart = commandLine.indexOf(commandStartSymbol)
-      if (indexOfCommandStart === -1) {
-        return new Error(`Could not find start of command ("${commandStartSymbol}")`)
-      }
+      const [botOptionsLinePart, commandLinePart] = commandLine.split(commandStartSymbol)
 
-      const commandLinePart = commandLine.slice(indexOfCommandStart + commandStartSymbol.length)
-
-      const botOptionsLinePart = commandLine.slice(0, indexOfCommandStart)
       const botArgs = await yargs(
         botOptionsLinePart.split(" ").filter((value) => {
           botOptionsLinePart
@@ -101,6 +98,10 @@ const parsePullRequestBotCommandLine = async (ctx: Context, rawCommandLine: stri
         )
       }
 
+      if (!commandLinePart && configuration.optionalCommandArgs !== true) {
+        return new Error(`Could not find start of command ("${commandStartSymbol}")`)
+      }
+
       const variables: Record<string, string> = {}
       const variableValueSeparator = "="
       for (const tok of arrayify(botArgs.var).concat(arrayify(botArgs.v))) {
@@ -119,7 +120,7 @@ const parsePullRequestBotCommandLine = async (ctx: Context, rawCommandLine: stri
         }
       }
 
-      const command = await validateSingleShellCommand(ctx, [...configuration.commandStart, commandLinePart].join(" "))
+      const command = await validateSingleShellCommand([...configuration.commandStart, commandLinePart].join(" "))
       if (command instanceof Error) {
         return command
       }
@@ -148,7 +149,7 @@ type WebhookHandler<E extends WebhookEvents> = (
 ) => Promise<PullRequestError | undefined>
 
 const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ctx, octokit, payload) => {
-  const { logger, repositoryCloneDirectory, gitlab } = ctx
+  const { repositoryCloneDirectory, gitlab } = ctx
 
   const { issue, comment, repository, installation } = payload
 
@@ -182,7 +183,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ct
   try {
     const commands: ParsedBotCommand[] = []
     for (const line of getLines(comment.body)) {
-      const parsedCommand = await parsePullRequestBotCommandLine(ctx, line)
+      const parsedCommand = await parsePullRequestBotCommandLine(line)
 
       if (parsedCommand === undefined) {
         continue
@@ -378,7 +379,6 @@ const setupEvent = <E extends WebhookEvents>(
   handler: WebhookHandler<E>,
 ) => {
   bot.on(eventName, async (event) => {
-    const { logger } = parentCtx
     const eventLogger = logger.child({ eventId: event.id, eventName })
     const ctx: Context = { ...parentCtx, logger: eventLogger }
 
@@ -386,7 +386,7 @@ const setupEvent = <E extends WebhookEvents>(
 
     const installationId: number | undefined =
       "installation" in event.payload ? event.payload.installation?.id : undefined
-    const octokit = getOctokit(ctx, await bot.auth(installationId))
+    const octokit = getOctokit(await bot.auth(installationId))
 
     void handler(ctx, octokit, event.payload as WebhookEventPayload<E>)
       .then(async (result) => {
