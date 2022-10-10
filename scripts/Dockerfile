@@ -11,7 +11,7 @@ RUN apt-get update && \
     wget ca-certificates \
     build-essential python3 \
     git && \
-    git --version \
+    git --version && \
     # shfmt is needed for shell command parsing
     wget https://github.com/mvdan/sh/releases/download/v3.5.0/shfmt_v3.5.0_linux_amd64 -O /bin/shfmt && \
     echo "8feea043364a725dfb69665432aee9e85b84c7f801a70668650e8b15452f6574  /bin/shfmt" | sha256sum --check && \

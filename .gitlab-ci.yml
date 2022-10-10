@@ -58,21 +58,21 @@ default:
           --tag "$IMAGE_NAME:$DEPLOYMENT_TAG"
           --file "$DOCKERFILE" .
 
-test-lint:
+.test-lint:
   <<:                              *common-refs
   stage:                           test
   script:
     - yarn --immutable
     - pre-commit run --color=always --all
 
-test-unit:
+.test-unit:
   <<:                              *common-refs
   stage:                           test
   script:
     - yarn --immutable
     - yarn test:unit
 
-test-integration:
+.test-integration:
   <<:                              *common-refs
   stage:                           test
   script:
