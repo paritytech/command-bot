@@ -183,12 +183,15 @@ uninstall-production:
 #### >> Automatic
 
 .tagged-production-build:          &tagged-production-build
-  <<:                              *production-env
+  environment:
+    name: parity-chains
   <<:                              *tags-refs
 
 build-production-image:
-  <<:                              *build-app-image
+  <<:                              *build-push-docker-image
   <<:                              *tagged-production-build
+  variables:
+    TARGET:                        app
   stage:                           containerize
 
 deploy-production:
