@@ -165,8 +165,8 @@ build-docker-ci:
         --namespace ${CI_PROJECT_NAME}
         --values helm-stg/values.yaml
         --values helm-stg/values-$ENVIRONMENT.yaml
-        --set image.repository="$IMAGE_NAME"
-        --set image.tag="$DOCKER_TAG"
+        --set common.image.repository="$IMAGE_NAME"
+        --set common.image.tag="$DOCKER_TAG"
         --set common.persistence.mountPath="$DATA_PATH"
         --set env.DATA_PATH="$DATA_PATH"
         --set env.IS_DEPLOYMENT="true"
