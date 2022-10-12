@@ -2,6 +2,7 @@ stages:
   - containerize
   - test
   - build
+  - staging
   - deploy
 
 variables:
@@ -13,6 +14,10 @@ variables:
   PING_PORT:                       3001
   TASK_DB_VERSION:                 v3
   DOCKERFILE:                      Dockerfile
+  VAULT_ADDR:                      "https://vault.parity-mgmt-vault.parity.io"
+  VAULT_AUTH_PATH:                 "gitlab-parity-io-jwt"
+  VAULT_AUTH_ROLE:                 "cicd_gitlab_parity_${CI_PROJECT_NAME}"
+  HELM_SECRETS_DRIVER:             vals
 
 default:
   image: $CI_IMAGE
@@ -146,6 +151,32 @@ build-docker-ci:
       --set env.GITLAB_ACCESS_TOKEN_USERNAME="$GITLAB_ACCESS_TOKEN_USERNAME"
       --set env.LOG_FORMAT=json
 
+.deploy-k8s-stg:                   &deploy-k8s-stg
+  image:                           paritytech/kubetools:helm3
+  script:
+    # https://docs.gitlab.com/ee/ci/examples/authenticating-with-hashicorp-vault/#example
+    - export VAULT_TOKEN="$(vault write -field=token auth/$VAULT_AUTH_PATH/login role=$VAULT_AUTH_ROLE jwt=$CI_JOB_JWT)"
+    - helm dependency update helm-stg/
+    - helm secrets --version
+    - helm secrets upgrade
+        --install
+        --atomic
+        --timeout 300s
+        --namespace ${CI_PROJECT_NAME}
+        --values helm-stg/values.yaml
+        --values helm-stg/values-$ENVIRONMENT.yaml
+        --namespace "$KUBE_NAMESPACE"
+        --set image.repository="$IMAGE_NAME"
+        --set image.tag="$DOCKER_TAG"
+        --set common.persistence.mountPath="$DATA_PATH"
+        --set env.DATA_PATH="$DATA_PATH"
+        --set env.IS_DEPLOYMENT="true"
+        --set env.TMPDIR="$DATA_PATH/tmp"
+        --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
+        --set env.PING_PORT="$PING_PORT"
+        --set env.LOG_FORMAT=json
+        $CI_PROJECT_NAME helm-stg/
+
 .uninstall-deployment:             &uninstall-deployment
   image:                           paritytech/kubetools:helm3
   stage:                           deploy
@@ -153,6 +184,24 @@ build-docker-ci:
     - helm uninstall "$KUBE_NAMESPACE" --namespace "$KUBE_NAMESPACE"
 
 #### > Production deployment
+
+build-push-docker-app:
+  stage:                           build
+  <<:                              *test-refs
+  <<:                              *build-only-docker-image
+  variables:
+    TARGET:                        app
+
+deploy-stg:
+  stage:                           staging
+  <<:                              *deploy-k8s-stg
+  <<:                              *test-refs
+  variables:
+    CI_IMAGE:                      "paritytech/kubetools:3.5.3"
+    ENVIRONMENT:                   parity-stg
+  environment:
+    name:                          parity-stg
+
 
 #### >> Manual
 
