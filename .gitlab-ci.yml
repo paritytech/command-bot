@@ -12,7 +12,7 @@ variables:
   DATA_PATH:                       /data
   PING_PORT:                       3001
   TASK_DB_VERSION:                 v3
-  DOCKERFILE:                      ./scripts/Dockerfile
+  DOCKERFILE:                      Dockerfile
 
 default:
   image: $CI_IMAGE
@@ -187,7 +187,7 @@ uninstall-production:
     name: parity-chains
   <<:                              *tags-refs
 
-build-production-image:
+build-publish-image:
   <<:                              *build-push-docker-image
   <<:                              *tagged-production-build
   variables:
