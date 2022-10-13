@@ -1,5 +1,4 @@
 stages:
-  - containerize
   - test
   - build
   - staging
@@ -195,7 +194,7 @@ build-docker-ci:
 
 .uninstall-deployment:             &uninstall-deployment
   image:                           paritytech/kubetools:helm3
-  stage:                           deploy
+  stage:                           production
   script:
     - helm uninstall "$KUBE_NAMESPACE" --namespace "$KUBE_NAMESPACE"
 
@@ -219,7 +218,6 @@ deploy-stg:
 
 deploy-production:
   <<:                              *deploy-k8s
-  <<:                              *tagged-production-build
   <<:                              *production-refs
   stage:                           production
   environment:
@@ -231,7 +229,7 @@ deploy-production:
 
 build-production-image-manual:
   <<:                              *build-push-docker-image
-  stage:                           containerize
+  stage:                           build
   variables:
     TARGET:                        app
   rules:
@@ -241,7 +239,7 @@ deploy-production-manual:
   <<:                              *deploy-k8s
   environment:
     name: parity-chains
-  stage:                           deploy
+  stage:                           production
   rules:
     - if: '$BUILD == "production" || $DEPLOY == "production"'
 
@@ -256,7 +254,7 @@ uninstall-production:
 
 build-ci-image-manual:
   <<:                              *build-push-docker-image
-  stage:                           containerize
+  stage:                           build
   variables:
     TARGET:                        ci
   rules:
@@ -267,5 +265,5 @@ build-ci-image:
   <<:                              *build-push-docker-image
   variables:
     TARGET:                        ci
-  stage:                           containerize
+  stage:                           build
   allow_failure:                   true
