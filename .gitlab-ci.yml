@@ -160,8 +160,7 @@ build-docker-ci:
     - export KUBERNETES_VERSION_TAG="$CI_PIPELINE_ID"
     # Those values are embedded in the annotations and that's how the change is
     # noticed
-    - |-
-      sed -i "s/version:.*/version: $KUBERNETES_VERSION_TAG/" helm-stg/Chart.yaml
+    # - sed -i "s/version:.*/version: $KUBERNETES_VERSION_TAG/" helm-stg/Chart.yaml
     - |-
       sed -i "s/appVersion:.*/appVersion: $KUBERNETES_VERSION_TAG/" helm-stg/Chart.yaml
     # https://docs.gitlab.com/ee/ci/examples/authenticating-with-hashicorp-vault/#example
