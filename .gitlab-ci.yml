@@ -154,6 +154,16 @@ build-docker-ci:
 .deploy-k8s-stg:                   &deploy-k8s-stg
   image:                           paritytech/kubetools:helm3
   script:
+    # Change the app version during build so that Kubernetes is able to update
+    # the deployment even if the images' tags did not change
+    # $CI_PIPELINE_ID is guaranteed to be unique
+    - export KUBERNETES_VERSION_TAG="$CI_PIPELINE_ID"
+    # Those values are embedded in the annotations and that's how the change is
+    # noticed
+    - |-
+      sed -i "s/version:.*/version: $KUBERNETES_VERSION_TAG/" helm-stg/Chart.yaml
+    - |-
+      sed -i "s/appVersion:.*/appVersion: $KUBERNETES_VERSION_TAG/" helm-stg/Chart.yaml
     # https://docs.gitlab.com/ee/ci/examples/authenticating-with-hashicorp-vault/#example
     - export VAULT_TOKEN="$(vault write -field=token auth/$VAULT_AUTH_PATH/login role=$VAULT_AUTH_ROLE jwt=$CI_JOB_JWT)"
     - helm dependency update helm-stg/
