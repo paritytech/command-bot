@@ -3,7 +3,7 @@ stages:
   - test
   - build
   - staging
-  - deploy
+  - production
 
 variables:
   IMAGE_NAME:                      docker.io/paritytech/command-bot
@@ -42,7 +42,14 @@ default:
   rules:
     - if: $CI_COMMIT_REF_NAME =~ /^[0-9]+$/                         # PRs
 
-.tags-refs:                        &tags-refs
+# to create, publish and deploy image
+.staging-refs:                     &staging-refs
+  rules:
+    - if: $CI_COMMIT_REF_NAME == "master"
+    - if: $CI_COMMIT_REF_NAME =~ /^v-[0-9]+\.[0-9]+.*$/             # i.e. v-1.0, v-2.1rc1
+    - if: $CI_COMMIT_REF_NAME =~ /^stg-v-[0-9]+\.[0-9]+.*$/         # i.e. stg-v-1.0, stg-v-2.1rc1
+
+.production-refs:                  &production-refs
   rules:
     - if: $CI_COMMIT_REF_NAME =~ /^v-[0-9]+\.[0-9]+.*$/             # i.e. v-1.0, v-2.1rc1
 
@@ -61,6 +68,20 @@ default:
           --target="$TARGET"
           --tag "$IMAGE_NAME:$DOCKER_TAG"
           --file "$DOCKERFILE" .
+
+.build-push-docker-image:          &build-push-docker-image
+  image:                           quay.io/buildah/stable
+  script:
+    - echo "$Docker_Hub_Pass_Parity" |
+      buildah login --username "$Docker_Hub_User_Parity" --password-stdin docker.io
+    - buildah bud
+      --format=docker
+      --target=$TARGET
+      --tag "$IMAGE_NAME:$DOCKER_TAG"
+      --file $DOCKERFILE .
+    - buildah push --format=v2s2 "$IMAGE_NAME:$DOCKER_TAG"
+  after_script:
+    - buildah logout --all
 
 test-lint:
   <<:                              *common-refs
@@ -100,20 +121,7 @@ build-docker-ci:
 
 #### App deployment
 
-.build-push-docker-image:          &build-push-docker-image
-  image:                           quay.io/buildah/stable
-  script:
-    - echo "$Docker_Hub_Pass_Parity" |
-      buildah login --username "$Docker_Hub_User_Parity" --password-stdin docker.io
-    - buildah bud
-      --format=docker
-      --target=$TARGET
-      --tag "$IMAGE_NAME:$DOCKER_TAG"
-      --file $DOCKERFILE .
-    - buildah push --format=v2s2 "$IMAGE_NAME:$DOCKER_TAG"
-  after_script:
-    - buildah logout --all
-
+# TODO: remove when prod is moved to parity-prod
 .deploy-k8s:                       &deploy-k8s
   image:                           paritytech/kubetools:helm3
   script:
@@ -151,6 +159,7 @@ build-docker-ci:
       --set env.GITLAB_ACCESS_TOKEN_USERNAME="$GITLAB_ACCESS_TOKEN_USERNAME"
       --set env.LOG_FORMAT=json
 
+# TODO: rename to .deploy-k8s when prod is moved to parity-prod
 .deploy-k8s-stg:                   &deploy-k8s-stg
   image:                           paritytech/kubetools:helm3
   script:
@@ -160,7 +169,6 @@ build-docker-ci:
     - export KUBERNETES_VERSION_TAG="$CI_PIPELINE_ID"
     # Those values are embedded in the annotations and that's how the change is
     # noticed
-    # - sed -i "s/version:.*/version: $KUBERNETES_VERSION_TAG/" helm-stg/Chart.yaml
     - |-
       sed -i "s/appVersion:.*/appVersion: $KUBERNETES_VERSION_TAG/" helm-stg/Chart.yaml
     # https://docs.gitlab.com/ee/ci/examples/authenticating-with-hashicorp-vault/#example
@@ -191,28 +199,35 @@ build-docker-ci:
   script:
     - helm uninstall "$KUBE_NAMESPACE" --namespace "$KUBE_NAMESPACE"
 
-#### > Production deployment
-
 build-push-docker-app:
   stage:                           build
-  <<:                              *test-refs
+  <<:                              *staging-refs
   <<:                              *build-push-docker-image
   variables:
     TARGET:                        app
 
 deploy-stg:
   stage:                           staging
+  #TODO: don't forget to rename to *deploy-k8s
   <<:                              *deploy-k8s-stg
-  <<:                              *test-refs
+  <<:                              *staging-refs
   variables:
-    CI_IMAGE:                      "paritytech/kubetools:3.5.3"
+    CI_IMAGE:                      paritytech/kubetools:3.5.3
     ENVIRONMENT:                   parity-stg
   environment:
     name:                          parity-stg
 
+deploy-production:
+  <<:                              *deploy-k8s
+  <<:                              *tagged-production-build
+  <<:                              *production-refs
+  stage:                           production
+  environment:
+    name: parity-chains
 
+
+# TODO: remove Manual section when prod is moved to parity-prod
 #### >> Manual
-
 
 build-production-image-manual:
   <<:                              *build-push-docker-image
@@ -236,25 +251,6 @@ uninstall-production:
     name: parity-chains
   rules:
     - if: "$UNINSTALL == 'production'"
-
-#### >> Automatic
-
-.tagged-production-build:          &tagged-production-build
-  environment:
-    name: parity-chains
-  <<:                              *tags-refs
-
-build-publish-image:
-  <<:                              *build-push-docker-image
-  <<:                              *tagged-production-build
-  variables:
-    TARGET:                        app
-  stage:                           containerize
-
-deploy-production:
-  <<:                              *deploy-k8s
-  <<:                              *tagged-production-build
-  stage:                           deploy
 
 #### CI images
 
