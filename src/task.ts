@@ -105,6 +105,7 @@ export const queueTask = async (
   const terminate = async () => {
     if (terminateTaskExecution) {
       await terminateTaskExecution()
+      logger.info(`terminateTaskExecution, command: ${task.command}, task: ${task.id}`)
       terminateTaskExecution = undefined
       taskEventChannel.emit(taskExecutionTerminationEvent)
     }
@@ -124,6 +125,8 @@ export const queueTask = async (
 
   const afterTaskRun = (result: CommandOutput | null) => {
     const wasAlive = taskIsAlive
+
+    logger.info(result, "AfterTaskRun handler")
 
     void terminate().catch((error) => {
       logger.error(error, "Failed to terminate task on afterTaskRun")
@@ -192,6 +195,7 @@ export const queueTask = async (
           }
         }
         if (!taskIsAlive) {
+          logger.info(task, "Task was cancelled!")
           return cancelledMessage
         }
 

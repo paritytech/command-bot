@@ -16,6 +16,13 @@ export type GitRef = {
   }
 }
 
+export type PipelineScripts =
+  | {
+      repository: string
+      ref: string | undefined
+    }
+  | undefined
+
 export type Context = {
   startDate: Date
   taskDb: TaskDB
@@ -36,12 +43,7 @@ export type Context = {
     jobImage: string
     accessTokenUsername: string
   }
-  pipelineScripts:
-    | {
-        repository: string
-        ref: string | undefined
-      }
-    | undefined
+  pipelineScripts: PipelineScripts
 }
 
 export class PullRequestError {
