@@ -35,7 +35,7 @@ common:
     WEBHOOK_SECRET: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#WEBHOOK_SECRET
   ingress:
     annotations:
-      external-dns.alpha.kubernetes.io/target: traefik-internal.parity-stg.parity.io.
+      external-dns.alpha.kubernetes.io/target: traefik-external.parity-stg.parity.io.
     rules:
       - host: command-bot.parity-stg.parity.io
         http:
