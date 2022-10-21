@@ -1,0 +1,54 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`getGitlabCiYmlConfig PIPELINE_SCRIPTS_REF and other VARs are applied, while PIPELINE_SCRIPTS_REPOSITORY is not overrideable 1`] = `
+Object {
+  "command": Object {
+    "artifacts": Object {
+      "expire_in": "7 days",
+      "name": "\${CI_JOB_NAME}_\${CI_COMMIT_REF_NAME}",
+      "paths": Array [
+        ".git/.artifacts",
+      ],
+      "when": "always",
+    },
+    "image": "image",
+    "script": Array [
+      "echo \\"This job is related to task 123. job Task info message.\\"",
+      "rm -rf \\"$PIPELINE_SCRIPTS_DIR\\"",
+      "if [ \\"\${PIPELINE_SCRIPTS_REPOSITORY:-}\\" ]; then if [ \\"\${PIPELINE_SCRIPTS_REF:-}\\" ]; then git clone --progress --verbose --depth 1 --branch \\"$PIPELINE_SCRIPTS_REF\\" \\"$PIPELINE_SCRIPTS_REPOSITORY\\" \\"$PIPELINE_SCRIPTS_DIR\\"; else git clone --progress --verbose --depth 1  \\"$PIPELINE_SCRIPTS_REPOSITORY\\" \\"$PIPELINE_SCRIPTS_DIR\\"; fi; fi",
+      "export ARTIFACTS_DIR=\\"$PWD/.git/.artifacts\\"",
+      "rm -rf \\"$ARTIFACTS_DIR\\"",
+      "mkdir -p \\"$ARTIFACTS_DIR\\"",
+      "echo 123",
+    ],
+    "tags": Array [
+      "any",
+    ],
+    "timeout": "24 hours",
+    "variables": Object {
+      "COMMIT_MESSAGE": "echo 123",
+      "CUSTOM_VAR": "IS_APPLIED",
+      "GH_CONTRIBUTOR": "contributor_owner",
+      "GH_CONTRIBUTOR_BRANCH": "contributor_branch",
+      "GH_CONTRIBUTOR_REPO": "contributor_repo",
+      "GH_HEAD_SHA": "headSha",
+      "GH_OWNER": "upstream_owner",
+      "GH_OWNER_BRANCH": "upstream_branch",
+      "GH_OWNER_REPO": "upstream_repo",
+      "PIPELINE_SCRIPTS_DIR": ".git/.scripts",
+      "PIPELINE_SCRIPTS_REF": "OVERRIDDEN_REF_IS_APPLIED",
+      "PIPELINE_SCRIPTS_REPOSITORY": "NON_OVERRIDEABLE",
+    },
+  },
+  "workflow": Object {
+    "rules": Array [
+      Object {
+        "if": "$CI_PIPELINE_SOURCE == \\"api\\"",
+      },
+      Object {
+        "if": "$CI_PIPELINE_SOURCE == \\"web\\"",
+      },
+    ],
+  },
+}
+`;
