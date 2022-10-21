@@ -1,10 +1,10 @@
 # gcloud-sqlproxy:
 #   serviceAccount:
 #     annotations:
-#       iam.gke.io/gcp-service-account: 'matrix-admin-bot@parity-stg.iam.gserviceaccount.com'
+#       iam.gke.io/gcp-service-account: 'command-bot@parity-stg.iam.gserviceaccount.com'
 #   cloudsql:
 #     instances:
-#     - instance: "matrix-admin-bot-db-pgsql"
+#     - instance: "command-bot-db-pgsql"
 #       project: "parity-stg"
 #       region: "europe-west3"
 #       port: 5432
@@ -37,17 +37,17 @@ common:
     annotations:
       external-dns.alpha.kubernetes.io/target: traefik-internal.parity-stg.parity.io.
     rules:
-      - host: matrix-admin-bot.parity-stg.parity.io
+      - host: command-bot.parity-stg.parity.io
         http:
           paths:
             - path: /
               pathType: ImplementationSpecific
               backend:
                 service:
-                  name: matrix-admin-bot
+                  name: command-bot
                   port:
                     name: http
     tls:
       - hosts:
-          - matrix-admin-bot.parity-stg.parity.io
-        secretName: matrix-admin-bot.parity-stg.parity.io
+          - command-bot.parity-stg.parity.io
+        secretName: command-bot.parity-stg.parity.io
