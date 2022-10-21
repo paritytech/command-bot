@@ -4,7 +4,6 @@ import { Task } from "./task"
 
 logger.options.minLogLevel = "fatal"
 
-// eslint-disable-next-line no-empty-pattern
 function getTaskStub(opts: { vars: Record<string, string> } = { vars: {} }): Task {
   const task: Task = {
     gitlab: {
