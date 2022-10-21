@@ -63,6 +63,10 @@ In `[bot-args]` you should provide the following options
 
 `/cmd queue -v RUST_LOG=debug -c bench-bot $ runtime westend-dev pallet_balances`
 
+#### Testing the updates to pipeline-scripts by overriding its default branch
+
+`/cmd queue -v PIPELINE_SCRIPTS_REF=your-branch -c bench-bot $ overhead assets westmint`
+
 ## Cancel <a name="pull-request-command-cancel"></a>
 
 In the pull request where you previously ran `/cmd queue`, comment:
