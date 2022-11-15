@@ -7,6 +7,7 @@ stages:
 variables:
   IMAGE_NAME:                      docker.io/paritytech/command-bot
   CI_IMAGE:                        ${IMAGE_NAME}:ci
+  BUILDAH_IMAGE:                   "quay.io/buildah/stable:v1.27"
   KUBE_NAMESPACE:                  try-runtime
   DOCKER_TAG:                      ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
   DATA_PATH:                       /data
@@ -60,7 +61,7 @@ default:
 
 # test that docker image can be built
 .build-only-docker-image:          &build-only-docker-image
-  image:                           quay.io/buildah/stable
+  image:                           $BUILDAH_IMAGE
   script:
     - buildah bud
           --format=docker
@@ -69,7 +70,7 @@ default:
           --file "$DOCKERFILE" .
 
 .build-push-docker-image:          &build-push-docker-image
-  image:                           quay.io/buildah/stable
+  image:                           $BUILDAH_IMAGE
   script:
     - echo "$Docker_Hub_Pass_Parity" |
       buildah login --username "$Docker_Hub_User_Parity" --password-stdin docker.io
