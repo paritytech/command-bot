@@ -1,13 +1,13 @@
-import { ParsedBotCommand, parsePullRequestBotCommandLine } from "./bot"
-import { logger } from "./logger"
+import { ParsedBotCommand, parsePullRequestBotCommandLine } from "./bot";
+import { logger } from "./logger";
 
-logger.options.minLogLevel = "fatal"
+logger.options.minLogLevel = "fatal";
 
 type DataProvider = {
-  suitName: string
-  commandLine: string
-  expectedResponse?: undefined | ParsedBotCommand | Error
-}
+  suitName: string;
+  commandLine: string;
+  expectedResponse?: undefined | ParsedBotCommand | Error;
+};
 
 const dataProvider: DataProvider[] = [
   { suitName: "empty command line returns nothing (ignores)", commandLine: "", expectedResponse: undefined },
@@ -112,13 +112,13 @@ const dataProvider: DataProvider[] = [
       `Could not find matching configuration xz; available ones are try-runtime, fmt, bench-bot, test-bench-bot, sample.`,
     ),
   },
-]
+];
 
 describe("parsePullRequestBotCommandLine", () => {
   for (const { suitName, commandLine, expectedResponse } of dataProvider) {
     test(`test commandLine: ${commandLine} [${suitName}]`, async () => {
-      const res = await parsePullRequestBotCommandLine(commandLine)
-      expect(res).toEqual(expectedResponse)
-    })
+      const res = await parsePullRequestBotCommandLine(commandLine);
+      expect(res).toEqual(expectedResponse);
+    });
   }
-})
+});

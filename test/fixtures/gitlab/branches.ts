@@ -24,5 +24,5 @@ export function getGitLabBranchesPayload(params: { branchName: string }): string
         parent_ids: ["4ad91d3c1144c406e50c7b33bae684bd6837faf8"],
       },
     },
-  ])
+  ]);
 }

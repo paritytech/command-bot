@@ -1,8 +1,8 @@
-import { getGitlabCiYmlConfig } from "./gitlab"
-import { logger } from "./logger"
-import { Task } from "./task"
+import { getGitlabCiYmlConfig } from "./gitlab";
+import { logger } from "./logger";
+import { Task } from "./task";
 
-logger.options.minLogLevel = "fatal"
+logger.options.minLogLevel = "fatal";
 
 function getTaskStub(opts: { vars: Record<string, string> } = { vars: {} }): Task {
   const task: Task = {
@@ -26,8 +26,8 @@ function getTaskStub(opts: { vars: Record<string, string> } = { vars: {} }): Tas
     requester: "requester",
     comment: { id: 55, htmlUrl: "htmlUrl" },
     installationId: 888,
-  }
-  return task
+  };
+  return task;
 }
 
 describe("getGitlabCiYmlConfig", () => {
@@ -43,7 +43,7 @@ describe("getGitlabCiYmlConfig", () => {
       }),
       { ref: "OVERRIDABLE", repository: "NON_OVERRIDEABLE" },
       "job Task info message",
-    )
-    expect(res).toMatchSnapshot()
-  })
-})
+    );
+    expect(res).toMatchSnapshot();
+  });
+});

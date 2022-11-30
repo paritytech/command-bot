@@ -1,78 +1,78 @@
-import { ChildProcess, spawn } from "child_process"
-import { readFileSync, rmSync } from "fs"
-import fetch from "node-fetch"
-import { ensureDefined, until } from "opstooling-js"
-import path from "path"
+import { ChildProcess, spawn } from "child_process";
+import { readFileSync, rmSync } from "fs";
+import fetch from "node-fetch";
+import { ensureDefined, until } from "opstooling-js";
+import path from "path";
 
-import { GitDaemons } from "./gitDaemons"
-import { selfSignedCertPath } from "./mockServers"
-import { findFreePorts } from "./util"
+import { GitDaemons } from "./gitDaemons";
+import { selfSignedCertPath } from "./mockServers";
+import { findFreePorts } from "./util";
 
-let bot: ChildProcess | null = null
-export const getBotInstance = (): ChildProcess | null => bot
+let bot: ChildProcess | null = null;
+export const getBotInstance = (): ChildProcess | null => bot;
 
-let webhookPort: number | null = null
-export const getWebhookPort = (): number | null => webhookPort
+let webhookPort: number | null = null;
+export const getWebhookPort = (): number | null => webhookPort;
 
-let pingPort: number | null = null
-export const getPingPort = (): number | null => pingPort
+let pingPort: number | null = null;
+export const getPingPort = (): number | null => pingPort;
 
 export async function launchBot(gitHubUrl: string, gitLabUrl: string, gitDaemons: GitDaemons): Promise<ChildProcess> {
-  rmSync(path.join(process.cwd(), "data", "access_db"), { recursive: true, force: true })
-  rmSync(path.join(process.cwd(), "data", "db"), { recursive: true, force: true })
-  ;[webhookPort, pingPort] = await findFreePorts(2)
+  rmSync(path.join(process.cwd(), "data", "access_db"), { recursive: true, force: true });
+  rmSync(path.join(process.cwd(), "data", "db"), { recursive: true, force: true });
+  [webhookPort, pingPort] = await findFreePorts(2);
 
-  const botEnv = getBotEnv(gitHubUrl, gitLabUrl, gitDaemons.gitHub.url, gitDaemons.gitLab.url)
+  const botEnv = getBotEnv(gitHubUrl, gitLabUrl, gitDaemons.gitHub.url, gitDaemons.gitLab.url);
   console.log(`Launching bot with
     GitHub HTTP: ${gitHubUrl},
     GitLab HTTP: ${gitLabUrl},
     GitHub git: ${gitDaemons.gitHub.url},
-    GitLab git: ${gitDaemons.gitLab.url}`)
+    GitLab git: ${gitDaemons.gitLab.url}`);
 
-  bot = spawn("yarn", ["start"], { env: Object.assign({}, process.env, botEnv), stdio: "pipe" })
+  bot = spawn("yarn", ["start"], { env: Object.assign({}, process.env, botEnv), stdio: "pipe" });
 
   await new Promise<void>((resolve, reject) => {
     const crashHandler = (code: number | null, signal: string | null) => {
-      const message = "bot exited with " + (code === null ? `signal ${String(signal)}` : `code ${String(code)}`)
-      console.log(message)
-      reject(new Error(message))
-    }
+      const message = "bot exited with " + (code === null ? `signal ${String(signal)}` : `code ${String(code)}`);
+      console.log(message);
+      reject(new Error(message));
+    };
 
-    const instance = ensureDefined<ChildProcess>(bot)
+    const instance = ensureDefined<ChildProcess>(bot);
 
     until(
       async () => {
         try {
-          await fetch(`http://localhost:${ensureDefined(pingPort)}`)
-          return true
+          await fetch(`http://localhost:${ensureDefined(pingPort)}`);
+          return true;
         } catch (e) {
-          return false
+          return false;
         }
       },
       500,
       50,
       `bot did not start to listen on ping port: ${ensureDefined(pingPort)}`,
-    ).then(resolve, reject)
+    ).then(resolve, reject);
 
     instance.stdout?.on("data", (dataBuf: Buffer) => {
-      const data: string = dataBuf.toString()
-      console.log(`>>> Bot said: ${data}`)
+      const data: string = dataBuf.toString();
+      console.log(`>>> Bot said: ${data}`);
 
       if (data.includes("Probot has started!")) {
-        instance.off("exit", crashHandler)
-        resolve()
+        instance.off("exit", crashHandler);
+        resolve();
       }
-    })
+    });
 
     instance.stderr?.on("data", (dataBuf: Buffer) => {
-      const data = dataBuf.toString()
-      console.log(`>>> Bot said (stderr): ${data}`)
-    })
+      const data = dataBuf.toString();
+      console.log(`>>> Bot said (stderr): ${data}`);
+    });
 
-    instance.on("exit", crashHandler)
-  })
+    instance.on("exit", crashHandler);
+  });
 
-  return bot
+  return bot;
 }
 
 function getBotEnv(
@@ -110,5 +110,5 @@ function getBotEnv(
     GITLAB_PIPELINE_UPDATE_INTERVAL: "300",
 
     NODE_EXTRA_CA_CERTS: selfSignedCertPath,
-  }
+  };
 }

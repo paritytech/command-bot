@@ -1,9 +1,9 @@
 export type PullRequestParams = {
-  login: string
-  org: string
-  repo: string
-  headBranch: string
-}
+  login: string;
+  org: string;
+  repo: string;
+  headBranch: string;
+};
 
 export function getPullRequestPayload(params: PullRequestParams): string {
   return JSON.stringify({
@@ -331,5 +331,5 @@ export function getPullRequestPayload(params: PullRequestParams): string {
     additions: 0,
     deletions: 0,
     changed_files: 1,
-  })
+  });
 }

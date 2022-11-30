@@ -1,10 +1,10 @@
-import { getAppInstallationTokenPayload } from "./fixtures/github/appInstallationToken"
-import { CommentWebhookParams, getCommentWebhookPayload } from "./fixtures/github/commentWebhook"
-import { getIssueCommentsPayload } from "./fixtures/github/issueComments"
-import { getPullRequestPayload } from "./fixtures/github/pullRequest"
-import { getGitLabBranchesPayload } from "./fixtures/gitlab/branches"
-import { getPipelineJobsPayload } from "./fixtures/gitlab/job"
-import { getPipelinePayload } from "./fixtures/gitlab/pipeline"
+import { getAppInstallationTokenPayload } from "./fixtures/github/appInstallationToken";
+import { CommentWebhookParams, getCommentWebhookPayload } from "./fixtures/github/commentWebhook";
+import { getIssueCommentsPayload } from "./fixtures/github/issueComments";
+import { getPullRequestPayload } from "./fixtures/github/pullRequest";
+import { getGitLabBranchesPayload } from "./fixtures/gitlab/branches";
+import { getPipelineJobsPayload } from "./fixtures/gitlab/job";
+import { getPipelinePayload } from "./fixtures/gitlab/pipeline";
 
 export const webhookFixtures: Record<string, (params: CommentWebhookParams) => string> = {
   queueCommandComment: (params) =>
@@ -17,36 +17,36 @@ export const webhookFixtures: Record<string, (params: CommentWebhookParams) => s
       ...{ body: "/cmd cancel", org: "tripleightech", repo: "command-bot-test", login: "somedev123" },
       ...params,
     }),
-}
+};
 
 export type RestFixturesParams = {
   github: {
-    prAuthor: string
-    org: string
-    repo: string
-    headBranch: string
-    comments: { author: string; body: string; id: number }[]
-  }
+    prAuthor: string;
+    org: string;
+    repo: string;
+    headBranch: string;
+    comments: { author: string; body: string; id: number }[];
+  };
   gitlab: {
-    cmdBranch: string
-  }
-}
+    cmdBranch: string;
+  };
+};
 
 export type RestFixtures = {
   github: {
-    appInstallationToken: string
-    pullRequest: string
-    issueComments: string
-  }
+    appInstallationToken: string;
+    pullRequest: string;
+    issueComments: string;
+  };
   gitlab: {
-    branches: string
-    pendingPipeline: string
-    successPipeline: string
-    failedPipeline: string
-    cancelledPipeline: string
-    jobs: string
-  }
-}
+    branches: string;
+    pendingPipeline: string;
+    successPipeline: string;
+    failedPipeline: string;
+    cancelledPipeline: string;
+    jobs: string;
+  };
+};
 
 export function getRestFixtures(params: RestFixturesParams): RestFixtures {
   return {
@@ -72,5 +72,5 @@ export function getRestFixtures(params: RestFixturesParams): RestFixtures {
       cancelledPipeline: getPipelinePayload({ status: "canceled" }),
       jobs: getPipelineJobsPayload({ status: "running" }),
     },
-  }
+  };
 }

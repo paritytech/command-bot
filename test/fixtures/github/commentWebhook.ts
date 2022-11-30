@@ -1,6 +1,6 @@
 // There are duplicated string literals here, but they aren't related to each other and aren't magic strings
 /* eslint-disable sonarjs/no-duplicate-string */
-export type CommentWebhookParams = { body: string; login: string; org: string; repo: string }
+export type CommentWebhookParams = { body: string; login: string; org: string; repo: string };
 export function getCommentWebhookPayload(params: CommentWebhookParams): string {
   return JSON.stringify({
     action: "created",
@@ -250,5 +250,5 @@ export function getCommentWebhookPayload(params: CommentWebhookParams): string {
       site_admin: false,
     },
     installation: { id: 25299948, node_id: "MDIzOkludGVncmF0aW9uSW5zdGFsbGF0aW9uMjUyOTk5NDg=" },
-  })
+  });
 }

@@ -4661,6 +4661,17 @@ joi@^17.6.0:
     "@sideway/formula" "^3.0.0"
     "@sideway/pinpoint" "^2.0.0"
 
+joi@^17.6.4:
+  version "17.7.0"
+  resolved "https://registry.yarnpkg.com/joi/-/joi-17.7.0.tgz#591a33b1fe1aca2bc27f290bcad9b9c1c570a6b3"
+  integrity sha512-1/ugc8djfn93rTE3WRKdCzGGt/EtiYKxITMO4Wiv6q5JL1gl9ePt4kBsl1S499nbosspfctIQTpYIhSmHA3WAg==
+  dependencies:
+    "@hapi/hoek" "^9.0.0"
+    "@hapi/topo" "^5.0.0"
+    "@sideway/address" "^4.1.3"
+    "@sideway/formula" "^3.0.0"
+    "@sideway/pinpoint" "^2.0.0"
+
 joycon@^3.0.0:
   version "3.1.1"
   resolved "https://registry.npmjs.org/joycon/-/joycon-3.1.1.tgz"
@@ -5432,9 +5443,9 @@ onetime@^5.1.2:
   dependencies:
     mimic-fn "^2.1.0"
 
-"opstooling-js-style@https://github.com/paritytech/opstooling-js-style.git#^v1.0.0":
+"opstooling-js-style@https://github.com/paritytech/opstooling-js-style#8578c0d55043e4e3db94f7fdf8b698bc4a86e58d":
   version "0.0.0"
-  resolved "https://github.com/paritytech/opstooling-js-style.git#40d8a53227e1d5b5e662ea3f3d12cc0c912e3d48"
+  resolved "https://github.com/paritytech/opstooling-js-style#8578c0d55043e4e3db94f7fdf8b698bc4a86e58d"
   dependencies:
     "@typescript-eslint/eslint-plugin" "^5.21.0"
     "@typescript-eslint/parser" "^5.21.0"
@@ -5449,18 +5460,19 @@ onetime@^5.1.2:
     prettier "^2.6.2"
     prettier-plugin-compactify "^0.1.6"
 
-"opstooling-js@https://github.com/paritytech/opstooling-js#v0.0.12":
+"opstooling-js@https://github.com/paritytech/opstooling-js#v0.0.13":
   version "0.0.0"
-  resolved "https://github.com/paritytech/opstooling-js#7e8feb7e0abc1b4f7ce40fe92b3348b826693d21"
+  resolved "https://github.com/paritytech/opstooling-js#2041fead7e6b202a38aaac948228f023089c6313"
   dependencies:
     "@octokit/rest" "^18.12.0"
     async-mutex "^0.3.2"
     commander "^9.3.0"
     deepdash "^5.3.9"
-    joi "^17.6.0"
+    joi "^17.6.4"
     joi-to-typescript "^4.0.5"
     lodash "^4.17.21"
     node-fetch "^3.2.10"
+    prettier "^2.7.1"
     probot "^12.2.8"
     ts-node "^10.9.1"
     tsconfig-paths "^4.0.0"
