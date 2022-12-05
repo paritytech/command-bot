@@ -21,6 +21,8 @@ common:
     TASK_DB_VERSION: v3
     PING_PORT: 3001
     LOG_FORMAT: json
+    DB_CLIENT: postgres
+    DB_PORT: 5432
   secrets:
     ALLOWED_ORGANIZATIONS: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#ALLOWED_ORGANIZATIONS
     APP_ID: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#APP_ID
@@ -33,7 +35,10 @@ common:
     MATRIX_HOMESERVER: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#MATRIX_HOMESERVER
     PRIVATE_KEY_BASE64: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#PRIVATE_KEY_BASE64
     WEBHOOK_SECRET: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#WEBHOOK_SECRET
-    DATABASE_URL: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg##DATABASE_URL
+    DB_USER: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#DB_USER
+    DB_PASSWORD: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#DB_PASSWORD
+    DB_HOST: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#DB_HOST
+    DB_NAME: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#DB_NAME
   ingress:
     annotations:
       external-dns.alpha.kubernetes.io/target: traefik-external.parity-stg.parity.io.
