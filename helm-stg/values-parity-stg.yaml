@@ -1,13 +1,13 @@
-# gcloud-sqlproxy:
-#   serviceAccount:
-#     annotations:
-#       iam.gke.io/gcp-service-account: 'command-bot@parity-stg.iam.gserviceaccount.com'
-#   cloudsql:
-#     instances:
-#     - instance: "command-bot-db-pgsql"
-#       project: "parity-stg"
-#       region: "europe-west3"
-#       port: 5432
+gcloud-sqlproxy:
+  serviceAccount:
+    annotations:
+      iam.gke.io/gcp-service-account: "command-bot@parity-stg.iam.gserviceaccount.com"
+  cloudsql:
+    instances:
+      - instance: "command-bot-pgsql"
+        project: "parity-stg"
+        region: "europe-west3"
+        port: 5432
 
 common:
   env:
@@ -33,6 +33,7 @@ common:
     MATRIX_HOMESERVER: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#MATRIX_HOMESERVER
     PRIVATE_KEY_BASE64: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#PRIVATE_KEY_BASE64
     WEBHOOK_SECRET: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#WEBHOOK_SECRET
+    DATABASE_URL: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg##DATABASE_URL
   ingress:
     annotations:
       external-dns.alpha.kubernetes.io/target: traefik-external.parity-stg.parity.io.
