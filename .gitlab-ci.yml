@@ -90,6 +90,16 @@ test-lint:
     - yarn --immutable
     - pre-commit run --color=always --all
 
+test:
+  <<:                              *common-refs
+  stage:                           test
+  variables:
+    CI_IMAGE:                      paritytech/kubetools:3.5.3
+  script:
+    - sleep 300
+  tags:
+    - cmd-bot-stg
+
 test-unit:
   <<:                              *common-refs
   stage:                           test
