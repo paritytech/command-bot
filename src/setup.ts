@@ -13,44 +13,19 @@ import { ensureDir, initDatabaseDir } from "./shell"
 import { requeueUnterminatedTasks } from "./task"
 import { Context } from "./types"
 import { Err, Ok } from "./utils"
+import { config } from "./config"
 
 export const setup = async (
   bot: Probot,
   server: Server,
   {
-    appId,
-    clientId,
-    clientSecret,
-    privateKey,
-    dataPath,
-    matrix: matrixConfiguration,
     shouldClearTaskDatabaseOnStart,
-    isDeployment,
     ...partialContext
-  }: Pick<
-    Context,
-    | "isDeployment"
-    | "shouldPostPullRequestComment"
-    | "allowedOrganizations"
-    | "masterToken"
-    | "gitlab"
-    | "pipelineScripts"
-  > & {
-    appId: number
-    clientId: string
-    clientSecret: string
-    privateKey: string
-    startDate: Date
-    dataPath: string
-    matrix:
-      | {
-          homeServer: string
-          accessToken: string
-        }
-      | undefined
+  }: Pick<Context, "disablePRComment" | "allowedOrganizations" | "gitlab"> & {
     shouldClearTaskDatabaseOnStart?: boolean
   },
 ): Promise<void> => {
+  const { dataPath } = config
   const repositoryCloneDirectory = path.join(dataPath, "repositories")
   await ensureDir(repositoryCloneDirectory)
 
@@ -73,21 +48,21 @@ export const setup = async (
   const accessDb = new AccessDB(getDb(accessDbPath))
 
   const authInstallation = createAppAuth({
-    appId,
-    privateKey,
-    clientId,
-    clientSecret,
+    appId: config.appId,
+    privateKey: config.privateKey,
+    clientId: config.clientId,
+    clientSecret: config.clientSecret,
     request: request.defaults({
       // GITHUB_BASE_URL variable allows us to mock requests to GitHub from integration tests
-      ...(process.env.GITHUB_BASE_URL ? { baseUrl: process.env.GITHUB_BASE_URL } : {}),
+      ...(config.githubBaseUrl ? { baseUrl: config.githubBaseUrl } : {}),
     }),
   })
   const getFetchEndpoint = async (installationId: number | null) => {
     let token: string | null = null
     let url: string
 
-    if (process.env.GITHUB_REMOTE_URL) {
-      url = process.env.GITHUB_REMOTE_URL
+    if (config.githubRemoteUrl) {
+      url = config.githubRemoteUrl
     } else if (installationId) {
       token = (await authInstallation({ type: "installation", installationId })).token
       url = `https://x-access-token:${token}@github.com`
@@ -98,6 +73,7 @@ export const setup = async (
     return { url, token }
   }
 
+  const matrixConfiguration = config.matrix
   const matrixClientSetup: Ok<MatrixClient | null> | Err<unknown> = await (matrixConfiguration === undefined
     ? Promise.resolve(new Ok(null))
     : new Promise((resolve) => {
@@ -122,7 +98,7 @@ export const setup = async (
 
   const { value: matrix } = matrixClientSetup
 
-  if (isDeployment && matrix === null) {
+  if (config.isDeployment && matrix === null) {
     throw new Error("Matrix configuration is expected for deployments")
   }
 
@@ -133,7 +109,6 @@ export const setup = async (
     getFetchEndpoint,
     log: bot.log,
     logger,
-    isDeployment,
     matrix,
     repositoryCloneDirectory,
   }

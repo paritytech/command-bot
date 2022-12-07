@@ -2,6 +2,7 @@ import { MatrixClient } from "matrix-bot-sdk"
 import { Logger } from "opstooling-js"
 
 import type { AccessDB, TaskDB } from "./db"
+import { CmdJson } from "./schema/schema.cmd"
 
 export type GitRef = {
   contributor: {
@@ -16,25 +17,20 @@ export type GitRef = {
   }
 }
 
-export type PipelineScripts =
-  | {
-      repository: string
-      ref: string | undefined
-    }
-  | undefined
+export type PipelineScripts = {
+  repository: string
+  ref: string | undefined
+}
 
 export type Context = {
-  startDate: Date
   taskDb: TaskDB
   accessDb: AccessDB
   getFetchEndpoint: (installationId: number | null) => Promise<{ token: string | null; url: string }>
   log: (str: string) => void
   allowedOrganizations: number[]
   logger: Logger
-  isDeployment: boolean
   matrix: MatrixClient | null
-  masterToken: string
-  shouldPostPullRequestComment: boolean
+  disablePRComment: boolean
   repositoryCloneDirectory: string
   gitlab: {
     accessToken: string
@@ -43,7 +39,6 @@ export type Context = {
     jobImage: string
     accessTokenUsername: string
   }
-  pipelineScripts: PipelineScripts
 }
 
 export class PullRequestError {
@@ -64,3 +59,5 @@ export class PullRequestError {
 export type ToString = { toString: () => string }
 
 export type CommandOutput = Error | string
+
+export type CommandConfigs = { [key: string]: CmdJson }

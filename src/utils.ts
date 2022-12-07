@@ -14,7 +14,7 @@ export const envVar = (name: string): string => {
 export const envNumberVar = (name: string): number => {
   const val = process.env[name]
   assert(val, `${name} was not found in the environment variables`)
-  const valNumber = parseInt(val)
+  const valNumber = parseInt(val, 10)
   assert(valNumber, `${name} is not a number`)
   return valNumber
 }
@@ -24,16 +24,6 @@ export const getLines = (str: string): string[] =>
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => !!line)
-
-export const displayCommand = ({
-  execPath,
-  args,
-  itemsToRedact,
-}: {
-  execPath: string
-  args: string[]
-  itemsToRedact: string[]
-}): string => redact(`${execPath} ${args.join(" ")}`, itemsToRedact)
 
 export const millisecondsDelay = (milliseconds: number): Promise<void> =>
   new Promise<void>((resolve) => {
@@ -65,7 +55,7 @@ export const getNextUniqueIncrementalId = (): number => {
   return nextIncrementalId
 }
 
-export const redact = (str: string, items: string[], replacement: string = "{SECRET}"): string => {
+export const obfuscate = (str: string, items: string[], replacement: string = "{SECRET}"): string => {
   for (const item of items) {
     str = str.replaceAll(item, replacement)
   }

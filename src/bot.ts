@@ -1,13 +1,17 @@
 import { EmitterWebhookEventName } from "@octokit/webhooks/dist-types/types"
 import { IssueCommentCreatedEvent } from "@octokit/webhooks-types/schema"
+import assert from "assert"
 import path from "path"
 import { Probot } from "probot"
 import yargs from "yargs"
 
-import { CommandConfiguration, commandsConfiguration, isRequesterAllowed } from "./core"
+import { fetchCommandsConfiguration } from "src/commands"
+
+import { isRequesterAllowed } from "./core"
 import { getSortedTasks } from "./db"
 import { createComment, ExtendedOctokit, getOctokit, getPostPullRequestResult, updateComment } from "./github"
 import { logger } from "./logger"
+import { CmdJson } from "./schema/schema.cmd"
 import { validateSingleShellCommand } from "./shell"
 import { cancelTask, getNextTaskId, PullRequestTask, queueTask, serializeTaskQueuedDate } from "./task"
 import { Context, PullRequestError } from "./types"
@@ -18,17 +22,22 @@ export const botPullRequestCommentSubcommands: {
   [Subcommand in "queue" | "cancel"]: Subcommand
 } = { queue: "queue", cancel: "cancel" }
 
-export type ParsedBotCommand =
-  | {
-      subcommand: "queue"
-      configuration: CommandConfiguration
-      variables: Record<string, string>
-      command: string
-    }
-  | {
-      subcommand: "cancel"
-      taskId: string
-    }
+type QueueCommand = {
+  subcommand: "queue"
+  configuration: Pick<CmdJson["command"]["configuration"], "gitlab" | "commandStart"> & {
+    optionalCommandArgs?: boolean
+  }
+  variables: {
+    [k: string]: unknown
+  }
+  command: string
+}
+type CancelCommand = {
+  subcommand: "cancel"
+  taskId: string
+}
+
+export type ParsedBotCommand = QueueCommand | CancelCommand
 
 export const parsePullRequestBotCommandLine = async (
   rawCommandLine: string,
@@ -86,11 +95,15 @@ export const parsePullRequestBotCommandLine = async (
         )
       }
 
-      const configuration =
-        configurationName in commandsConfiguration
-          ? commandsConfiguration[configurationName as keyof typeof commandsConfiguration]
-          : undefined
-      if (!configuration) {
+      const commandsConfiguration = await fetchCommandsConfiguration()
+      const configuration = commandsConfiguration[configurationName].command.configuration
+
+      // if presets has nothing - then it means that the command doesn't need any arguments and runs as is
+      if (Object.keys(commandsConfiguration[configurationName].command?.presets || [])?.length === 0) {
+        configuration.optionalCommandArgs = true
+      }
+
+      if (!Object.keys(configuration).length) {
         return new Error(
           `Could not find matching configuration ${configurationName}; available ones are ${Object.keys(
             commandsConfiguration,
@@ -119,6 +132,8 @@ export const parsePullRequestBotCommandLine = async (
           }
         }
       }
+
+      assert(configuration.commandStart, "command start should exist")
 
       const command = await validateSingleShellCommand([...configuration.commandStart, commandLinePart].join(" "))
       if (command instanceof Error) {
@@ -245,12 +260,15 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ct
           }
 
           const contributor = { owner: contributorUsername, repo: contributorRepository, branch: contributorBranch }
-
+          console.log(parsedCommand)
           const commentBody = `Preparing command "${parsedCommand.command}". This comment will be updated later.`.trim()
           const createdComment = await createComment(ctx, octokit, { ...commentParams, body: commentBody })
           getError = (body: string) => new PullRequestError(pr, { body, requester, commentId: createdComment.id })
 
           const queuedDate = new Date()
+
+          const defaultVariables = parsedCommand.configuration.gitlab?.job.variables
+          const overriddenVariables = parsedCommand.variables
 
           const task: PullRequestTask = {
             ...pr,
@@ -268,9 +286,9 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ct
             queuedDate: serializeTaskQueuedDate(queuedDate),
             gitlab: {
               job: {
-                ...parsedCommand.configuration.gitlab.job,
+                tags: parsedCommand.configuration.gitlab?.job.tags || [],
                 image: gitlab.jobImage,
-                variables: { ...parsedCommand.configuration.gitlab.job.variables, ...parsedCommand.variables },
+                variables: Object.assign(defaultVariables, overriddenVariables),
               },
               pipeline: null,
             },

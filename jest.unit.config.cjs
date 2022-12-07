@@ -1,4 +1,4 @@
-/** @type {import('ts-jest').JestConfigWithTsJest} */
+/** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {
   extensionsToTreatAsEsm: [".ts"],
   testMatch: ["<rootDir>/src/**/*.spec.ts"],
@@ -10,4 +10,5 @@ module.exports = {
   moduleNameMapper: { "^src/(.*)$": `${process.cwd()}/src/$1` },
   collectCoverage: false,
   coverageDirectory: "coverage",
+  setupFiles: ["./.env.example.cjs"]
 }

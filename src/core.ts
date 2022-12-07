@@ -21,8 +21,9 @@ export type CommandConfiguration = {
   // allows to be run without arguments after " $ "
   optionalCommandArgs?: boolean
 }
+
 export const commandsConfiguration: {
-  [K in "try-runtime" | "bench-bot" | "test-bench-bot" | "fmt" | "sample"]: CommandConfiguration
+  [k: string]: CommandConfiguration
 } = {
   "try-runtime": {
     gitlab: { job: { tags: ["linux-docker"], variables: {} } },
@@ -69,16 +70,16 @@ export const prepareBranch = async function* (
 ) {
   const { token, url } = await getFetchEndpoint()
 
-  const itemsToRedact: string[] = []
+  const itemsToObfuscate: string[] = []
   if (typeof token === "string") {
-    itemsToRedact.push(token)
+    itemsToObfuscate.push(token)
   }
 
-  const cmdRunner = new CommandRunner({ itemsToRedact })
+  const cmdRunner = new CommandRunner({ itemsToObfuscate })
 
   yield cmdRunner.run("mkdir", ["-p", repoPath])
 
-  const repoCmdRunner = new CommandRunner({ itemsToRedact, cwd: repoPath })
+  const repoCmdRunner = new CommandRunner({ itemsToObfuscate, cwd: repoPath })
 
   // Clone the repository if it does not exist
   yield repoCmdRunner.run("git", ["clone", "--quiet", `${url}/${upstream.owner}/${upstream.repo}.git`, repoPath], {

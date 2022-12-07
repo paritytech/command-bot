@@ -18,6 +18,7 @@ import { cancelGitlabPipeline, restoreTaskGitlabContext, runCommandInGitlabPipel
 import { logger } from "./logger"
 import { CommandOutput, Context, GitRef } from "./types"
 import { displayError, getNextUniqueIncrementalId, intoError } from "./utils"
+import { CmdJson } from "./schema/schema.cmd"
 
 export const queuedTasks: Map<string, EventEmitter> = new Map()
 export const taskExecutionTerminationEvent = Symbol()
@@ -41,7 +42,9 @@ type TaskBase<T> = {
     job: {
       tags: string[]
       image: string
-      variables: Record<string, string | boolean | number>
+      variables: {
+        [k: string]: unknown
+      }
     }
     pipeline: TaskGitlabPipeline | null
   }

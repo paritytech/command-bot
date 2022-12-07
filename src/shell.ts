@@ -7,7 +7,7 @@ import { Readable as ReadableStream } from "stream"
 
 import { logger } from "./logger"
 import { ToString } from "./types"
-import { displayCommand, redact } from "./utils"
+import { obfuscate } from "./utils"
 
 export const ensureDir = async (dir: string): Promise<void> => {
   // mkdir doesn't throw an error if the directory already exists
@@ -24,10 +24,11 @@ export const initDatabaseDir = async (dir: string): Promise<void> => {
 
 export class CommandRunner {
   private logger: Logger
+  private commandOutputBuffer: ["stdout" | "stderr", string][] = []
 
   constructor(
-    private configuration: {
-      itemsToRedact: string[]
+    private configuration?: {
+      itemsToObfuscate?: string[]
       shouldTrackProgress?: boolean
       cwd?: string
       onChild?: (child: ChildProcess) => void
@@ -51,14 +52,16 @@ export class CommandRunner {
       stdinInput?: string
     } = {},
   ): Promise<string | Error> {
-    const { logger: log } = this
+    const { logger: log, commandOutputBuffer } = this
     return await new Promise<string | Error>((resolve, reject) => {
-      const { cwd, itemsToRedact, onChild, shouldTrackProgress } = this.configuration
+      const { cwd, itemsToObfuscate, onChild } = this.configuration || {}
 
-      const commandDisplayed = displayCommand({ execPath, args, itemsToRedact })
+      const rawCommand = `${execPath} ${args.join(" ")}`
+      const commandDisplayed = itemsToObfuscate?.length ? obfuscate(rawCommand, itemsToObfuscate) : rawCommand
       log.info(`Executing command ${commandDisplayed}`)
 
       const child = spawn(execPath, args, { cwd, stdio: "pipe" })
+
       if (onChild) {
         onChild(child)
       }
@@ -70,19 +73,11 @@ export class CommandRunner {
         stdinStream.pipe(child.stdin)
       }
 
-      const commandOutputBuffer: ["stdout" | "stderr", string][] = []
-      const getStreamHandler = (channel: "stdout" | "stderr") => (data: ToString) => {
-        const str = itemsToRedact === undefined ? data.toString() : redact(data.toString(), itemsToRedact)
-        const strTrim = str.trim()
+      // clear
+      commandOutputBuffer.splice(0, commandOutputBuffer.length)
 
-        if (shouldTrackProgress && strTrim) {
-          log.info(strTrim, channel)
-        }
-
-        commandOutputBuffer.push([channel, str])
-      }
-      child.stdout.on("data", getStreamHandler("stdout"))
-      child.stderr.on("data", getStreamHandler("stderr"))
+      child.stdout.on("data", this.getStreamHandler("stdout"))
+      child.stderr.on("data", this.getStreamHandler("stderr"))
 
       child.on("close", (exitCode, signal) => {
         log.info(
@@ -97,15 +92,9 @@ export class CommandRunner {
 
         if (exitCode) {
           const rawStderr = commandOutputBuffer
-            .reduce((acc, [stream, value]) => {
-              if (stream === "stderr") {
-                return `${acc}${value}`
-              } else {
-                return acc
-              }
-            }, "")
+            .reduce((acc, [stream, value]) => (stream === "stderr" ? `${acc}${value}` : acc), "")
             .trim()
-          const stderr = itemsToRedact === undefined ? rawStderr : redact(rawStderr, itemsToRedact)
+          const stderr = itemsToObfuscate?.length ? obfuscate(rawStderr, itemsToObfuscate) : rawStderr
           if (
             !allowedErrorCodes?.includes(exitCode) &&
             (testAllowedErrorMessage === undefined || !testAllowedErrorMessage(stderr))
@@ -116,24 +105,32 @@ export class CommandRunner {
 
         const outputBuf = shouldCaptureAllStreams
           ? commandOutputBuffer.reduce((acc, [_, value]) => `${acc}${value}`, "")
-          : commandOutputBuffer.reduce((acc, [stream, value]) => {
-              if (stream === "stdout") {
-                return `${acc}${value}`
-              } else {
-                return acc
-              }
-            }, "")
+          : commandOutputBuffer.reduce((acc, [stream, value]) => (stream === "stdout" ? `${acc}${value}` : acc), "")
         const rawOutput = outputBuf.trim()
-        const output = itemsToRedact === undefined ? rawOutput : redact(rawOutput, itemsToRedact)
+        const output = itemsToObfuscate?.length ? obfuscate(rawOutput, itemsToObfuscate) : rawOutput
 
         resolve(output)
       })
     })
   }
+
+  private getStreamHandler(channel: "stdout" | "stderr") {
+    const { itemsToObfuscate, shouldTrackProgress } = this.configuration || {}
+    return (data: ToString) => {
+      const str = itemsToObfuscate?.length ? obfuscate(data.toString(), itemsToObfuscate) : data.toString()
+      const strTrim = str.trim()
+
+      if (shouldTrackProgress && strTrim) {
+        this.logger.info(strTrim, channel)
+      }
+
+      this.commandOutputBuffer.push([channel, str])
+    }
+  }
 }
 
 export const validateSingleShellCommand = async (command: string): Promise<string | Error> => {
-  const cmdRunner = new CommandRunner({ itemsToRedact: [] })
+  const cmdRunner = new CommandRunner()
   const commandAstText = await cmdRunner.run("shfmt", ["--tojson"], { stdinInput: command })
   if (commandAstText instanceof Error) {
     return new Error(`Command AST could not be parsed for "${command}"`)

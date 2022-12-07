@@ -6,6 +6,7 @@ import { envNumberVar } from "opstooling-js"
 import path from "path"
 import yaml from "yaml"
 
+import { config } from "./config"
 import { CommandRunner } from "./shell"
 import { Task, taskExecutionTerminationEvent, TaskGitlabPipeline } from "./task"
 import { Context, PipelineScripts } from "./types"
@@ -22,9 +23,10 @@ const getPipelineScriptsCloneCommand = ({ withRef }: { withRef: boolean }) =>
   } "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"`
 
 export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Promise<GitlabTaskContext> => {
-  const { logger, gitlab, pipelineScripts } = ctx
+  const { logger, gitlab } = ctx
+  const { pipelineScripts } = config
 
-  const cmdRunner = new CommandRunner({ itemsToRedact: [gitlab.accessToken], cwd: task.repoPath })
+  const cmdRunner = new CommandRunner({ itemsToObfuscate: [gitlab.accessToken], cwd: task.repoPath })
 
   /*
     Save the head SHA before doing any modifications to the branch so that

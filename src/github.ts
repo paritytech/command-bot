@@ -194,28 +194,28 @@ export type Comment = {
   data: unknown | null // TODO: quite a complex type inside
 }
 export const createComment = async (
-  { shouldPostPullRequestComment }: Context,
+  { disablePRComment }: Context,
   octokit: Octokit,
   ...args: Parameters<typeof octokit.issues.createComment>
 ): Promise<Comment> => {
-  if (shouldPostPullRequestComment) {
-    const { data, status } = await octokit.issues.createComment(...args)
-    return { status, id: data.id, htmlUrl: data.html_url, data }
-  } else {
+  if (disablePRComment) {
     logger.info({ call: "createComment", args })
     return { status: 201, id: 0, htmlUrl: "", data: null }
+  } else {
+    const { data, status } = await octokit.issues.createComment(...args)
+    return { status, id: data.id, htmlUrl: data.html_url, data }
   }
 }
 
 export const updateComment = async (
-  { shouldPostPullRequestComment }: Context,
+  { disablePRComment }: Context,
   octokit: Octokit,
   ...args: Parameters<typeof octokit.issues.updateComment>
 ): Promise<void> => {
-  if (shouldPostPullRequestComment) {
-    await octokit.issues.updateComment(...args)
-  } else {
+  if (disablePRComment) {
     logger.info({ call: "updateComment", args })
+  } else {
+    await octokit.issues.updateComment(...args)
   }
 }
 

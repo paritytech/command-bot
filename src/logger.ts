@@ -1,4 +1,6 @@
 import { Logger, LoggerOptions } from "opstooling-js"
+import { Logger as ProbotLogger } from "pino"
+import { getLog } from "probot/lib/helpers/get-log"
 
 export const logFormat = ((): "json" | null => {
   const value = process.env.LOG_FORMAT
@@ -14,6 +16,7 @@ export const logFormat = ((): "json" | null => {
     }
   }
 })()
+
 export const minLogLevel = ((): "info" | "warn" | "error" => {
   const value: string | undefined = process.env.MIN_LOG_LEVEL
   switch (value) {
@@ -34,3 +37,19 @@ export const minLogLevel = ((): "info" | "warn" | "error" => {
 const loggerOptions: LoggerOptions = { name: "command-bot", minLogLevel, logFormat, impl: console }
 
 export const logger = new Logger(loggerOptions)
+
+export let probotLogger: ProbotLogger | undefined = undefined
+switch (logFormat) {
+  case "json": {
+    probotLogger = getLog({ level: "error", logFormat: "json", logLevelInString: true, logMessageKey: "msg" })
+    break
+  }
+  case null: {
+    break
+  }
+  default: {
+    const exhaustivenessCheck: never = logFormat
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+    throw new Error(`Not exhaustive: ${exhaustivenessCheck}`)
+  }
+}

@@ -1,5 +1,12 @@
+import { jest } from "@jest/globals"
+
 import { ParsedBotCommand, parsePullRequestBotCommandLine } from "./bot"
 import { logger } from "./logger"
+import { cmd } from "./__mocks__/commands"
+
+jest.mock("src/commands", () => {
+  return { parsePullRequestBotCommandLine: jest.fn(() => Promise.resolve(cmd)) }
+})
 
 logger.options.minLogLevel = "fatal"
 
@@ -67,7 +74,6 @@ const dataProvider: DataProvider[] = [
   {
     suitName: "fmt, no args should be allowed and return config",
     commandLine: "/cmd queue -c fmt",
-    // expectedResponse: new Error(`Could not find start of command (" $ ")`),
     expectedResponse: {
       subcommand: "queue",
       configuration: {

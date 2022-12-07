@@ -6,6 +6,7 @@ import LevelErrors from "level-errors"
 import path from "path"
 import { Server } from "probot"
 
+import { config } from "./config"
 import { commandsConfiguration } from "./core"
 import { validateSingleShellCommand } from "./shell"
 import { ApiTask, cancelTask, getNextTaskId, getSendTaskMatrixResult, queueTask, serializeTaskQueuedDate } from "./task"
@@ -67,7 +68,7 @@ export const setupApi = (ctx: Context, server: Server): void => {
           */
         let matrixRoom: string = ""
         if (checkMasterToken) {
-          if (token !== ctx.masterToken) {
+          if (token !== config.masterToken) {
             return errorResponse(res, next, 422, `Invalid ${token} for master token`)
           }
         } else {
