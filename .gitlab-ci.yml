@@ -83,202 +83,192 @@ default:
   after_script:
     - buildah logout --all
 
-# test-lint:
-#   <<:                              *common-refs
-#   stage:                           test
-#   script:
-#     - yarn --immutable
-#     - pre-commit run --color=always --all
-
-test:
+test-lint:
   <<:                              *common-refs
   stage:                           test
+  script:
+    - yarn --immutable
+    - pre-commit run --color=always --all
+
+test-unit:
+  <<:                              *common-refs
+  stage:                           test
+  script:
+    - yarn --immutable
+    - yarn test:unit
+
+test-integration:
+  <<:                              *common-refs
+  stage:                           test
+  script:
+    - yarn --immutable
+    - yarn test:integration
+
+build-docker-app:
+  stage:                           build
+  <<:                              *test-refs
+  <<:                              *build-only-docker-image
+  variables:
+    TARGET:                        app
+
+build-docker-ci:
+  stage:                           build
+  <<:                              *test-refs
+  <<:                              *build-only-docker-image
+  variables:
+    TARGET:                        ci
+  allow_failure:                   true
+
+#### App deployment
+
+# TODO: remove when prod is moved to parity-prod
+.deploy-k8s:                       &deploy-k8s
+  image:                           paritytech/kubetools:helm3
+  script:
+    # Change the app version during build so that Kubernetes is able to update
+    # the deployment even if the images' tags did not change
+    # $CI_PIPELINE_ID is guaranteed to be unique
+    - export KUBERNETES_VERSION_TAG="$CI_PIPELINE_ID"
+    # Those values are embedded in the annotations and that's how the change is
+    # noticed
+    - |-
+      sed -i "s/version:.*/version: $KUBERNETES_VERSION_TAG/" helm/Chart.yaml
+    - |-
+      sed -i "s/appVersion:.*/appVersion: $KUBERNETES_VERSION_TAG/" helm/Chart.yaml
+    - helm upgrade --install "$KUBE_NAMESPACE" ./helm
+      --values helm/values.yaml
+      --namespace "$KUBE_NAMESPACE"
+      --set image.repository="$IMAGE_NAME"
+      --set image.tag="$DOCKER_TAG"
+      --set env.APP_ID="$APP_ID"
+      --set env.CLIENT_ID="$CLIENT_ID"
+      --set env.CLIENT_SECRET="$CLIENT_SECRET"
+      --set env.WEBHOOK_SECRET="$WEBHOOK_SECRET"
+      --set env.PRIVATE_KEY_BASE64="$PRIVATE_KEY_BASE64"
+      --set env.ALLOWED_ORGANIZATIONS="$ALLOWED_ORGANIZATIONS"
+      --set env.DATA_PATH="$DATA_PATH"
+      --set persistence.mountPath="$DATA_PATH"
+      --set env.IS_DEPLOYMENT="true"
+      --set env.TMPDIR="$DATA_PATH/tmp"
+      --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
+      --set env.PING_PORT="$PING_PORT"
+      --set env.MATRIX_HOMESERVER="$MATRIX_HOMESERVER"
+      --set env.MATRIX_ACCESS_TOKEN="$MATRIX_ACCESS_TOKEN"
+      --set env.MASTER_TOKEN="$MASTER_TOKEN"
+      --set env.GITLAB_ACCESS_TOKEN="$GITLAB_ACCESS_TOKEN"
+      --set env.GITLAB_ACCESS_TOKEN_USERNAME="$GITLAB_ACCESS_TOKEN_USERNAME"
+      --set env.LOG_FORMAT=json
+
+# TODO: rename to .deploy-k8s when prod is moved to parity-prod
+.deploy-k8s-stg:                   &deploy-k8s-stg
+  image:                           paritytech/kubetools:helm3
+  script:
+    # Change the app version during build so that Kubernetes is able to update
+    # the deployment even if the images' tags did not change
+    # $CI_PIPELINE_ID is guaranteed to be unique
+    - export KUBERNETES_VERSION_TAG="$CI_PIPELINE_ID"
+    # Those values are embedded in the annotations and that's how the change is
+    # noticed
+    - |-
+      sed -i "s/appVersion:.*/appVersion: $KUBERNETES_VERSION_TAG/" helm-stg/Chart.yaml
+    # https://docs.gitlab.com/ee/ci/examples/authenticating-with-hashicorp-vault/#example
+    - export VAULT_TOKEN="$(vault write -field=token auth/$VAULT_AUTH_PATH/login role=$VAULT_AUTH_ROLE jwt=$CI_JOB_JWT)"
+    - helm dependency update helm-stg/
+    - helm secrets --version
+    - helm secrets upgrade
+        --install
+        --atomic
+        --timeout 300s
+        --namespace ${CI_PROJECT_NAME}
+        --values helm-stg/values.yaml
+        --values helm-stg/values-$ENVIRONMENT.yaml
+        --set common.image.repository="$IMAGE_NAME"
+        --set common.image.tag="$DOCKER_TAG"
+        --set common.persistence.mountPath="$DATA_PATH"
+        --set env.DATA_PATH="$DATA_PATH"
+        --set env.IS_DEPLOYMENT="true"
+        --set env.TMPDIR="$DATA_PATH/tmp"
+        --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
+        --set env.PING_PORT="$PING_PORT"
+        --set env.LOG_FORMAT=json
+        $CI_PROJECT_NAME helm-stg/
+
+.uninstall-deployment:             &uninstall-deployment
+  image:                           paritytech/kubetools:helm3
+  stage:                           production
+  script:
+    - helm uninstall "$KUBE_NAMESPACE" --namespace "$KUBE_NAMESPACE"
+
+build-push-docker-app:
+  stage:                           build
+  # <<:                              *staging-refs
+  <<:                              *test-refs
+  <<:                              *build-push-docker-image
+  variables:
+    TARGET:                        app
+
+deploy-stg:
+  stage:                           staging
+  #TODO: don't forget to rename to *deploy-k8s
+  <<:                              *deploy-k8s-stg
+  # <<:                              *staging-refs
+  <<:                              *test-refs
   variables:
     CI_IMAGE:                      paritytech/kubetools:3.5.3
-  script:
-    - sleep 300
+    ENVIRONMENT:                   parity-stg
+  # environment:
+  #   name:                          parity-stg
   tags:
     - cmd-bot-stg
 
-# test-unit:
-#   <<:                              *common-refs
-#   stage:                           test
-#   script:
-#     - yarn --immutable
-#     - yarn test:unit
-
-# test-integration:
-#   <<:                              *common-refs
-#   stage:                           test
-#   script:
-#     - yarn --immutable
-#     - yarn test:integration
-
-# build-docker-app:
-#   stage:                           build
-#   <<:                              *test-refs
-#   <<:                              *build-only-docker-image
-#   variables:
-#     TARGET:                        app
-
-# build-docker-ci:
-#   stage:                           build
-#   <<:                              *test-refs
-#   <<:                              *build-only-docker-image
-#   variables:
-#     TARGET:                        ci
-#   allow_failure:                   true
-
-# #### App deployment
-
-# # TODO: remove when prod is moved to parity-prod
-# .deploy-k8s:                       &deploy-k8s
-#   image:                           paritytech/kubetools:helm3
-#   script:
-#     # Change the app version during build so that Kubernetes is able to update
-#     # the deployment even if the images' tags did not change
-#     # $CI_PIPELINE_ID is guaranteed to be unique
-#     - export KUBERNETES_VERSION_TAG="$CI_PIPELINE_ID"
-#     # Those values are embedded in the annotations and that's how the change is
-#     # noticed
-#     - |-
-#       sed -i "s/version:.*/version: $KUBERNETES_VERSION_TAG/" helm/Chart.yaml
-#     - |-
-#       sed -i "s/appVersion:.*/appVersion: $KUBERNETES_VERSION_TAG/" helm/Chart.yaml
-#     - helm upgrade --install "$KUBE_NAMESPACE" ./helm
-#       --values helm/values.yaml
-#       --namespace "$KUBE_NAMESPACE"
-#       --set image.repository="$IMAGE_NAME"
-#       --set image.tag="$DOCKER_TAG"
-#       --set env.APP_ID="$APP_ID"
-#       --set env.CLIENT_ID="$CLIENT_ID"
-#       --set env.CLIENT_SECRET="$CLIENT_SECRET"
-#       --set env.WEBHOOK_SECRET="$WEBHOOK_SECRET"
-#       --set env.PRIVATE_KEY_BASE64="$PRIVATE_KEY_BASE64"
-#       --set env.ALLOWED_ORGANIZATIONS="$ALLOWED_ORGANIZATIONS"
-#       --set env.DATA_PATH="$DATA_PATH"
-#       --set persistence.mountPath="$DATA_PATH"
-#       --set env.IS_DEPLOYMENT="true"
-#       --set env.TMPDIR="$DATA_PATH/tmp"
-#       --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
-#       --set env.PING_PORT="$PING_PORT"
-#       --set env.MATRIX_HOMESERVER="$MATRIX_HOMESERVER"
-#       --set env.MATRIX_ACCESS_TOKEN="$MATRIX_ACCESS_TOKEN"
-#       --set env.MASTER_TOKEN="$MASTER_TOKEN"
-#       --set env.GITLAB_ACCESS_TOKEN="$GITLAB_ACCESS_TOKEN"
-#       --set env.GITLAB_ACCESS_TOKEN_USERNAME="$GITLAB_ACCESS_TOKEN_USERNAME"
-#       --set env.LOG_FORMAT=json
-
-# # TODO: rename to .deploy-k8s when prod is moved to parity-prod
-# .deploy-k8s-stg:                   &deploy-k8s-stg
-#   image:                           paritytech/kubetools:helm3
-#   script:
-#     # Change the app version during build so that Kubernetes is able to update
-#     # the deployment even if the images' tags did not change
-#     # $CI_PIPELINE_ID is guaranteed to be unique
-#     - export KUBERNETES_VERSION_TAG="$CI_PIPELINE_ID"
-#     # Those values are embedded in the annotations and that's how the change is
-#     # noticed
-#     - |-
-#       sed -i "s/appVersion:.*/appVersion: $KUBERNETES_VERSION_TAG/" helm-stg/Chart.yaml
-#     # https://docs.gitlab.com/ee/ci/examples/authenticating-with-hashicorp-vault/#example
-#     - export VAULT_TOKEN="$(vault write -field=token auth/$VAULT_AUTH_PATH/login role=$VAULT_AUTH_ROLE jwt=$CI_JOB_JWT)"
-#     - helm dependency update helm-stg/
-#     - helm secrets --version
-#     - helm secrets upgrade
-#         --install
-#         --atomic
-#         --timeout 300s
-#         --namespace ${CI_PROJECT_NAME}
-#         --values helm-stg/values.yaml
-#         --values helm-stg/values-$ENVIRONMENT.yaml
-#         --set common.image.repository="$IMAGE_NAME"
-#         --set common.image.tag="$DOCKER_TAG"
-#         --set common.persistence.mountPath="$DATA_PATH"
-#         --set env.DATA_PATH="$DATA_PATH"
-#         --set env.IS_DEPLOYMENT="true"
-#         --set env.TMPDIR="$DATA_PATH/tmp"
-#         --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
-#         --set env.PING_PORT="$PING_PORT"
-#         --set env.LOG_FORMAT=json
-#         $CI_PROJECT_NAME helm-stg/
-
-# .uninstall-deployment:             &uninstall-deployment
-#   image:                           paritytech/kubetools:helm3
-#   stage:                           production
-#   script:
-#     - helm uninstall "$KUBE_NAMESPACE" --namespace "$KUBE_NAMESPACE"
-
-# build-push-docker-app:
-#   stage:                           build
-#   # <<:                              *staging-refs
-#   <<:                              *test-refs
-#   <<:                              *build-push-docker-image
-#   variables:
-#     TARGET:                        app
-
-# deploy-stg:
-#   stage:                           staging
-#   #TODO: don't forget to rename to *deploy-k8s
-#   <<:                              *deploy-k8s-stg
-#   # <<:                              *staging-refs
-#   <<:                              *test-refs
-#   variables:
-#     CI_IMAGE:                      paritytech/kubetools:3.5.3
-#     ENVIRONMENT:                   parity-stg
-#   # environment:
-#   #   name:                          parity-stg
-#   tags:
-#     - cmd-bot-stg
-
-# deploy-production:
-#   <<:                              *deploy-k8s
-#   <<:                              *production-refs
-#   stage:                           production
-#   environment:
-#     name: parity-chains
+deploy-production:
+  <<:                              *deploy-k8s
+  <<:                              *production-refs
+  stage:                           production
+  environment:
+    name: parity-chains
 
 
-# # TODO: remove Manual section when prod is moved to parity-prod
-# #### >> Manual
+# TODO: remove Manual section when prod is moved to parity-prod
+#### >> Manual
 
-# build-production-image-manual:
-#   <<:                              *build-push-docker-image
-#   stage:                           build
-#   variables:
-#     TARGET:                        app
-#   rules:
-#     - if: "$BUILD == 'production'"
+build-production-image-manual:
+  <<:                              *build-push-docker-image
+  stage:                           build
+  variables:
+    TARGET:                        app
+  rules:
+    - if: "$BUILD == 'production'"
 
-# deploy-production-manual:
-#   <<:                              *deploy-k8s
-#   environment:
-#     name: parity-chains
-#   stage:                           production
-#   rules:
-#     - if: '$BUILD == "production" || $DEPLOY == "production"'
+deploy-production-manual:
+  <<:                              *deploy-k8s
+  environment:
+    name: parity-chains
+  stage:                           production
+  rules:
+    - if: '$BUILD == "production" || $DEPLOY == "production"'
 
-# uninstall-production:
-#   <<:                              *uninstall-deployment
-#   environment:
-#     name: parity-chains
-#   rules:
-#     - if: "$UNINSTALL == 'production'"
+uninstall-production:
+  <<:                              *uninstall-deployment
+  environment:
+    name: parity-chains
+  rules:
+    - if: "$UNINSTALL == 'production'"
 
-# #### CI images
+#### CI images
 
-# build-ci-image-manual:
-#   <<:                              *build-push-docker-image
-#   stage:                           build
-#   variables:
-#     TARGET:                        ci
-#   rules:
-#     - if: "$BUILD == 'ci'"
+build-ci-image-manual:
+  <<:                              *build-push-docker-image
+  stage:                           build
+  variables:
+    TARGET:                        ci
+  rules:
+    - if: "$BUILD == 'ci'"
 
-# build-ci-image:
-#   <<:                              *master-refs
-#   <<:                              *build-push-docker-image
-#   variables:
-#     TARGET:                        ci
-#   stage:                           build
-#   allow_failure:                   true
+build-ci-image:
+  <<:                              *master-refs
+  <<:                              *build-push-docker-image
+  variables:
+    TARGET:                        ci
+  stage:                           build
+  allow_failure:                   true
