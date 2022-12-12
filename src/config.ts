@@ -5,6 +5,7 @@ import path from "path"
 import { ensureDirSync } from "./shell"
 import { PipelineScripts } from "./types"
 import { envNumberVar, envVar } from "./utils"
+import { readFileSync, writeFileSync } from "fs"
 
 const repository = envVar("PIPELINE_SCRIPTS_REPOSITORY")
 const ref = process.env.PIPELINE_SCRIPTS_REF
@@ -18,10 +19,10 @@ ensureDirSync(dataPath)
 
 const appDbVersionPath = path.join(dataPath, "task-db-version")
 const shouldClearTaskDatabaseOnStart = process.env.TASK_DB_VERSION
-  ? await (async (appDbVersion) => {
-      const currentDbVersion = await (async () => {
+  ? ((appDbVersion) => {
+      const currentDbVersion = (() => {
         try {
-          return (await readFile(appDbVersionPath)).toString().trim()
+          return readFileSync(appDbVersionPath).toString().trim()
         } catch (error) {
           if (
             /*
@@ -41,7 +42,7 @@ const shouldClearTaskDatabaseOnStart = process.env.TASK_DB_VERSION
         }
       })()
       if (currentDbVersion !== appDbVersion) {
-        await writeFile(appDbVersionPath, appDbVersion)
+        writeFileSync(appDbVersionPath, appDbVersion)
         return true
       }
     })(process.env.TASK_DB_VERSION.trim())
