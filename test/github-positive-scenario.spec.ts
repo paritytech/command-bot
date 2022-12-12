@@ -10,7 +10,7 @@ import { getMockServers } from "./setup/mockServers"
 
 const restFixtures = getRestFixtures({
   github: {
-    org: "tripleightech",
+    org: "paritytech-stg",
     repo: "command-bot-test",
     prAuthor: "somedev123",
     headBranch: "prBranch1",
@@ -36,35 +36,39 @@ const commandsDataProvider: CommandDataProviderItem[] = [
     suitName: "[sample] command",
     commandLine: "/cmd queue -c sample $ helloworld",
     expected: {
-      startMessage: 'Preparing command "echo helloworld". This comment will be updated later.',
-      finishMessage: "@somedev123 Command `echo helloworld` has finished.",
+      startMessage:
+        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh" helloworld". This comment will be updated later.',
+      finishMessage:
+        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh" helloworld` has finished. Result: https://example.com/foo/bar/-/jobs/6 has finished. If any artifacts were generated, you can download them from https://example.com/foo/bar/-/jobs/6/artifacts/download',
     },
   },
   {
     suitName: "[fmt] command with args",
     commandLine: "/cmd queue -c fmt $ 1",
     expected: {
-      startMessage: 'Preparing command ""$PIPELINE_SCRIPTS_DIR/fmt.sh" 1". This comment will be updated later.',
-      finishMessage: '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/fmt.sh" 1` has finished.',
+      startMessage:
+        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh" 1". This comment will be updated later.',
+      finishMessage: '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh" 1` has finished.',
     },
   },
   {
     suitName: "[fmt] command no args",
     commandLine: "/cmd queue -c fmt",
     expected: {
-      startMessage: 'Preparing command ""$PIPELINE_SCRIPTS_DIR/fmt.sh"". This comment will be updated later.',
-      finishMessage: '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/fmt.sh"` has finished.',
+      startMessage:
+        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"". This comment will be updated later.',
+      finishMessage: '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"` has finished.',
     },
   },
   {
     suitName: "[bench-bot] command",
     commandLine:
-      "/cmd queue -v PIPELINE_SCRIPTS_REF=hello-is-this-even-used -c bench-bot $ runtime kusama-dev pallet_referenda",
+      "/cmd queue -v PIPELINE_SCRIPTS_REF=hello-is-this-even-used -c bench $ runtime kusama-dev pallet_referenda",
     expected: {
       startMessage:
-        'Preparing command ""$PIPELINE_SCRIPTS_DIR/bench-bot.sh" runtime kusama-dev pallet_referenda". This comment will be updated later.',
+        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" runtime kusama-dev pallet_referenda". This comment will be updated later.',
       finishMessage:
-        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/bench-bot.sh" runtime kusama-dev pallet_referenda` has finished.',
+        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" runtime kusama-dev pallet_referenda` has finished.',
     },
   },
   {
@@ -73,9 +77,9 @@ const commandsDataProvider: CommandDataProviderItem[] = [
       "/cmd queue -v RUST_LOG=remote-ext=debug,runtime=trace -c try-runtime $ --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443",
     expected: {
       startMessage:
-        'Preparing command ""$PIPELINE_SCRIPTS_DIR/try-runtime-bot.sh" --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443". This comment will be updated later.',
+        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443". This comment will be updated later.',
       finishMessage:
-        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/try-runtime-bot.sh" --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443` has finished. Result: https://example.com/foo/bar/-/jobs/6 has finished. If any artifacts were generated, you can download them from https://example.com/foo/bar/-/jobs/6/artifacts/download.',
+        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443` has finished. Result: https://example.com/foo/bar/-/jobs/6 has finished. If any artifacts were generated, you can download them from https://example.com/foo/bar/-/jobs/6/artifacts/download.',
     },
   },
 ]
@@ -83,9 +87,9 @@ const commandsDataProvider: CommandDataProviderItem[] = [
 beforeAll(async () => {
   const gitDaemons = await startGitDaemons()
 
-  await initRepo(gitDaemons.gitHub, "tripleightech", "command-bot-test.git", [])
+  await initRepo(gitDaemons.gitHub, "paritytech-stg", "command-bot-test.git", [])
   await initRepo(gitDaemons.gitHub, "somedev123", "command-bot-test.git", ["prBranch1"])
-  await initRepo(gitDaemons.gitLab, "tripleightech", "command-bot-test.git", [])
+  await initRepo(gitDaemons.gitLab, "paritytech-stg", "command-bot-test.git", [])
 
   const mockServers = ensureDefined(getMockServers())
 
@@ -96,11 +100,11 @@ beforeAll(async () => {
   await mockServers.gitHub.forGet("/organizations/123/members/somedev123").thenReply(204)
 
   await mockServers.gitHub
-    .forGet("/repos/tripleightech/command-bot-test/pulls/4")
+    .forGet("/repos/paritytech-stg/command-bot-test/pulls/4")
     .thenReply(200, restFixtures.github.pullRequest, jsonResponseHeaders)
 
   mockedEndpoints.pipeline = await mockServers.gitLab
-    .forGet("/api/v4/projects/tripleightech%2Fcommand-bot-test/repository/branches/cmd-bot%2F4")
+    .forGet("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/repository/branches/cmd-bot%2F4")
     .thenReply(200, restFixtures.gitlab.branches, jsonResponseHeaders)
 })
 
@@ -119,7 +123,7 @@ describe.each(commandsDataProvider)(
 
       const de = new DetachedExpectation()
       await mockServers.gitHub
-        .forPost("/repos/tripleightech/command-bot-test/issues/4/comments")
+        .forPost("/repos/paritytech-stg/command-bot-test/issues/4/comments")
         .thenCallback(async (request: CompletedRequest): Promise<requestHandlerDefinitions.CallbackResponseResult> => {
           const comment = (await request.body.getJson()) as { body: string }
           commentThatBotLeft = { author: "cmd-bot", body: comment.body, id: 555 }
@@ -130,7 +134,7 @@ describe.each(commandsDataProvider)(
 
           return {
             body: getIssueCommentPayload({
-              org: "tripleightech",
+              org: "paritytech-stg",
               repo: "command-bot-test",
               comment: commentThatBotLeft,
             }),
@@ -140,13 +144,13 @@ describe.each(commandsDataProvider)(
         })
 
       await mockServers.gitHub
-        .forPatch("/repos/tripleightech/command-bot-test/issues/comments/555")
+        .forPatch("/repos/paritytech-stg/command-bot-test/issues/comments/555")
         .thenCallback(async (request: CompletedRequest) => {
           const comment = (await request.body.getJson()) as { body: string }
           const existingComment = ensureDefined(commentThatBotLeft)
           existingComment.body = comment.body
           return {
-            body: getIssueCommentPayload({ org: "tripleightech", repo: "command-bot-test", comment: existingComment }),
+            body: getIssueCommentPayload({ org: "paritytech-stg", repo: "command-bot-test", comment: existingComment }),
             headers: jsonResponseHeaders,
             status: 200,
           }
@@ -160,7 +164,7 @@ describe.each(commandsDataProvider)(
       const mockServers = ensureDefined(getMockServers())
 
       const mockedPipelineEndpoint = await mockServers.gitLab
-        .forPost("/api/v4/projects/tripleightech%2Fcommand-bot-test/pipeline")
+        .forPost("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/pipeline")
         .withQuery({ ref: "cmd-bot/4" })
         .thenReply(201, restFixtures.gitlab.pendingPipeline, jsonResponseHeaders)
 
@@ -169,7 +173,7 @@ describe.each(commandsDataProvider)(
         .thenReply(200, restFixtures.gitlab.pendingPipeline, jsonResponseHeaders)
 
       await mockServers.gitLab
-        .forGet("/api/v4/projects/tripleightech%2Fcommand-bot-test/pipelines/61/jobs")
+        .forGet("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/pipelines/61/jobs")
         .thenReply(200, restFixtures.gitlab.jobs, jsonResponseHeaders)
 
       await until(async () => !(await mockedPipelineEndpoint.isPending()), 100, 50)
@@ -201,7 +205,7 @@ describe.each(commandsDataProvider)(
 
       const de = new DetachedExpectation()
       await mockServers.gitHub
-        .forPost("/repos/tripleightech/command-bot-test/issues/4/comments")
+        .forPost("/repos/paritytech-stg/command-bot-test/issues/4/comments")
         .thenCallback(async (request: CompletedRequest): Promise<requestHandlerDefinitions.CallbackResponseResult> => {
           const comment = (await request.body.getJson()) as { body: string }
           commentThatBotLeft = { author: "cmd-bot", body: comment.body, id: 555 }
@@ -210,7 +214,7 @@ describe.each(commandsDataProvider)(
 
           return {
             body: getIssueCommentPayload({
-              org: "tripleightech",
+              org: "paritytech-stg",
               repo: "command-bot-test",
               comment: commentThatBotLeft,
             }),

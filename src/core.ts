@@ -8,7 +8,7 @@ import { Context } from "./types"
   that it can be updated dynamically, without redeploying the application
 */
 const getBenchBotCommand = ({ tags }: { tags: string[] }) => {
-  return { gitlab: { job: { tags, variables: {} } }, commandStart: ['"$PIPELINE_SCRIPTS_DIR/bench-bot.sh"'] }
+  return { gitlab: { job: { tags, variables: {} } }, commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh"'] }
 }
 export type CommandConfiguration = {
   gitlab: {
@@ -27,11 +27,11 @@ export const commandsConfiguration: {
 } = {
   "try-runtime": {
     gitlab: { job: { tags: ["linux-docker"], variables: {} } },
-    commandStart: ['"$PIPELINE_SCRIPTS_DIR/try-runtime-bot.sh"'],
+    commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh"'],
   },
   fmt: {
     gitlab: { job: { tags: ["linux-docker"], variables: {} } },
-    commandStart: ['"$PIPELINE_SCRIPTS_DIR/fmt.sh"'],
+    commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"'],
     optionalCommandArgs: true,
   },
   "bench-bot": getBenchBotCommand({ tags: ["bench-bot"] }),

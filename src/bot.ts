@@ -96,19 +96,19 @@ export const parsePullRequestBotCommandLine = async (
       }
 
       const commandsConfiguration = await fetchCommandsConfiguration()
-      const configuration = commandsConfiguration[configurationName].command.configuration
+      const configuration = commandsConfiguration[configurationName]?.command?.configuration
 
-      // if presets has nothing - then it means that the command doesn't need any arguments and runs as is
-      if (Object.keys(commandsConfiguration[configurationName].command?.presets || [])?.length === 0) {
-        configuration.optionalCommandArgs = true
-      }
-
-      if (!Object.keys(configuration).length) {
+      if (typeof configuration === "undefined" || !Object.keys(configuration).length) {
         return new Error(
           `Could not find matching configuration ${configurationName}; available ones are ${Object.keys(
             commandsConfiguration,
           ).join(", ")}.`,
         )
+      }
+
+      // if presets has nothing - then it means that the command doesn't need any arguments and runs as is
+      if (Object.keys(commandsConfiguration[configurationName]?.command?.presets || [])?.length === 0) {
+        configuration.optionalCommandArgs = true
       }
 
       if (!commandLinePart && configuration.optionalCommandArgs !== true) {

@@ -10,7 +10,7 @@ import { getMockServers } from "./setup/mockServers"
 
 const restFixures = getRestFixtures({
   github: {
-    org: "tripleightech",
+    org: "paritytech-stg",
     repo: "command-bot-test",
     prAuthor: "somedev123",
     headBranch: "prBranch1",
@@ -32,7 +32,7 @@ describe("Job cancellation (GitHub webhook)", () => {
     lastCommentBody = comment.body
     return {
       body: getIssueCommentPayload({
-        org: "tripleightech",
+        org: "paritytech-stg",
         repo: "command-bot-test",
         comment: { author: "cmd-bot", body: comment.body, id: 555 },
       }),
@@ -44,9 +44,9 @@ describe("Job cancellation (GitHub webhook)", () => {
   beforeAll(async () => {
     const gitDaemons = await startGitDaemons()
 
-    await initRepo(gitDaemons.gitHub, "tripleightech", "command-bot-test.git", [])
+    await initRepo(gitDaemons.gitHub, "paritytech-stg", "command-bot-test.git", [])
     await initRepo(gitDaemons.gitHub, "somedev123", "command-bot-test.git", ["prBranch1"])
-    await initRepo(gitDaemons.gitLab, "tripleightech", "command-bot-test.git", [])
+    await initRepo(gitDaemons.gitLab, "paritytech-stg", "command-bot-test.git", [])
 
     const mockServers = ensureDefined(getMockServers())
 
@@ -57,11 +57,11 @@ describe("Job cancellation (GitHub webhook)", () => {
     await mockServers.gitHub.forGet("/organizations/123/members/somedev123").thenReply(204)
 
     await mockServers.gitHub
-      .forGet("/repos/tripleightech/command-bot-test/pulls/4")
+      .forGet("/repos/paritytech-stg/command-bot-test/pulls/4")
       .thenReply(200, restFixures.github.pullRequest, jsonResponseHeaders)
 
     mockedEndpoints.pipeline = await mockServers.gitLab
-      .forGet("/api/v4/projects/tripleightech%2Fcommand-bot-test/repository/branches/cmd-bot%2F4")
+      .forGet("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/repository/branches/cmd-bot%2F4")
       .thenReply(200, restFixures.gitlab.branches, jsonResponseHeaders)
   })
 
@@ -69,17 +69,17 @@ describe("Job cancellation (GitHub webhook)", () => {
     const mockServers = ensureDefined(getMockServers())
 
     await mockServers.gitHub
-      .forPost("/repos/tripleightech/command-bot-test/issues/4/comments")
+      .forPost("/repos/paritytech-stg/command-bot-test/issues/4/comments")
       .thenCallback(getCommentResponse)
 
     await mockServers.gitHub
-      .forPatch("/repos/tripleightech/command-bot-test/issues/comments/555")
+      .forPatch("/repos/paritytech-stg/command-bot-test/issues/comments/555")
       .thenCallback(getCommentResponse)
 
     await triggerWebhook("queueCommandComment")
 
     const mockedPipelineEndpoint = await mockServers.gitLab
-      .forPost("/api/v4/projects/tripleightech%2Fcommand-bot-test/pipeline")
+      .forPost("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/pipeline")
       .withQuery({ ref: "cmd-bot/4" })
       .thenReply(201, restFixures.gitlab.pendingPipeline, jsonResponseHeaders)
 
@@ -88,7 +88,7 @@ describe("Job cancellation (GitHub webhook)", () => {
       .thenReply(200, restFixures.gitlab.pendingPipeline, jsonResponseHeaders)
 
     await mockServers.gitLab
-      .forGet("/api/v4/projects/tripleightech%2Fcommand-bot-test/pipelines/61/jobs")
+      .forGet("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/pipelines/61/jobs")
       .thenReply(200, restFixures.gitlab.jobs, jsonResponseHeaders)
 
     await until(async () => !(await mockedPipelineEndpoint.isPending()), 100, 50)

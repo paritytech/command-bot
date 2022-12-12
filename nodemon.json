@@ -1,3 +1,7 @@
 {
-  "ignore": ["src/schema/*.ts"]
+  "verbose": false,
+  "watch": ["src/", ".env.cjs"],
+  "ignore": ["test/", "node_modules/", ".git", "src/schema/*.ts"],
+  "ext": ".ts",
+  "exec": "node -r ts-node/register -r ./.env.cjs -r tsconfig-paths/register"
 }

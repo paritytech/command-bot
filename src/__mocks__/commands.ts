@@ -4,12 +4,12 @@ import { CommandConfigs } from "src/types"
 
 export const cmd: CommandConfigs = {
   bench: {
-    $schema: "../../schema.cmd.json",
+    $schema: "../../node_modules/command-bot/src/schema/schema.cmd.json",
     command: {
       description: "Runs `benchmark pallet` or `benchmark overhead` against your PR and commits back updated weights",
       configuration: {
-        gitlab: { job: { tags: ["bench-bot"] }, variables: {} },
-        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh'],
+        gitlab: { job: { tags: ["bench-bot"], variables: {} } },
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh"'],
       },
       presets: {
         substrate: {
@@ -112,21 +112,21 @@ export const cmd: CommandConfigs = {
     },
   },
   fmt: {
-    $schema: "../../schema.cmd.json",
+    $schema: "../../node_modules/command-bot/src/schema/schema.cmd.json",
     command: {
       description: "RustFMT. Formatting Rust code according to style guidelines and commits to your PR.",
       configuration: {
-        gitlab: { job: { tags: ["linux-docker"] }, variables: {} },
-        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh'],
+        gitlab: { job: { tags: ["linux-docker"], variables: {} } },
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"'],
       },
     },
   },
   sample: {
-    $schema: "../../schema.cmd.json",
+    $schema: "../../node_modules/command-bot/src/schema/schema.cmd.json",
     command: {
       configuration: {
         gitlab: { job: { tags: ["kubernetes-parity-build"], variables: {} } },
-        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh'],
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh"'],
       },
       presets: {
         default: {
@@ -138,13 +138,13 @@ export const cmd: CommandConfigs = {
     },
   },
   "try-runtime": {
-    $schema: "../../schema.cmd.json",
+    $schema: "../../node_modules/command-bot/src/schema/schema.cmd.json",
     command: {
       description:
         "Runs `cargo run --release --quiet --features=try-runtime try-runtime --chain=<CHAIN> --execution=Wasm --no-spec-check-panic on-runtime-upgrade live --uri=<URI>`",
       configuration: {
-        gitlab: { job: { tags: ["linux-docker"] }, variables: {} },
-        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh'],
+        gitlab: { job: { tags: ["linux-docker"], variables: {} } },
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh"'],
       },
       presets: {
         default: { args: { chain: { label: "Chain", rule: "/^[a-z_-]+$/" }, uri: { label: "URI", rule: [".*"] } } },
@@ -153,4 +153,5 @@ export const cmd: CommandConfigs = {
   },
 }
 
-export const fetchCommandsConfiguration = jest.fn(() => Promise.resolve(cmd))
+// eslint-disable-next-line @typescript-eslint/require-await
+export const fetchCommandsConfiguration = jest.fn(async () => cmd)

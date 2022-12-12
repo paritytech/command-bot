@@ -1,5 +1,5 @@
 import { promises as fs } from "fs"
-import mockttp from "mockttp"
+import * as mockttp from "mockttp"
 import selfsigned from "selfsigned"
 
 export type MockServers = {

@@ -2,7 +2,7 @@ import assert from "assert"
 import { readFile, writeFile } from "fs/promises"
 import path from "path"
 
-import { ensureDir } from "./shell"
+import { ensureDirSync } from "./shell"
 import { PipelineScripts } from "./types"
 import { envNumberVar, envVar } from "./utils"
 
@@ -14,7 +14,7 @@ const pipelineScripts: PipelineScripts = { repository, ref }
 const disablePRComment = !!process.env.DISABLE_PR_COMMENT
 
 const dataPath = envVar("DATA_PATH")
-await ensureDir(dataPath)
+ensureDirSync(dataPath)
 
 const appDbVersionPath = path.join(dataPath, "task-db-version")
 const shouldClearTaskDatabaseOnStart = process.env.TASK_DB_VERSION

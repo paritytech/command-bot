@@ -2,11 +2,8 @@ import { jest } from "@jest/globals"
 
 import { ParsedBotCommand, parsePullRequestBotCommandLine } from "./bot"
 import { logger } from "./logger"
-import { cmd } from "./__mocks__/commands"
 
-jest.mock("src/commands", () => {
-  return { parsePullRequestBotCommandLine: jest.fn(() => Promise.resolve(cmd)) }
-})
+jest.mock("src/commands")
 
 logger.options.minLogLevel = "fatal"
 
@@ -25,21 +22,21 @@ const dataProvider: DataProvider[] = [
   },
   {
     suitName: "check wrong set -v, validation should trigger error",
-    commandLine: "/cmd queue -v PIPELINE_SCRIPTS_REF -c bench-bot $ runtime ",
+    commandLine: "/cmd queue -v PIPELINE_SCRIPTS_REF -c bench $ runtime ",
     expectedResponse: new Error(`Variable token "PIPELINE_SCRIPTS_REF" doesn't have a value separator ('=')`),
   },
   {
     suitName: "bench-bot",
     commandLine:
-      "/cmd queue -v PIPELINE_SCRIPTS_REF=hello-is-this-even-used -c bench-bot $ runtime kusama-dev pallet_referenda",
+      "/cmd queue -v PIPELINE_SCRIPTS_REF=hello-is-this-even-used -c bench $ runtime kusama-dev pallet_referenda",
     expectedResponse: {
       subcommand: "queue",
       configuration: {
-        commandStart: ['"$PIPELINE_SCRIPTS_DIR/bench-bot.sh"'],
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh"'],
         gitlab: { job: { tags: ["bench-bot"], variables: {} } },
       },
       variables: { PIPELINE_SCRIPTS_REF: "hello-is-this-even-used" },
-      command: '"$PIPELINE_SCRIPTS_DIR/bench-bot.sh" runtime kusama-dev pallet_referenda',
+      command: '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" runtime kusama-dev pallet_referenda',
     },
   },
   {
@@ -49,12 +46,12 @@ const dataProvider: DataProvider[] = [
     expectedResponse: {
       subcommand: "queue",
       configuration: {
-        commandStart: ['"$PIPELINE_SCRIPTS_DIR/try-runtime-bot.sh"'],
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh"'],
         gitlab: { job: { tags: ["linux-docker"], variables: {} } },
       },
       variables: { RUST_LOG: "remote-ext=debug,runtime=trace" },
       command:
-        '"$PIPELINE_SCRIPTS_DIR/try-runtime-bot.sh" --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443',
+        '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443',
     },
   },
   {
@@ -63,12 +60,12 @@ const dataProvider: DataProvider[] = [
     expectedResponse: {
       subcommand: "queue",
       configuration: {
-        commandStart: ['"$PIPELINE_SCRIPTS_DIR/fmt.sh"'],
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"'],
         gitlab: { job: { tags: ["linux-docker"], variables: {} } },
         optionalCommandArgs: true,
       },
       variables: {},
-      command: '"$PIPELINE_SCRIPTS_DIR/fmt.sh" 1',
+      command: '"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh" 1',
     },
   },
   {
@@ -77,17 +74,17 @@ const dataProvider: DataProvider[] = [
     expectedResponse: {
       subcommand: "queue",
       configuration: {
-        commandStart: ['"$PIPELINE_SCRIPTS_DIR/fmt.sh"'],
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"'],
         gitlab: { job: { tags: ["linux-docker"], variables: {} } },
         optionalCommandArgs: true,
       },
       variables: {},
-      command: '"$PIPELINE_SCRIPTS_DIR/fmt.sh"',
+      command: '"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"',
     },
   },
   {
     suitName: "bench-bot, no args when not allowed, should return error",
-    commandLine: "/cmd queue -c bench-bot",
+    commandLine: "/cmd queue -c bench",
     expectedResponse: new Error(`Could not find start of command (" $ ")`),
   },
   {
@@ -115,7 +112,7 @@ const dataProvider: DataProvider[] = [
     suitName: "non existed config must return error with explanation",
     commandLine: "/cmd queue -c xz",
     expectedResponse: new Error(
-      `Could not find matching configuration xz; available ones are try-runtime, fmt, bench-bot, test-bench-bot, sample.`,
+      `Could not find matching configuration xz; available ones are bench, fmt, sample, try-runtime.`,
     ),
   },
 ]

@@ -24,9 +24,10 @@ RUN apt-get update && \
 
 FROM base as builder
 
-COPY . /build
-WORKDIR /build
+COPY . /builder
+WORKDIR /builder
 RUN yarn --ignore-optional --immutable
+RUN yarn build
 
 # ---------------------- app ---------------------- #
 
@@ -34,7 +35,7 @@ FROM builder AS app
 
 WORKDIR /app
 
-COPY --from=builder /build/ /app
+COPY --from=builder /builder/ /app
 
 RUN chown -R node:node /app
 

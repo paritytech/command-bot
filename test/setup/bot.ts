@@ -29,6 +29,7 @@ export async function launchBot(gitHubUrl: string, gitLabUrl: string, gitDaemons
     GitHub git: ${gitDaemons.gitHub.url},
     GitLab git: ${gitDaemons.gitLab.url}`)
 
+  await spawn("yarn", ["build"], { env: Object.assign({}, process.env, botEnv), stdio: "pipe" })
   bot = spawn("yarn", ["start"], { env: Object.assign({}, process.env, botEnv), stdio: "pipe" })
 
   await new Promise<void>((resolve, reject) => {
@@ -87,6 +88,9 @@ function getBotEnv(
     MASTER_TOKEN: "master_token",
     DATA_PATH: path.join(process.cwd(), "data"),
 
+    PIPELINE_SCRIPTS_REPOSITORY: "https://github.com/paritytech/command-bot-scripts.git",
+    PIPELINE_SCRIPTS_REF: "main",
+
     PRIVATE_KEY_BASE64: readFileSync(path.join(process.cwd(), "test", "testing-app.txt"), "base64"),
 
     WEBHOOK_SECRET: "webhook_secret_value",
@@ -102,7 +106,7 @@ function getBotEnv(
     GITLAB_ACCESS_TOKEN_USERNAME: "gitlab_token_holder",
     GITLAB_ACCESS_TOKEN: "gitlab_access_token_value",
 
-    GITLAB_PUSH_NAMESPACE: "tripleightech",
+    GITLAB_PUSH_NAMESPACE: "paritytech-stg",
     GITLAB_JOB_IMAGE: "quay.io/buildah/stable",
 
     GITLAB_REMOTE_URL: gitLabRemoteUrl,

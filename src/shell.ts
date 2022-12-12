@@ -8,10 +8,16 @@ import { Readable as ReadableStream } from "stream"
 import { logger } from "./logger"
 import { ToString } from "./types"
 import { obfuscate } from "./utils"
+import { mkdirSync } from "fs"
 
 export const ensureDir = async (dir: string): Promise<void> => {
   // mkdir doesn't throw an error if the directory already exists
   await mkdir(dir, { recursive: true })
+}
+
+export const ensureDirSync = (dir: string): void => {
+  // mkdir doesn't throw an error if the directory already exists
+  mkdirSync(dir, { recursive: true })
 }
 
 export const initDatabaseDir = async (dir: string): Promise<void> => {

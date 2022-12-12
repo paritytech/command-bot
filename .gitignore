@@ -3,7 +3,7 @@ node_modules/
 *.pem
 build/
 git/
-data/
+data*
 .idea
 .vscode
 

@@ -11,7 +11,6 @@ import { CommandConfigs } from "./types"
 const CMD_ROOT_FOLDER = "commands"
 
 export async function fetchCommandsConfiguration(): Promise<CommandConfigs> {
-  console.error("-------------------------------------------------------")
   const cmdRunner = new CommandRunner()
   const scriptsFolder = "scripts"
   const scriptsPath = path.join(config.dataPath, scriptsFolder)
