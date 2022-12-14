@@ -8,12 +8,12 @@ import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db"
 
 import { setupApi } from "./api"
 import { setupBot } from "./bot"
+import { config } from "./config"
 import { logger } from "./logger"
 import { ensureDir, initDatabaseDir } from "./shell"
 import { requeueUnterminatedTasks } from "./task"
 import { Context } from "./types"
 import { Err, Ok } from "./utils"
-import { config } from "./config"
 
 export const setup = async (
   bot: Probot,

@@ -1,11 +1,11 @@
 import assert from "assert"
-import { readFile, writeFile } from "fs/promises"
+import { readFileSync, writeFileSync } from "fs"
+import { isError } from "lodash"
 import path from "path"
 
 import { ensureDirSync } from "./shell"
 import { PipelineScripts } from "./types"
 import { envNumberVar, envVar } from "./utils"
-import { readFileSync, writeFileSync } from "fs"
 
 const repository = envVar("PIPELINE_SCRIPTS_REPOSITORY")
 const ref = process.env.PIPELINE_SCRIPTS_REF
@@ -34,7 +34,7 @@ const shouldClearTaskDatabaseOnStart = process.env.TASK_DB_VERSION
               path: '/foo'
             }
           */
-            !(error instanceof Error) ||
+            !isError(error) ||
             (error as { code?: string })?.code !== "ENOENT"
           ) {
             throw error

@@ -46,6 +46,7 @@ Comment in a pull request:
 In `[bot-args]` you should provide the following options
 
 - `-c` / `--configuration`: select one of the following configurations
+
   - `bench-bot`: runs
     [`bench-bot`](https://github.com/paritytech/pipeline-scripts/blob/master/bench-bot.sh)
     `[args]`
@@ -100,8 +101,7 @@ curl \
 
 ## Queue <a name="api-command-queue"></a>
 
-Use a [Personal Token](#api-create-token) for queueing a command through `POST
-/api/queue`.
+Use a [Personal Token](#api-create-token) for queueing a command through `POST /api/queue`.
 
 ```sh
 curl \
@@ -136,8 +136,7 @@ before benchmarks.
 ## Cancel <a name="api-command-cancel"></a>
 
 `POST /api/queue` will return a `{ task: { id: string } }` response. The
-`task.id` can used for cancelling an ongoing command through `DELETE
-/api/task/:task_id`.
+`task.id` can used for cancelling an ongoing command through `DELETE /api/task/:task_id`.
 
 ```sh
 curl \
@@ -218,29 +217,29 @@ once the application starts.
 1. [Set up the GitHub App](#github-app)
 2. [Set up the command-bot application](#setup)
 
-    During development it's handy to use a [smee.io](https://smee.io/) proxy,
-    through the `WEBHOOK_PROXY_URL` environment variable, for receiving GitHub
-    Webhook Events in your local server instance.
+   During development it's handy to use a [smee.io](https://smee.io/) proxy,
+   through the `WEBHOOK_PROXY_URL` environment variable, for receiving GitHub
+   Webhook Events in your local server instance.
 
 3. [Install the GitHub app](#github-app-installation) in a GitHub repository
 4. Create a repository in GitLab and set up [`GITLAB_PUSH_NAMESPACE`](./.env.example.cjs)
-  along with [`GITLAB_ACCESS_TOKEN`](./.env.example.cjs)
-  to run the commands for the GitHub repository (Step 3).
+   along with [`GITLAB_ACCESS_TOKEN`](./.env.example.cjs)
+   to run the commands for the GitHub repository (Step 3).
 
-    Note: The GitLab repository name should match how the repository is named on
-    GitHub.
+   Note: The GitLab repository name should match how the repository is named on
+   GitHub.
 
 5. Run `yarn` to install the dependencies
 6. Run `yarn dev` to start a development server or `yarn watch` for a
-  development server which automatically restarts when you make changes to the
-  source files
+   development server which automatically restarts when you make changes to the
+   source files
 7. Trigger the [commands](#pull-request-commands) in the repositories where
-  you've installed the GitHub App (Step 3) and check if it works
+   you've installed the GitHub App (Step 3) and check if it works
 
-    The `sample` configuration is available for debugging purposes.
+   The `sample` configuration is available for debugging purposes.
 
-    `/cmd queue -c sample $ hi` will run `echo hi` in a GitLab job (GitLab
-    repository from Step 4).
+   `/cmd queue -c sample $ hi` will run `echo hi` in a GitLab job (GitLab
+   repository from Step 4).
 
 # Deployment <a name="deployment"></a>
 

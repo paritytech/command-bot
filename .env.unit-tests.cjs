@@ -15,3 +15,4 @@ process.env.PRIVATE_KEY_BASE64 ??= Buffer.from("key123", "utf-8").toString("base
 process.env.DATA_PATH ??= path.join(__dirname, "data")
 process.env.ALLOWED_ORGANIZATIONS ??= "123,456"
 process.env.MASTER_TOKEN ??= "placeholder"
+process.env.TASK_DB_VERSION ??= "123"

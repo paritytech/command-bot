@@ -12,4 +12,4 @@ updates:
         # Ignore minor/patch upgrades; only bother with opening the upgrade PR
         # when a new major release comes out; security updates are nevertheless
         # unaffected by this setting and will continue to work.
-        update-types: ["version-update:semver-patch","version-update:semver-minor"]
+        update-types: ["version-update:semver-patch", "version-update:semver-minor"]

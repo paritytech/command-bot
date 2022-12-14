@@ -75,6 +75,7 @@ export const validatedFetch = async <T>(
   schema: Joi.AnySchema,
   { decoding }: { decoding: "json" } = { decoding: "json" },
 ): Promise<T> => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const body = await (async () => {
     switch (decoding) {
       case "json": {

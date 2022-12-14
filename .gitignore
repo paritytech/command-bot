@@ -13,3 +13,4 @@ data*
 coverage
 
 src/schema/schema.cmd.d.ts
+.eslintrc.cjs

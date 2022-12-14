@@ -1,5 +1,6 @@
 import { ChildProcess, spawn } from "child_process"
 import { randomUUID } from "crypto"
+import { mkdirSync } from "fs"
 import { mkdir, rm } from "fs/promises"
 import { Logger } from "opstooling-js"
 import path from "path"
@@ -8,7 +9,6 @@ import { Readable as ReadableStream } from "stream"
 import { logger } from "./logger"
 import { ToString } from "./types"
 import { obfuscate } from "./utils"
-import { mkdirSync } from "fs"
 
 export const ensureDir = async (dir: string): Promise<void> => {
   // mkdir doesn't throw an error if the directory already exists

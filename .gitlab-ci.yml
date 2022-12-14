@@ -5,25 +5,25 @@ stages:
   - production
 
 variables:
-  IMAGE_NAME:                      docker.io/paritytech/command-bot
-  CI_IMAGE:                        ${IMAGE_NAME}:ci
-  BUILDAH_IMAGE:                   "quay.io/buildah/stable:v1.27"
-  KUBE_NAMESPACE:                  try-runtime
-  DOCKER_TAG:                      ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
-  DATA_PATH:                       /data
-  PING_PORT:                       3001
-  TASK_DB_VERSION:                 v3
-  DOCKERFILE:                      Dockerfile
-  VAULT_ADDR:                      "https://vault.parity-mgmt-vault.parity.io"
-  VAULT_AUTH_PATH:                 "gitlab-parity-io-jwt"
-  VAULT_AUTH_ROLE:                 "cicd_gitlab_parity_${CI_PROJECT_NAME}"
-  HELM_SECRETS_DRIVER:             vals
+  IMAGE_NAME: docker.io/paritytech/command-bot
+  CI_IMAGE: ${IMAGE_NAME}:ci
+  BUILDAH_IMAGE: "quay.io/buildah/stable:v1.27"
+  KUBE_NAMESPACE: try-runtime
+  DOCKER_TAG: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
+  DATA_PATH: /data
+  PING_PORT: 3001
+  TASK_DB_VERSION: v3
+  DOCKERFILE: Dockerfile
+  VAULT_ADDR: "https://vault.parity-mgmt-vault.parity.io"
+  VAULT_AUTH_PATH: "gitlab-parity-io-jwt"
+  VAULT_AUTH_ROLE: "cicd_gitlab_parity_${CI_PROJECT_NAME}"
+  HELM_SECRETS_DRIVER: vals
 
 default:
   image: $CI_IMAGE
   tags:
-    -  kubernetes-parity-build
-  interruptible:                   true
+    - kubernetes-parity-build
+  interruptible: true
   retry:
     max: 2
     when:
@@ -31,46 +31,46 @@ default:
       - unknown_failure
       - api_failure
 
-.common-refs:                      &common-refs
+.common-refs: &common-refs
   rules:
     - if: $BUILD
       when: never
     - if: $CI_COMMIT_REF_NAME == "master"
-    - if: $CI_COMMIT_REF_NAME =~ /^[0-9]+$/                         # PRs
+    - if: $CI_COMMIT_REF_NAME =~ /^[0-9]+$/ # PRs
 
-.test-refs:                        &test-refs
+.test-refs: &test-refs
   rules:
-    - if: $CI_COMMIT_REF_NAME =~ /^[0-9]+$/                         # PRs
+    - if: $CI_COMMIT_REF_NAME =~ /^[0-9]+$/ # PRs
 
 # to create, publish and deploy image
-.staging-refs:                     &staging-refs
+.staging-refs: &staging-refs
   rules:
     - if: $CI_COMMIT_REF_NAME == "master"
-    - if: $CI_COMMIT_REF_NAME =~ /^v[0-9]+\.[0-9]+.*$/             # i.e. v1.0, v2.1rc1
-    - if: $CI_COMMIT_REF_NAME =~ /^stg-v[0-9]+\.[0-9]+.*$/         # i.e. stg-v1.0, stg-v2.1rc1
+    - if: $CI_COMMIT_REF_NAME =~ /^v[0-9]+\.[0-9]+.*$/ # i.e. v1.0, v2.1rc1
+    - if: $CI_COMMIT_REF_NAME =~ /^stg-v[0-9]+\.[0-9]+.*$/ # i.e. stg-v1.0, stg-v2.1rc1
 
-.production-refs:                  &production-refs
+.production-refs: &production-refs
   rules:
-    - if: $CI_COMMIT_REF_NAME =~ /^v[0-9]+\.[0-9]+.*$/             # i.e. v1.0, v2.1rc1
+    - if: $CI_COMMIT_REF_NAME =~ /^v[0-9]+\.[0-9]+.*$/ # i.e. v1.0, v2.1rc1
 
-.master-refs:                      &master-refs
+.master-refs: &master-refs
   rules:
     - if: $BUILD
       when: never
     - if: $CI_COMMIT_REF_NAME == "master"
 
 # test that docker image can be built
-.build-only-docker-image:          &build-only-docker-image
-  image:                           $BUILDAH_IMAGE
+.build-only-docker-image: &build-only-docker-image
+  image: $BUILDAH_IMAGE
   script:
     - buildah bud
-          --format=docker
-          --target="$TARGET"
-          --tag "$IMAGE_NAME:$DOCKER_TAG"
-          --file "$DOCKERFILE" .
+      --format=docker
+      --target="$TARGET"
+      --tag "$IMAGE_NAME:$DOCKER_TAG"
+      --file "$DOCKERFILE" .
 
-.build-push-docker-image:          &build-push-docker-image
-  image:                           $BUILDAH_IMAGE
+.build-push-docker-image: &build-push-docker-image
+  image: $BUILDAH_IMAGE
   script:
     - echo "$Docker_Hub_Pass_Parity" |
       buildah login --username "$Docker_Hub_User_Parity" --password-stdin docker.io
@@ -84,46 +84,46 @@ default:
     - buildah logout --all
 
 test-lint:
-  <<:                              *common-refs
-  stage:                           test
+  <<: *common-refs
+  stage: test
   script:
     - yarn --immutable
     - yarn lint
 
 test-unit:
-  <<:                              *common-refs
-  stage:                           test
+  <<: *common-refs
+  stage: test
   script:
     - yarn --immutable
     - yarn test:unit
 
 test-integration:
-  <<:                              *common-refs
-  stage:                           test
+  <<: *common-refs
+  stage: test
   script:
     - yarn --immutable
     - yarn test:integration
 
 build-docker-app:
-  stage:                           build
-  <<:                              *test-refs
-  <<:                              *build-only-docker-image
+  stage: build
+  <<: *test-refs
+  <<: *build-only-docker-image
   variables:
-    TARGET:                        app
+    TARGET: app
 
 build-docker-ci:
-  stage:                           build
-  <<:                              *test-refs
-  <<:                              *build-only-docker-image
+  stage: build
+  <<: *test-refs
+  <<: *build-only-docker-image
   variables:
-    TARGET:                        ci
-  allow_failure:                   true
+    TARGET: ci
+  allow_failure: true
 
 #### App deployment
 
 # TODO: remove when prod is moved to parity-prod
-.deploy-k8s:                       &deploy-k8s
-  image:                           paritytech/kubetools:helm3
+.deploy-k8s: &deploy-k8s
+  image: paritytech/kubetools:helm3
   script:
     # Change the app version during build so that Kubernetes is able to update
     # the deployment even if the images' tags did not change
@@ -160,8 +160,8 @@ build-docker-ci:
       --set env.LOG_FORMAT=json
 
 # TODO: rename to .deploy-k8s when prod is moved to parity-prod
-.deploy-k8s-stg:                   &deploy-k8s-stg
-  image:                           paritytech/kubetools:helm3
+.deploy-k8s-stg: &deploy-k8s-stg
+  image: paritytech/kubetools:helm3
   script:
     # Change the app version during build so that Kubernetes is able to update
     # the deployment even if the images' tags did not change
@@ -176,76 +176,75 @@ build-docker-ci:
     - helm dependency update helm-stg/
     - helm secrets --version
     - helm secrets upgrade
-        --install
-        --atomic
-        --timeout 300s
-        --namespace ${CI_PROJECT_NAME}
-        --values helm-stg/values.yaml
-        --values helm-stg/values-$ENVIRONMENT.yaml
-        --set common.image.repository="$IMAGE_NAME"
-        --set common.image.tag="$DOCKER_TAG"
-        --set common.persistence.mountPath="$DATA_PATH"
-        --set env.DATA_PATH="$DATA_PATH"
-        --set env.IS_DEPLOYMENT="true"
-        --set env.TMPDIR="$DATA_PATH/tmp"
-        --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
-        --set env.PING_PORT="$PING_PORT"
-        --set env.LOG_FORMAT=json
-        $CI_PROJECT_NAME helm-stg/
+      --install
+      --atomic
+      --timeout 300s
+      --namespace ${CI_PROJECT_NAME}
+      --values helm-stg/values.yaml
+      --values helm-stg/values-$ENVIRONMENT.yaml
+      --set common.image.repository="$IMAGE_NAME"
+      --set common.image.tag="$DOCKER_TAG"
+      --set common.persistence.mountPath="$DATA_PATH"
+      --set env.DATA_PATH="$DATA_PATH"
+      --set env.IS_DEPLOYMENT="true"
+      --set env.TMPDIR="$DATA_PATH/tmp"
+      --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
+      --set env.PING_PORT="$PING_PORT"
+      --set env.LOG_FORMAT=json
+      $CI_PROJECT_NAME helm-stg/
 
-.uninstall-deployment:             &uninstall-deployment
-  image:                           paritytech/kubetools:helm3
-  stage:                           production
+.uninstall-deployment: &uninstall-deployment
+  image: paritytech/kubetools:helm3
+  stage: production
   script:
     - helm uninstall "$KUBE_NAMESPACE" --namespace "$KUBE_NAMESPACE"
 
 build-push-docker-app:
-  stage:                           build
-  <<:                              *staging-refs
-  <<:                              *build-push-docker-image
+  stage: build
+  <<: *staging-refs
+  <<: *build-push-docker-image
   variables:
-    TARGET:                        app
+    TARGET: app
 
 deploy-stg:
-  stage:                           staging
+  stage: staging
   #TODO: don't forget to rename to *deploy-k8s
-  <<:                              *deploy-k8s-stg
-  <<:                              *staging-refs
+  <<: *deploy-k8s-stg
+  <<: *staging-refs
   variables:
-    CI_IMAGE:                      paritytech/kubetools:3.5.3
-    ENVIRONMENT:                   parity-stg
+    CI_IMAGE: paritytech/kubetools:3.5.3
+    ENVIRONMENT: parity-stg
   environment:
-    name:                          parity-stg
+    name: parity-stg
 
 deploy-production:
-  <<:                              *deploy-k8s
-  <<:                              *production-refs
-  stage:                           production
+  <<: *deploy-k8s
+  <<: *production-refs
+  stage: production
   environment:
     name: parity-chains
-
 
 # TODO: remove Manual section when prod is moved to parity-prod
 #### >> Manual
 
 build-production-image-manual:
-  <<:                              *build-push-docker-image
-  stage:                           build
+  <<: *build-push-docker-image
+  stage: build
   variables:
-    TARGET:                        app
+    TARGET: app
   rules:
     - if: "$BUILD == 'production'"
 
 deploy-production-manual:
-  <<:                              *deploy-k8s
+  <<: *deploy-k8s
   environment:
     name: parity-chains
-  stage:                           production
+  stage: production
   rules:
     - if: '$BUILD == "production" || $DEPLOY == "production"'
 
 uninstall-production:
-  <<:                              *uninstall-deployment
+  <<: *uninstall-deployment
   environment:
     name: parity-chains
   rules:
@@ -254,17 +253,17 @@ uninstall-production:
 #### CI images
 
 build-ci-image-manual:
-  <<:                              *build-push-docker-image
-  stage:                           build
+  <<: *build-push-docker-image
+  stage: build
   variables:
-    TARGET:                        ci
+    TARGET: ci
   rules:
     - if: "$BUILD == 'ci'"
 
 build-ci-image:
-  <<:                              *master-refs
-  <<:                              *build-push-docker-image
+  <<: *master-refs
+  <<: *build-push-docker-image
   variables:
-    TARGET:                        ci
-  stage:                           build
-  allow_failure:                   true
+    TARGET: ci
+  stage: build
+  allow_failure: true

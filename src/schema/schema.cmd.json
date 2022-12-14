@@ -71,7 +71,6 @@
                     "[a-z]": {
                       "type": "object",
                       "properties": {
-
                         "label": {
                           "type": "string"
                         },
