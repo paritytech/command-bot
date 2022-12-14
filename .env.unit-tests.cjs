@@ -1,0 +1,17 @@
+const fs = require("fs")
+const path = require("path")
+process.env.WEBHOOK_SECRET ??= "placeholder"
+process.env.APP_ID ??= 123
+process.env.CLIENT_ID ??= "placeholder"
+process.env.CLIENT_SECRET ??= "placeholder"
+process.env.GITLAB_DOMAIN ??= "placeholder"
+process.env.GITLAB_PUSH_NAMESPACE ??= "placeholder"
+process.env.GITLAB_JOB_IMAGE ??= "placeholder"
+process.env.GITLAB_ACCESS_TOKEN ??= "placeholder"
+process.env.GITLAB_ACCESS_TOKEN_USERNAME ??= "placeholder"
+process.env.PIPELINE_SCRIPTS_REPOSITORY ??= "https://github.com/paritytech/command-bot-scripts.git"
+process.env.PIPELINE_SCRIPTS_REF ??= "main"
+process.env.PRIVATE_KEY_BASE64 ??= Buffer.from("key123", "utf-8").toString("base64")
+process.env.DATA_PATH ??= path.join(__dirname, "data")
+process.env.ALLOWED_ORGANIZATIONS ??= "123,456"
+process.env.MASTER_TOKEN ??= "placeholder"

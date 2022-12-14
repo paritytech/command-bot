@@ -88,7 +88,7 @@ test-lint:
   stage:                           test
   script:
     - yarn --immutable
-    - pre-commit run --color=always --all
+    - yarn lint
 
 test-unit:
   <<:                              *common-refs
