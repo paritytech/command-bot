@@ -13,7 +13,7 @@ export const cmd: CommandConfigs = {
       },
       presets: {
         substrate: {
-          label: "Pallet Benchmark for Substrate",
+          description: "Pallet Benchmark for Substrate",
           repos: ["substrate"],
           args: {
             type: { label: "Type of bench", type_one_of: ["pallet"] },
@@ -22,7 +22,7 @@ export const cmd: CommandConfigs = {
           },
         },
         polkadot: {
-          label: "Pallet Benchmark for Polkadot",
+          description: "Pallet Benchmark for Polkadot",
           repos: ["polkadot"],
           args: {
             type: { label: "Type of bench", type_one_of: ["runtime", "xcm"] },
@@ -34,7 +34,7 @@ export const cmd: CommandConfigs = {
           },
         },
         "cumulus-assets": {
-          label: "Pallet Benchmark for Cumulus [assets]",
+          description: "Pallet Benchmark for Cumulus [assets]",
           repos: ["cumulus"],
           args: {
             type: { label: "Type of bench", type_one_of: ["xcm", "pallet"] },
@@ -44,7 +44,7 @@ export const cmd: CommandConfigs = {
           },
         },
         "cumulus-collectives": {
-          label: "Pallet Benchmark for Cumulus [collectives]",
+          description: "Pallet Benchmark for Cumulus [collectives]",
           repos: ["cumulus"],
           args: {
             type: { label: "Type of bench", type_one_of: ["xcm", "pallet"] },
@@ -54,7 +54,7 @@ export const cmd: CommandConfigs = {
           },
         },
         "cumulus-contracts": {
-          label: "Pallet Benchmark for Cumulus [contracts]",
+          description: "Pallet Benchmark for Cumulus [contracts]",
           repos: ["cumulus"],
           args: {
             type: { label: "Type of bench", type_one_of: ["xcm", "pallet"] },
@@ -64,7 +64,7 @@ export const cmd: CommandConfigs = {
           },
         },
         "cumulus-starters": {
-          label: "Pallet Benchmark for Cumulus [starters]",
+          description: "Pallet Benchmark for Cumulus [starters]",
           repos: ["cumulus"],
           args: {
             type: { label: "Type of bench", type_one_of: ["xcm", "pallet"] },
@@ -74,7 +74,7 @@ export const cmd: CommandConfigs = {
           },
         },
         "cumulus-testing": {
-          label: "Pallet Benchmark for Cumulus [testing]",
+          description: "Pallet Benchmark for Cumulus [testing]",
           repos: ["cumulus"],
           args: {
             type: { label: "Type of bench", type_one_of: ["xcm", "pallet"] },
@@ -84,13 +84,11 @@ export const cmd: CommandConfigs = {
           },
         },
         "substrate-overhead": {
-          label: "Overhead for Substrate",
           description: "Runs `benchmark overhead` and commits back to PR the updated `extrinsic_weights.rs` files",
           repos: ["substrate"],
           args: { type: { label: "Type of bench", type_one_of: ["overhead"] } },
         },
         "polkadot-overhead": {
-          label: "Overhead for Polkadot",
           description: "Runs `benchmark overhead` and commits back to PR the updated `extrinsic_weights.rs` files",
           repos: ["polkadot"],
           args: {
@@ -99,7 +97,6 @@ export const cmd: CommandConfigs = {
           },
         },
         "cumulus-overhead": {
-          label: "Overhead for Cumulus",
           description: "Runs `benchmark overhead` and commits back to PR the updated `extrinsic_weights.rs` files",
           repos: ["cumulus"],
           args: {
@@ -147,7 +144,10 @@ export const cmd: CommandConfigs = {
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh"'],
       },
       presets: {
-        default: { args: { chain: { label: "Chain", rule: "/^[a-z_-]+$/" }, uri: { label: "URI", rule: [".*"] } } },
+        default: {
+          description: "1",
+          args: { chain: { label: "Chain", rule: "/^[a-z_-]+$/" }, uri: { label: "URI", rule: [".*"] } },
+        },
       },
     },
   },

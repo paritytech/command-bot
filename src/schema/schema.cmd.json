@@ -46,58 +46,67 @@
         },
         "presets": {
           "type": "object",
-          "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "description": {
-                "type": "string"
-              },
-              "repos": {
-                "type": "array",
-                "items": {
+          "patternProperties": {
+            "[a-z]": {
+              "type": "object",
+              "properties": {
+                "description": {
                   "type": "string"
-                }
-              },
-              "env": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "args": {
-                "type": "object",
-                "items": {
+                },
+                "repos": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "env": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "args": {
                   "type": "object",
-                  "properties": {
-                    "type_one_of": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "type_many_of": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "type_rule": {
-                      "type": "string"
-                    },
-                    "anyOf": [
-                      {
-                        "required": ["type_one_of"]
+                  "patternProperties": {
+                    "[a-z]": {
+                      "type": "object",
+                      "properties": {
+
+                        "label": {
+                          "type": "string"
+                        },
+                        "type_one_of": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "type_many_of": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "type_rule": {
+                          "type": "string"
+                        }
                       },
-                      {
-                        "required": ["type_many_of"]
-                      },
-                      {
-                        "required": ["type_rule"]
-                      }
-                    ]
+                      "anyOf": [
+                        {
+                          "required": ["type_one_of"]
+                        },
+                        {
+                          "required": ["type_many_of"]
+                        },
+                        {
+                          "required": ["type_rule"]
+                        }
+                      ]
+                    }
                   }
                 }
-              }
+              },
+              "required": ["args", "description"]
             }
           }
         }
