@@ -260,7 +260,6 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ct
           }
 
           const contributor = { owner: contributorUsername, repo: contributorRepository, branch: contributorBranch }
-          console.log(parsedCommand)
           const commentBody = `Preparing command "${parsedCommand.command}". This comment will be updated later.`.trim()
           const createdComment = await createComment(ctx, octokit, { ...commentParams, body: commentBody })
           getError = (body: string) => new PullRequestError(pr, { body, requester, commentId: createdComment.id })
