@@ -83,7 +83,7 @@ env:
   GITLAB_PUSH_NAMESPACE: parity/mirrors
   GITLAB_JOB_IMAGE: paritytech/ci-linux:production
   GITLAB_DOMAIN: gitlab.parity.io
-  PIPELINE_SCRIPTS_REPOSITORY: https://github.com/paritytech/pipeline-scripts
+  PIPELINE_SCRIPTS_REPOSITORY: https://github.com/paritytech/command-bot-scripts/
 
 persistence:
   enabled: true
