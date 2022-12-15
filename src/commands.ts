@@ -1,4 +1,5 @@
 import assert from "assert"
+import { Mutex } from "async-mutex"
 import fs from "fs"
 import glob from "glob"
 import path from "path"
@@ -7,7 +8,6 @@ import { config } from "./config"
 import { CmdJson } from "./schema/schema.cmd"
 import { CommandRunner } from "./shell"
 import { CommandConfigs } from "./types"
-import { Mutex } from "async-mutex"
 
 const CMD_ROOT_FOLDER = "commands"
 
