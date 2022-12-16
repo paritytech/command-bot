@@ -216,6 +216,8 @@ deploy-stg:
     ENVIRONMENT:                   parity-stg
   environment:
     name:                          parity-stg
+  tags:
+    - cmd-bot-stg
 
 deploy-production:
   <<:                              *deploy-k8s
