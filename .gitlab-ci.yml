@@ -201,7 +201,8 @@ build-docker-ci:
 
 build-push-docker-app:
   stage:                           build
-  <<:                              *staging-refs
+  # <<:                              *staging-refs
+  <<:                              *test-refs
   <<:                              *build-push-docker-image
   variables:
     TARGET:                        app
@@ -210,12 +211,15 @@ deploy-stg:
   stage:                           staging
   #TODO: don't forget to rename to *deploy-k8s
   <<:                              *deploy-k8s-stg
-  <<:                              *staging-refs
+  # <<:                              *staging-refs
+  <<:                              *test-refs
   variables:
     CI_IMAGE:                      paritytech/kubetools:3.5.3
     ENVIRONMENT:                   parity-stg
   environment:
     name:                          parity-stg
+  tags:
+    - cmd-bot-stg
 
 deploy-production:
   <<:                              *deploy-k8s
