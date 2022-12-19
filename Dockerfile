@@ -57,7 +57,4 @@ RUN apt-get install -y --quiet --no-install-recommends \
     gcc \
     python3-dev \
     libc-dev \
-    python3-pip && \
-    pip3 install pre-commit && \
-    pre-commit --version && \
     apt-get autoremove -y
