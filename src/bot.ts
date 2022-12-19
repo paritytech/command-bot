@@ -398,7 +398,7 @@ const setupEvent = <E extends WebhookEvents>(
     const eventLogger = logger.child({ eventId: event.id, eventName })
     const ctx: Context = { ...parentCtx, logger: eventLogger }
 
-    eventLogger.info({ event, eventName }, "Received bot event")
+    eventLogger.info(`Received bot event ${eventName}`, null, [event, eventName])
 
     const installationId: number | undefined =
       "installation" in event.payload ? event.payload.installation?.id : undefined

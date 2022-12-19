@@ -5826,9 +5826,9 @@ onetime@^5.1.2:
     prettier "^2.6.2"
     prettier-plugin-compactify "^0.1.6"
 
-"opstooling-js@https://github.com/paritytech/opstooling-js#v0.0.14":
+"opstooling-js@https://github.com/paritytech/opstooling-js#v0.0.15":
   version "0.0.0"
-  resolved "https://github.com/paritytech/opstooling-js#de905f0bd4693087eec7b7b312e10bf95b251caf"
+  resolved "https://github.com/paritytech/opstooling-js#0c8f4c19052c7d572d9bcab6825d8c3b91035f51"
   dependencies:
     "@octokit/rest" "^18.12.0"
     async-mutex "^0.3.2"
