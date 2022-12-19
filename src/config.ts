@@ -1,12 +1,12 @@
 import assert from "assert"
-import { readFileSync, writeFileSync } from "fs"
-import { isError } from "lodash"
+import { writeFileSync } from "fs"
 import path from "path"
+
+import { getCurrentDbVersion } from "src/db"
 
 import { ensureDirSync } from "./shell"
 import { PipelineScripts } from "./types"
 import { envNumberVar, envVar } from "./utils"
-import { getCurrentDbVersion } from "src/db"
 
 const repository = envVar("PIPELINE_SCRIPTS_REPOSITORY")
 const ref = process.env.PIPELINE_SCRIPTS_REF
