@@ -36,12 +36,12 @@ export async function fetchCommandsConfiguration(): Promise<CommandConfigs> {
     const commandsRootPath = path.join(scriptsRevPath, CMD_ROOT_FOLDER)
     const commandsOutputPath = path.join(scriptsRevPath, "commands.json")
 
-    fs.rmSync(scriptsRevPath, { recursive: true, force: true })
-
     if (!fs.existsSync(scriptsRevPath)) {
-      await cmdRunner.run("git", ["clone", "--quiet", `${config.pipelineScripts.repository}`, scriptsRevPath], {
-        testAllowedErrorMessage: (err) => err.endsWith("already exists and is not an empty directory."),
-      })
+      await cmdRunner.run(
+        "git",
+        ["clone", "--quiet", "--depth", "1", `${config.pipelineScripts.repository}`, scriptsRevPath],
+        { testAllowedErrorMessage: (err) => err.endsWith("already exists and is not an empty directory.") },
+      )
 
       const files: string[] = glob.sync("**/*.cmd.json", { cwd: commandsRootPath })
 
