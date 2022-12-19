@@ -7,6 +7,8 @@ import type { LevelUp } from "levelup"
 
 import { parseTaskQueuedDate, queuedTasks, Task } from "./task"
 import { Context, ToString } from "./types"
+import { readFileSync } from "fs"
+import { isError } from "lodash"
 
 type DbKey = string
 type DbValue = string
@@ -84,4 +86,26 @@ export const getSortedTasks = async (
   })
 
   return items
+}
+
+export function getCurrentDbVersion(appDbVersionPath: string): string | undefined {
+  try {
+    return readFileSync(appDbVersionPath).toString().trim()
+  } catch (error) {
+    if (
+      /*
+    Test for the following error:
+      [Error: ENOENT: no such file or directory, open '/foo'] {
+        errno: -2,
+        code: 'ENOENT',
+        syscall: 'unlink',
+        path: '/foo'
+      }
+    */
+      !isError(error) ||
+      (error as { code?: string })?.code !== "ENOENT"
+    ) {
+      throw error
+    }
+  }
 }

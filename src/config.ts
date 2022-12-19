@@ -6,6 +6,7 @@ import path from "path"
 import { ensureDirSync } from "./shell"
 import { PipelineScripts } from "./types"
 import { envNumberVar, envVar } from "./utils"
+import { getCurrentDbVersion } from "src/db"
 
 const repository = envVar("PIPELINE_SCRIPTS_REPOSITORY")
 const ref = process.env.PIPELINE_SCRIPTS_REF
@@ -18,34 +19,15 @@ const dataPath = envVar("DATA_PATH")
 ensureDirSync(dataPath)
 
 const appDbVersionPath = path.join(dataPath, "task-db-version")
-const shouldClearTaskDatabaseOnStart = process.env.TASK_DB_VERSION
-  ? ((appDbVersion) => {
-      const currentDbVersion = (() => {
-        try {
-          return readFileSync(appDbVersionPath).toString().trim()
-        } catch (error) {
-          if (
-            /*
-          Test for the following error:
-            [Error: ENOENT: no such file or directory, open '/foo'] {
-              errno: -2,
-              code: 'ENOENT',
-              syscall: 'unlink',
-              path: '/foo'
-            }
-          */
-            !isError(error) ||
-            (error as { code?: string })?.code !== "ENOENT"
-          ) {
-            throw error
-          }
-        }
-      })()
-      if (currentDbVersion !== appDbVersion) {
-        writeFileSync(appDbVersionPath, appDbVersion)
+const taskDbVersion = process.env.TASK_DB_VERSION?.trim() || ""
+const currentDbVersion = getCurrentDbVersion(appDbVersionPath)
+const shouldClearTaskDatabaseOnStart = taskDbVersion
+  ? (() => {
+      if (currentDbVersion !== taskDbVersion) {
+        writeFileSync(appDbVersionPath, taskDbVersion)
         return true
       }
-    })(process.env.TASK_DB_VERSION.trim())
+    })()
   : false
 
 export type MatrixConfig = {
