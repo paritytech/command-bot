@@ -214,8 +214,6 @@ deploy-stg:
   variables:
     CI_IMAGE:                      paritytech/kubetools:3.5.3
     ENVIRONMENT:                   parity-stg
-  environment:
-    name:                          parity-stg
   tags:
     - cmd-bot-stg
 
