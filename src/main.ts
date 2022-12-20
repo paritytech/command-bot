@@ -2,9 +2,9 @@ import http from "http"
 import { Probot, Server } from "probot"
 import stoppable from "stoppable"
 
-import { config } from "./config"
-import { logger, probotLogger } from "./logger"
-import { setup } from "./setup"
+import { config } from "src/config"
+import { logger, probotLogger } from "src/logger"
+import { setup } from "src/setup"
 
 const main = async () => {
   const bot = Probot.defaults({

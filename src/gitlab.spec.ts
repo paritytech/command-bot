@@ -1,10 +1,11 @@
 import { jest } from "@jest/globals"
 
-import { getGitlabCiYmlConfig } from "./gitlab"
-import { logger } from "./logger"
-import { Task } from "./task"
+import { getGitlabCiYmlConfig } from "src/gitlab"
+import { logger } from "src/logger"
+import { Task } from "src/task"
 
 jest.mock("src/commands")
+
 logger.options.minLogLevel = "fatal"
 
 function getTaskStub(opts: { vars: Record<string, string> } = { vars: {} }): Task {

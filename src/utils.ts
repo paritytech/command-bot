@@ -55,7 +55,7 @@ export const getNextUniqueIncrementalId = (): number => {
   return nextIncrementalId
 }
 
-export const obfuscate = (str: string, items: string[], replacement: string = "{SECRET}"): string => {
+export const redact = (str: string, items: string[], replacement: string = "{SECRET}"): string => {
   for (const item of items) {
     str = str.replaceAll(item, replacement)
   }

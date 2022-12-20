@@ -1,7 +1,7 @@
-import { ExtendedOctokit, isOrganizationMember } from "./github"
-import { CommandRunner } from "./shell"
-import { Task } from "./task"
-import { Context } from "./types"
+import { ExtendedOctokit, isOrganizationMember } from "src/github"
+import { CommandRunner } from "src/shell"
+import { Task } from "src/task"
+import { Context } from "src/types"
 
 /*
   TODO: Move command configurations to configuration repository or database so
@@ -70,16 +70,16 @@ export const prepareBranch = async function* (
 ) {
   const { token, url } = await getFetchEndpoint()
 
-  const itemsToObfuscate: string[] = []
+  const itemsToRedact: string[] = []
   if (typeof token === "string") {
-    itemsToObfuscate.push(token)
+    itemsToRedact.push(token)
   }
 
-  const cmdRunner = new CommandRunner({ itemsToObfuscate })
+  const cmdRunner = new CommandRunner({ itemsToRedact })
 
   yield cmdRunner.run("mkdir", ["-p", repoPath])
 
-  const repoCmdRunner = new CommandRunner({ itemsToObfuscate, cwd: repoPath })
+  const repoCmdRunner = new CommandRunner({ itemsToRedact, cwd: repoPath })
 
   // Clone the repository if it does not exist
   yield repoCmdRunner.run("git", ["clone", "--quiet", `${url}/${upstream.owner}/${upstream.repo}.git`, repoPath], {

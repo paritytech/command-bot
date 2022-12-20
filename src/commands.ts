@@ -4,10 +4,10 @@ import fs from "fs"
 import glob from "glob"
 import path from "path"
 
-import { config } from "./config"
-import { CmdJson } from "./schema/schema.cmd"
-import { CommandRunner } from "./shell"
-import { CommandConfigs } from "./types"
+import { config } from "src/config"
+import { CmdJson } from "src/schema/schema.cmd"
+import { CommandRunner } from "src/shell"
+import { CommandConfigs } from "src/types"
 
 const CMD_ROOT_FOLDER = "commands"
 
@@ -36,7 +36,7 @@ export async function fetchCommandsConfiguration(): Promise<CommandConfigs> {
     const commandsRootPath = path.join(scriptsRevPath, CMD_ROOT_FOLDER)
     const commandsOutputPath = path.join(scriptsRevPath, "commands.json")
 
-    if (!fs.existsSync(scriptsRevPath)) {
+    if (!fs.existsSync(scriptsRevPath) || !fs.existsSync(commandsOutputPath)) {
       await cmdRunner.run(
         "git",
         ["clone", "--quiet", "--depth", "1", `${config.pipelineScripts.repository}`, scriptsRevPath],

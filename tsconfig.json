@@ -22,7 +22,12 @@
     "allowSyntheticDefaultImports": true,
     "useUnknownInCatchVariables": true,
     "types": ["node", "jest"],
-    "typeRoots": ["./node_modules/@types", "./src", "opstooling-js"]
+    "typeRoots": ["./node_modules/@types", "./src", "opstooling-js"],
+    "plugins": [
+      {
+        "transform": "typescript-transform-paths"
+      }
+    ]
   },
   "include": ["src"],
   "ts-node": {

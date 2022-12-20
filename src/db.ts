@@ -1,14 +1,14 @@
 import type { AbstractIterator, AbstractLevelDOWN } from "abstract-leveldown"
 import { isBefore, isValid } from "date-fns"
-import { readFileSync } from "fs"
+import { readFileSync, writeFileSync } from "fs"
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore because level-rocksdb is not typed
 import getLevelDb from "level-rocksdb"
 import type { LevelUp } from "levelup"
 import { isError } from "lodash"
 
-import { parseTaskQueuedDate, queuedTasks, Task } from "./task"
-import { Context, ToString } from "./types"
+import { parseTaskQueuedDate, queuedTasks, Task } from "src/task"
+import { Context, ToString } from "src/types"
 
 type DbKey = string
 type DbValue = string
@@ -30,6 +30,17 @@ type Item = {
   id: DbKey
   queuedDate: Date
   task: Task
+}
+
+export function isNewDBVersionRequested(appDbVersionPath: string, taskDbVersion: string): boolean {
+  const currentDbVersion = readCurrentDbVersion(appDbVersionPath)
+
+  if (taskDbVersion && currentDbVersion !== taskDbVersion) {
+    writeFileSync(appDbVersionPath, taskDbVersion)
+    return true
+  }
+
+  return false
 }
 
 export const getSortedTasks = async (
@@ -88,7 +99,7 @@ export const getSortedTasks = async (
   return items
 }
 
-export function getCurrentDbVersion(appDbVersionPath: string): string | undefined {
+function readCurrentDbVersion(appDbVersionPath: string): string | undefined {
   try {
     return readFileSync(appDbVersionPath).toString().trim()
   } catch (error) {

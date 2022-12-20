@@ -1,12 +1,10 @@
 import assert from "assert"
-import { writeFileSync } from "fs"
 import path from "path"
 
-import { getCurrentDbVersion } from "src/db"
-
-import { ensureDirSync } from "./shell"
-import { PipelineScripts } from "./types"
-import { envNumberVar, envVar } from "./utils"
+import { isNewDBVersionRequested } from "src/db"
+import { ensureDirSync } from "src/shell"
+import { PipelineScripts } from "src/types"
+import { envNumberVar, envVar } from "src/utils"
 
 const repository = envVar("PIPELINE_SCRIPTS_REPOSITORY")
 const ref = process.env.PIPELINE_SCRIPTS_REF
@@ -18,17 +16,8 @@ const disablePRComment = !!process.env.DISABLE_PR_COMMENT
 const dataPath = envVar("DATA_PATH")
 ensureDirSync(dataPath)
 
-const appDbVersionPath = path.join(dataPath, "task-db-version")
+export const appDbVersionPath = path.join(dataPath, "task-db-version")
 const taskDbVersion = process.env.TASK_DB_VERSION?.trim() || ""
-const currentDbVersion = getCurrentDbVersion(appDbVersionPath)
-const shouldClearTaskDatabaseOnStart = taskDbVersion
-  ? (() => {
-      if (currentDbVersion !== taskDbVersion) {
-        writeFileSync(appDbVersionPath, taskDbVersion)
-        return true
-      }
-    })()
-  : false
 
 export type MatrixConfig = {
   homeServer: string
@@ -50,7 +39,6 @@ const allowedOrganizations = envVar("ALLOWED_ORGANIZATIONS")
     assert(parsedValue)
     return parsedValue
   })
-assert(allowedOrganizations.length)
 
 export const config = {
   matrix,
@@ -58,7 +46,7 @@ export const config = {
   pipelineScripts,
   appDbVersionPath,
   allowedOrganizations,
-  shouldClearTaskDatabaseOnStart,
+  shouldClearTaskDatabaseOnStart: isNewDBVersionRequested(appDbVersionPath, taskDbVersion),
   disablePRComment,
   startDate: new Date(),
   pingPort: process.env.PING_PORT ? parseInt(process.env.PING_PORT, 10) || undefined : undefined,

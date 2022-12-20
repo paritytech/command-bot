@@ -6,11 +6,18 @@ import LevelErrors from "level-errors"
 import path from "path"
 import { Server } from "probot"
 
-import { config } from "./config"
-import { commandsConfiguration } from "./core"
-import { validateSingleShellCommand } from "./shell"
-import { ApiTask, cancelTask, getNextTaskId, getSendTaskMatrixResult, queueTask, serializeTaskQueuedDate } from "./task"
-import { Context } from "./types"
+import { config } from "src/config"
+import { commandsConfiguration } from "src/core"
+import { validateSingleShellCommand } from "src/shell"
+import {
+  ApiTask,
+  cancelTask,
+  getNextTaskId,
+  getSendTaskMatrixResult,
+  queueTask,
+  serializeTaskQueuedDate,
+} from "src/task"
+import { Context } from "src/types"
 
 const getApiRoute = (route: string): string => `/api${route}`
 

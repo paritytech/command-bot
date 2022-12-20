@@ -4,16 +4,15 @@ import { MatrixClient, SimpleFsStorageProvider } from "matrix-bot-sdk"
 import path from "path"
 import { Probot, Server } from "probot"
 
+import { setupApi } from "src/api"
+import { setupBot } from "src/bot"
+import { config } from "src/config"
 import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db"
-
-import { setupApi } from "./api"
-import { setupBot } from "./bot"
-import { config } from "./config"
-import { logger } from "./logger"
-import { ensureDir, initDatabaseDir } from "./shell"
-import { requeueUnterminatedTasks } from "./task"
-import { Context } from "./types"
-import { Err, Ok } from "./utils"
+import { logger } from "src/logger"
+import { ensureDir, initDatabaseDir } from "src/shell"
+import { requeueUnterminatedTasks } from "src/task"
+import { Context } from "src/types"
+import { Err, Ok } from "src/utils"
 
 export const setup = async (
   bot: Probot,

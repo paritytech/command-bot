@@ -4,6 +4,7 @@ import { ParsedBotCommand, parsePullRequestBotCommandLine } from "./bot"
 import { logger } from "./logger"
 
 jest.mock("src/commands")
+jest.mock("src/db")
 
 logger.options.minLogLevel = "fatal"
 

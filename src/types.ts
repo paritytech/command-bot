@@ -1,8 +1,8 @@
 import { MatrixClient } from "matrix-bot-sdk"
 import { Logger } from "opstooling-js"
 
-import type { AccessDB, TaskDB } from "./db"
-import { CmdJson } from "./schema/schema.cmd"
+import type { AccessDB, TaskDB } from "src/db"
+import { CmdJson } from "src/schema/schema.cmd"
 
 export type GitRef = {
   contributor: {

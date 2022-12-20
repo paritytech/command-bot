@@ -4,10 +4,10 @@ import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types"
 import { Mutex } from "async-mutex"
 import { Probot } from "probot"
 
-import { logger } from "./logger"
-import { PullRequestTask } from "./task"
-import { CommandOutput, Context } from "./types"
-import { displayError, Err, millisecondsDelay, Ok } from "./utils"
+import { logger } from "src/logger"
+import { PullRequestTask } from "src/task"
+import { CommandOutput, Context } from "src/types"
+import { displayError, Err, millisecondsDelay, Ok } from "src/utils"
 
 type Octokit = Awaited<ReturnType<Probot["auth"]>>
 

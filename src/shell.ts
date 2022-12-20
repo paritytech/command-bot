@@ -6,9 +6,9 @@ import { Logger } from "opstooling-js"
 import path from "path"
 import { Readable as ReadableStream } from "stream"
 
-import { logger } from "./logger"
-import { ToString } from "./types"
-import { obfuscate } from "./utils"
+import { logger } from "src/logger"
+import { ToString } from "src/types"
+import { redact } from "src/utils"
 
 export const ensureDir = async (dir: string): Promise<void> => {
   // mkdir doesn't throw an error if the directory already exists
@@ -34,7 +34,7 @@ export class CommandRunner {
 
   constructor(
     private configuration?: {
-      itemsToObfuscate?: string[]
+      itemsToRedact?: string[]
       shouldTrackProgress?: boolean
       cwd?: string
       onChild?: (child: ChildProcess) => void
@@ -60,10 +60,10 @@ export class CommandRunner {
   ): Promise<string | Error> {
     const { logger: log, commandOutputBuffer } = this
     return await new Promise<string | Error>((resolve, reject) => {
-      const { cwd, itemsToObfuscate, onChild } = this.configuration || {}
+      const { cwd, itemsToRedact, onChild } = this.configuration || {}
 
       const rawCommand = `${execPath} ${args.join(" ")}`
-      const commandDisplayed = itemsToObfuscate?.length ? obfuscate(rawCommand, itemsToObfuscate) : rawCommand
+      const commandDisplayed = itemsToRedact?.length ? redact(rawCommand, itemsToRedact) : rawCommand
       log.info(`Executing command ${commandDisplayed}`)
 
       const child = spawn(execPath, args, { cwd, stdio: "pipe" })
@@ -100,7 +100,7 @@ export class CommandRunner {
           const rawStderr = commandOutputBuffer
             .reduce((acc, [stream, value]) => (stream === "stderr" ? `${acc}${value}` : acc), "")
             .trim()
-          const stderr = itemsToObfuscate?.length ? obfuscate(rawStderr, itemsToObfuscate) : rawStderr
+          const stderr = itemsToRedact?.length ? redact(rawStderr, itemsToRedact) : rawStderr
           if (
             !allowedErrorCodes?.includes(exitCode) &&
             (testAllowedErrorMessage === undefined || !testAllowedErrorMessage(stderr))
@@ -113,7 +113,7 @@ export class CommandRunner {
           ? commandOutputBuffer.reduce((acc, [_, value]) => `${acc}${value}`, "")
           : commandOutputBuffer.reduce((acc, [stream, value]) => (stream === "stdout" ? `${acc}${value}` : acc), "")
         const rawOutput = outputBuf.trim()
-        const output = itemsToObfuscate?.length ? obfuscate(rawOutput, itemsToObfuscate) : rawOutput
+        const output = itemsToRedact?.length ? redact(rawOutput, itemsToRedact) : rawOutput
 
         resolve(output)
       })
@@ -121,9 +121,9 @@ export class CommandRunner {
   }
 
   private getStreamHandler(channel: "stdout" | "stderr") {
-    const { itemsToObfuscate, shouldTrackProgress } = this.configuration || {}
+    const { itemsToRedact, shouldTrackProgress } = this.configuration || {}
     return (data: ToString) => {
-      const str = itemsToObfuscate?.length ? obfuscate(data.toString(), itemsToObfuscate) : data.toString()
+      const str = itemsToRedact?.length ? redact(data.toString(), itemsToRedact) : data.toString()
       const strTrim = str.trim()
 
       if (shouldTrackProgress && strTrim) {
