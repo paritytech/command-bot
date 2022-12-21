@@ -4,10 +4,10 @@ import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types"
 import { Mutex } from "async-mutex"
 import { Probot } from "probot"
 
-import { logger } from "./logger"
-import { PullRequestTask } from "./task"
-import { CommandOutput, Context } from "./types"
-import { displayError, Err, millisecondsDelay, Ok } from "./utils"
+import { logger } from "src/logger"
+import { PullRequestTask } from "src/task"
+import { CommandOutput, Context } from "src/types"
+import { displayError, Err, millisecondsDelay, Ok } from "src/utils"
 
 type Octokit = Awaited<ReturnType<Probot["auth"]>>
 
@@ -194,28 +194,28 @@ export type Comment = {
   data: unknown | null // TODO: quite a complex type inside
 }
 export const createComment = async (
-  { shouldPostPullRequestComment }: Context,
+  { disablePRComment }: Context,
   octokit: Octokit,
   ...args: Parameters<typeof octokit.issues.createComment>
 ): Promise<Comment> => {
-  if (shouldPostPullRequestComment) {
-    const { data, status } = await octokit.issues.createComment(...args)
-    return { status, id: data.id, htmlUrl: data.html_url, data }
-  } else {
+  if (disablePRComment) {
     logger.info({ call: "createComment", args })
     return { status: 201, id: 0, htmlUrl: "", data: null }
+  } else {
+    const { data, status } = await octokit.issues.createComment(...args)
+    return { status, id: data.id, htmlUrl: data.html_url, data }
   }
 }
 
 export const updateComment = async (
-  { shouldPostPullRequestComment }: Context,
+  { disablePRComment }: Context,
   octokit: Octokit,
   ...args: Parameters<typeof octokit.issues.updateComment>
 ): Promise<void> => {
-  if (shouldPostPullRequestComment) {
-    await octokit.issues.updateComment(...args)
-  } else {
+  if (disablePRComment) {
     logger.info({ call: "updateComment", args })
+  } else {
+    await octokit.issues.updateComment(...args)
   }
 }
 

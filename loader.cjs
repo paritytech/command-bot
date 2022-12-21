@@ -8,6 +8,7 @@ const resolve = (specifier, ...args) => {
     const parsed = parsePath(specifier)
     return tsNodeResolve(joinPath(__dirname, parsed.dir, `${parsed.name}.ts`), ...args)
   }
+
   return tsNodeResolve(specifier, ...args)
 }
 

@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cmd.json",
+  "type": "object",
+  "properties": {
+    "command": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "configuration": {
+          "type": "object",
+          "properties": {
+            "gitlab": {
+              "type": "object",
+              "properties": {
+                "job": {
+                  "type": "object",
+                  "properties": {
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "variables": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": ["tags"]
+                }
+              },
+              "required": ["job"]
+            },
+            "commandStart": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxItems": 1
+              }
+            },
+            "required": ["gitlab"]
+          }
+        },
+        "presets": {
+          "type": "object",
+          "patternProperties": {
+            "[a-z]": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "repos": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "env": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "args": {
+                  "type": "object",
+                  "patternProperties": {
+                    "[a-z]": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "type_one_of": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "type_many_of": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "type_rule": {
+                          "type": "string"
+                        }
+                      },
+                      "anyOf": [
+                        {
+                          "required": ["type_one_of"]
+                        },
+                        {
+                          "required": ["type_many_of"]
+                        },
+                        {
+                          "required": ["type_rule"]
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "required": ["args", "description"]
+            }
+          }
+        }
+      },
+      "required": ["configuration"]
+    }
+  },
+  "required": ["command"]
+}

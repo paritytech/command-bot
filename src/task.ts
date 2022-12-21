@@ -8,16 +8,15 @@ import LevelErrors from "level-errors"
 import { extractRequestError, MatrixClient } from "matrix-bot-sdk"
 import { Probot } from "probot"
 
+import { getApiTaskEndpoint } from "src/api"
+import { botPullRequestCommentMention, botPullRequestCommentSubcommands } from "src/bot"
+import { prepareBranch } from "src/core"
 import { getSortedTasks } from "src/db"
-
-import { getApiTaskEndpoint } from "./api"
-import { botPullRequestCommentMention, botPullRequestCommentSubcommands } from "./bot"
-import { prepareBranch } from "./core"
-import { getPostPullRequestResult, updateComment } from "./github"
-import { cancelGitlabPipeline, restoreTaskGitlabContext, runCommandInGitlabPipeline } from "./gitlab"
-import { logger } from "./logger"
-import { CommandOutput, Context, GitRef } from "./types"
-import { displayError, getNextUniqueIncrementalId, intoError } from "./utils"
+import { getPostPullRequestResult, updateComment } from "src/github"
+import { cancelGitlabPipeline, restoreTaskGitlabContext, runCommandInGitlabPipeline } from "src/gitlab"
+import { logger } from "src/logger"
+import { CommandOutput, Context, GitRef } from "src/types"
+import { displayError, getNextUniqueIncrementalId, intoError } from "src/utils"
 
 export const queuedTasks: Map<string, EventEmitter> = new Map()
 export const taskExecutionTerminationEvent = Symbol()
@@ -41,7 +40,9 @@ type TaskBase<T> = {
     job: {
       tags: string[]
       image: string
-      variables: Record<string, string | boolean | number>
+      variables: {
+        [k: string]: unknown
+      }
     }
     pipeline: TaskGitlabPipeline | null
   }

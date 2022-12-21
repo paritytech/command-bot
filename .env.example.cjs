@@ -58,12 +58,12 @@ process.env.GITLAB_ACCESS_TOKEN_USERNAME ??= "placeholder"
 
 /*
   Define a $PIPELINE_SCRIPTS_REPOSITORY (full URL to a Git repository, e.g.
-  "https://github.com/paritytech/pipeline-scripts") to be cloned on GitLab
+  "https://github.com/paritytech/command-bot-scripts") to be cloned on GitLab
   pipelines with ref $PIPELINE_SCRIPTS_REF. Leave it unset to disable
   $PIPELINE_SCRIPTS.
 */
-// process.env.PIPELINE_SCRIPTS_REPOSITORY ??= "placeholder"
-// process.env.PIPELINE_SCRIPTS_REF ??= "placeholder"
+process.env.PIPELINE_SCRIPTS_REPOSITORY ??= "https://github.com/paritytech/command-bot-scripts.git"
+process.env.PIPELINE_SCRIPTS_REF ??= "main"
 
 /*
   Download private key file from
@@ -112,11 +112,11 @@ process.env.MASTER_TOKEN ??= "placeholder"
 
 /*
   NOT REQUIRED
-  Set `POST_COMMENT` to "false" in order to have the bot log to the console
+  Set `DISABLE_PR_COMMENT` to any value in order to have the bot log to the console
   instead of creating comments on the API. Useful while you're trying something
   out in order to avoid spamming pull requests with useless comments.
 */
-// process.env.POST_COMMENT ??= false
+// process.env.DISABLE_PR_COMMENT ??= false
 
 /*
   NOT REQUIRED

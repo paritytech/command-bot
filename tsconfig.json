@@ -1,13 +1,16 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
+    "paths": {
+      "src/*": ["./src/*", "./*"]
+    },
     "outDir": "build",
     "sourceMap": false,
     "declaration": false,
     "noFallthroughCasesInSwitch": true,
     "allowJs": true,
     "moduleResolution": "node",
-    "module": "esnext",
+    "module": "commonjs",
     "target": "ES2021",
     // Node.js LTS 16
     "lib": ["ES2021"],
@@ -19,9 +22,14 @@
     "allowSyntheticDefaultImports": true,
     "useUnknownInCatchVariables": true,
     "types": ["node", "jest"],
-    "typeRoots": ["./node_modules/@types", "./src", "opstooling-js"]
+    "typeRoots": ["./node_modules/@types", "./src", "opstooling-js"],
+    "plugins": [
+      {
+        "transform": "typescript-transform-paths"
+      }
+    ]
   },
-  "include": ["src", "test"],
+  "include": ["src"],
   "ts-node": {
     "files": true
     // This makes ts-node able to find the src/index.d.ts file

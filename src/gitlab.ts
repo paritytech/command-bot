@@ -6,10 +6,11 @@ import { envNumberVar } from "opstooling-js"
 import path from "path"
 import yaml from "yaml"
 
-import { CommandRunner } from "./shell"
-import { Task, taskExecutionTerminationEvent, TaskGitlabPipeline } from "./task"
-import { Context, PipelineScripts } from "./types"
-import { millisecondsDelay, validatedFetch } from "./utils"
+import { config } from "src/config"
+import { CommandRunner } from "src/shell"
+import { Task, taskExecutionTerminationEvent, TaskGitlabPipeline } from "src/task"
+import { Context, PipelineScripts } from "src/types"
+import { millisecondsDelay, validatedFetch } from "src/utils"
 
 // Integration tests don't like waiting for 16 seconds
 const pipelineUpdateInterval = process.env.GITLAB_PIPELINE_UPDATE_INTERVAL
@@ -22,7 +23,8 @@ const getPipelineScriptsCloneCommand = ({ withRef }: { withRef: boolean }) =>
   } "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"`
 
 export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Promise<GitlabTaskContext> => {
-  const { logger, gitlab, pipelineScripts } = ctx
+  const { logger, gitlab } = ctx
+  const { pipelineScripts } = config
 
   const cmdRunner = new CommandRunner({ itemsToRedact: [gitlab.accessToken], cwd: task.repoPath })
 

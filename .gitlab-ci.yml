@@ -64,10 +64,10 @@ default:
   image:                           $BUILDAH_IMAGE
   script:
     - buildah bud
-          --format=docker
-          --target="$TARGET"
-          --tag "$IMAGE_NAME:$DOCKER_TAG"
-          --file "$DOCKERFILE" .
+      --format=docker
+      --target="$TARGET"
+      --tag "$IMAGE_NAME:$DOCKER_TAG"
+      --file "$DOCKERFILE" .
 
 .build-push-docker-image:          &build-push-docker-image
   image:                           $BUILDAH_IMAGE
@@ -88,7 +88,7 @@ test-lint:
   stage:                           test
   script:
     - yarn --immutable
-    - pre-commit run --color=always --all
+    - yarn lint
 
 test-unit:
   <<:                              *common-refs
@@ -176,22 +176,22 @@ build-docker-ci:
     - helm dependency update helm-stg/
     - helm secrets --version
     - helm secrets upgrade
-        --install
-        --atomic
-        --timeout 300s
-        --namespace ${CI_PROJECT_NAME}
-        --values helm-stg/values.yaml
-        --values helm-stg/values-$ENVIRONMENT.yaml
-        --set common.image.repository="$IMAGE_NAME"
-        --set common.image.tag="$DOCKER_TAG"
-        --set common.persistence.mountPath="$DATA_PATH"
-        --set env.DATA_PATH="$DATA_PATH"
-        --set env.IS_DEPLOYMENT="true"
-        --set env.TMPDIR="$DATA_PATH/tmp"
-        --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
-        --set env.PING_PORT="$PING_PORT"
-        --set env.LOG_FORMAT=json
-        $CI_PROJECT_NAME helm-stg/
+      --install
+      --atomic
+      --timeout 300s
+      --namespace ${CI_PROJECT_NAME}
+      --values helm-stg/values.yaml
+      --values helm-stg/values-$ENVIRONMENT.yaml
+      --set common.image.repository="$IMAGE_NAME"
+      --set common.image.tag="$DOCKER_TAG"
+      --set common.persistence.mountPath="$DATA_PATH"
+      --set env.DATA_PATH="$DATA_PATH"
+      --set env.IS_DEPLOYMENT="true"
+      --set env.TMPDIR="$DATA_PATH/tmp"
+      --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
+      --set env.PING_PORT="$PING_PORT"
+      --set env.LOG_FORMAT=json
+      $CI_PROJECT_NAME helm-stg/
 
 .uninstall-deployment:             &uninstall-deployment
   image:                           paritytech/kubetools:helm3

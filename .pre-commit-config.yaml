@@ -11,7 +11,7 @@ repos:
         entry: node_modules/.bin/eslint
         language: node
         files: \.[^\.]*(t|j)s$
-        exclude: env.cjs
+        exclude: ".env.cjs|test\/.*"
         args: ["--quiet"]
       - id: prettier
         name: prettier
@@ -24,3 +24,4 @@ repos:
         entry: node_modules/.bin/tsc-files
         language: node
         files: \.ts$
+        args: ["--noEmit"]

@@ -1,14 +1,14 @@
-import { ExtendedOctokit, isOrganizationMember } from "./github"
-import { CommandRunner } from "./shell"
-import { Task } from "./task"
-import { Context } from "./types"
+import { ExtendedOctokit, isOrganizationMember } from "src/github"
+import { CommandRunner } from "src/shell"
+import { Task } from "src/task"
+import { Context } from "src/types"
 
 /*
   TODO: Move command configurations to configuration repository or database so
   that it can be updated dynamically, without redeploying the application
 */
 const getBenchBotCommand = ({ tags }: { tags: string[] }) => {
-  return { gitlab: { job: { tags, variables: {} } }, commandStart: ['"$PIPELINE_SCRIPTS_DIR/bench-bot.sh"'] }
+  return { gitlab: { job: { tags, variables: {} } }, commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh"'] }
 }
 export type CommandConfiguration = {
   gitlab: {
@@ -21,16 +21,17 @@ export type CommandConfiguration = {
   // allows to be run without arguments after " $ "
   optionalCommandArgs?: boolean
 }
+
 export const commandsConfiguration: {
-  [K in "try-runtime" | "bench-bot" | "test-bench-bot" | "fmt" | "sample"]: CommandConfiguration
+  [k: string]: CommandConfiguration
 } = {
   "try-runtime": {
     gitlab: { job: { tags: ["linux-docker"], variables: {} } },
-    commandStart: ['"$PIPELINE_SCRIPTS_DIR/try-runtime-bot.sh"'],
+    commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh"'],
   },
   fmt: {
     gitlab: { job: { tags: ["linux-docker"], variables: {} } },
-    commandStart: ['"$PIPELINE_SCRIPTS_DIR/fmt.sh"'],
+    commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"'],
     optionalCommandArgs: true,
   },
   "bench-bot": getBenchBotCommand({ tags: ["bench-bot"] }),

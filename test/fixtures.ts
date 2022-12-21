@@ -9,12 +9,12 @@ import { getPipelinePayload } from "./fixtures/gitlab/pipeline"
 export const webhookFixtures: Record<string, (params: CommentWebhookParams) => string> = {
   queueCommandComment: (params) =>
     getCommentWebhookPayload({
-      ...{ body: "/cmd queue -c sample $ hi", org: "tripleightech", repo: "command-bot-test", login: "somedev123" },
+      ...{ body: "/cmd queue -c sample $ hi", org: "paritytech-stg", repo: "command-bot-test", login: "somedev123" },
       ...params,
     }),
   cancelCommandComment: (params) =>
     getCommentWebhookPayload({
-      ...{ body: "/cmd cancel", org: "tripleightech", repo: "command-bot-test", login: "somedev123" },
+      ...{ body: "/cmd cancel", org: "paritytech-stg", repo: "command-bot-test", login: "somedev123" },
       ...params,
     }),
 }

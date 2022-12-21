@@ -3,10 +3,13 @@ node_modules/
 *.pem
 build/
 git/
-data/
+data*
 .idea
+.vscode
 
 /test/.test-ca.pem
 /test/.test-ca.key
 
 coverage
+
+src/schema/schema.cmd.d.ts
