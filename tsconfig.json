@@ -25,7 +25,8 @@
     "typeRoots": ["./node_modules/@types", "./src", "opstooling-js"],
     "plugins": [
       {
-        "transform": "typescript-transform-paths"
+        "transform": "typescript-transform-paths",
+        "exclude": ["**/node_modules/**"]
       }
     ]
   },
