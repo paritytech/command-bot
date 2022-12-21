@@ -73,7 +73,7 @@
     "fix": "yarn fix:eslint '{*,**/*}.{cjs,ts}' && yarn fix:prettier '{*,**/*}.json'",
     "prebuild": "yarn schema",
     "build": "tsc",
-    "start": "TS_NODE_BASEURL=./build node -r ./.env.cjs ./build/main.js",
+    "start": "TS_NODE_BASEURL=./build node ./build/main.js",
     "dev": "yarn schema && nodemon --no-update-notifier -- ./src/main.ts"
   }
 }
