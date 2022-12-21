@@ -22,7 +22,7 @@
     "level-rocksdb": "5.0.0",
     "lodash": "4.17.21",
     "matrix-bot-sdk": "0.6.3",
-    "node-fetch": "^2.6.7",
+    "node-fetch": "^3.3.0",
     "opstooling-js": "https://github.com/paritytech/opstooling-js#v0.0.14",
     "opstooling-js-style": "https://github.com/paritytech/opstooling-js-style.git#^v1.0.0",
     "probot": "^12.2.8",
