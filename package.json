@@ -47,7 +47,6 @@
     "json-schema-to-typescript": "^11.0.2",
     "mockttp": "^3.6.2",
     "nodemon": "2.0.19",
-    "pre-commit": "^1.2.2",
     "prettier": "^2.7.1",
     "rimraf": "3.0.2",
     "selfsigned": "^2.1.0",
