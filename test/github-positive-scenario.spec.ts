@@ -62,8 +62,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   },
   {
     suitName: "[bench-bot] command",
-    commandLine:
-      "/cmd queue -v PIPELINE_SCRIPTS_REF=hello-is-this-even-used -c bench $ runtime kusama-dev pallet_referenda",
+    commandLine: "/cmd queue -c bench $ runtime kusama-dev pallet_referenda",
     expected: {
       startMessage:
         'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" runtime kusama-dev pallet_referenda". This comment will be updated later.',

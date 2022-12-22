@@ -1,6 +1,7 @@
 import { EmitterWebhookEventName } from "@octokit/webhooks/dist-types/types"
 import { IssueCommentCreatedEvent } from "@octokit/webhooks-types/schema"
 import assert from "assert"
+import { displayError, intoError } from "opstooling-js"
 import path from "path"
 import { Probot } from "probot"
 import yargs from "yargs"
@@ -14,8 +15,9 @@ import { CmdJson } from "src/schema/schema.cmd"
 import { validateSingleShellCommand } from "src/shell"
 import { cancelTask, getNextTaskId, PullRequestTask, queueTask, serializeTaskQueuedDate } from "src/task"
 import { Context, PullRequestError } from "src/types"
-import { arrayify, displayError, getLines } from "src/utils"
+import { arrayify, getLines } from "src/utils"
 
+const PIPELINE_SCRIPTS_REF = "PIPELINE_SCRIPTS_REF"
 export const botPullRequestCommentMention = "/cmd"
 export const botPullRequestCommentSubcommands: {
   [Subcommand in "queue" | "cancel"]: Subcommand
@@ -94,7 +96,25 @@ export const parsePullRequestBotCommandLine = async (
         )
       }
 
-      const commandsConfiguration = await fetchCommandsConfiguration()
+      const variables: Record<string, string> = {}
+      const variableValueSeparator = "="
+      for (const tok of arrayify(botArgs.var).concat(arrayify(botArgs.v))) {
+        switch (typeof tok) {
+          case "string": {
+            const valueSeparatorIndex = tok.indexOf(variableValueSeparator)
+            if (valueSeparatorIndex === -1) {
+              return new Error(`Variable token "${tok}" doesn't have a value separator ('${variableValueSeparator}')`)
+            }
+            variables[tok.slice(0, valueSeparatorIndex)] = tok.slice(valueSeparatorIndex + 1)
+            break
+          }
+          default: {
+            return new Error(`Variable token "${String(tok)}" should be a string of the form NAME=VALUE`)
+          }
+        }
+      }
+
+      const commandsConfiguration = await fetchCommandsConfiguration(variables[PIPELINE_SCRIPTS_REF])
       const configuration = commandsConfiguration[configurationName]?.command?.configuration
 
       if (typeof configuration === "undefined" || !Object.keys(configuration).length) {
@@ -112,24 +132,6 @@ export const parsePullRequestBotCommandLine = async (
 
       if (!commandLinePart && configuration.optionalCommandArgs !== true) {
         return new Error(`Could not find start of command ("${commandStartSymbol}")`)
-      }
-
-      const variables: Record<string, string> = {}
-      const variableValueSeparator = "="
-      for (const tok of arrayify(botArgs.var).concat(arrayify(botArgs.v))) {
-        switch (typeof tok) {
-          case "string": {
-            const valueSeparatorIndex = tok.indexOf(variableValueSeparator)
-            if (valueSeparatorIndex === -1) {
-              return new Error(`Variable token "${tok}" doesn't have a value separator ('${variableValueSeparator}')`)
-            }
-            variables[tok.slice(0, valueSeparatorIndex)] = tok.slice(valueSeparatorIndex + 1)
-            break
-          }
-          default: {
-            return new Error(`Variable token "${String(tok)}" should be a string of the form NAME=VALUE`)
-          }
-        }
       }
 
       assert(configuration.commandStart, "command start should exist")
@@ -384,7 +386,9 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ct
       }
     }
   } catch (rawError) {
-    return getError(`Exception caught in webhook handler\n${displayError(rawError)}`)
+    logger.fatal(displayError(rawError))
+    const errMessage = intoError(rawError)
+    return getError(`Exception caught in webhook handler\n${errMessage.message}`)
   }
 }
 
