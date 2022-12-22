@@ -11,7 +11,7 @@ import { CommandConfigs } from "src/types"
 
 const CMD_ROOT_FOLDER = "commands"
 
-export async function fetchCommandsConfiguration(): Promise<CommandConfigs> {
+export async function fetchCommandsConfiguration(devBranch?: string): Promise<CommandConfigs> {
   const cmdRunner = new CommandRunner()
   const scriptsFolder = "scripts"
   const scriptsPath = path.join(config.dataPath, scriptsFolder)
@@ -21,9 +21,22 @@ export async function fetchCommandsConfiguration(): Promise<CommandConfigs> {
   return await commandConfigMutex.runExclusive<CommandConfigs>(async () => {
     await cmdRunner.run("mkdir", ["-p", scriptsPath])
 
-    let scriptsRevision = await cmdRunner.run("git", ["ls-remote", `${config.pipelineScripts.repository}`, "HEAD"])
+    if (devBranch && /([^\w\d\-_/]+)/g.test(devBranch)) {
+      throw new Error(`Scripts branch should match pattern /([^\\w\\d\\-_/]+)/, given: "${devBranch}", does not match`)
+    }
+
+    const scriptsBranch = devBranch || "HEAD"
+    let scriptsRevision = await cmdRunner.run("git", [
+      "ls-remote",
+      `${config.pipelineScripts.repository}`,
+      scriptsBranch,
+    ])
     if (scriptsRevision instanceof Error) {
       throw scriptsRevision
+    }
+
+    if (!scriptsRevision) {
+      throw new Error(`Can't find a revision of ${config.pipelineScripts.repository}#${scriptsBranch}`)
     }
 
     // grab only revision
@@ -35,11 +48,20 @@ export async function fetchCommandsConfiguration(): Promise<CommandConfigs> {
     const scriptsRevPath = path.join(scriptsPath, scriptsRevision)
     const commandsRootPath = path.join(scriptsRevPath, CMD_ROOT_FOLDER)
     const commandsOutputPath = path.join(scriptsRevPath, "commands.json")
+    const scriptsBranchForClone = devBranch ? ["--branch", devBranch] : []
 
     if (!fs.existsSync(scriptsRevPath) || !fs.existsSync(commandsOutputPath)) {
       await cmdRunner.run(
         "git",
-        ["clone", "--quiet", "--depth", "1", `${config.pipelineScripts.repository}`, scriptsRevPath],
+        [
+          "clone",
+          "--quiet",
+          "--depth",
+          "1",
+          ...scriptsBranchForClone,
+          `${config.pipelineScripts.repository}`,
+          scriptsRevPath,
+        ],
         { testAllowedErrorMessage: (err) => err.endsWith("already exists and is not an empty directory.") },
       )
 

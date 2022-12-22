@@ -56,5 +56,5 @@ RUN apt-get install -y --quiet --no-install-recommends \
     python3-pkg-resources \
     gcc \
     python3-dev \
-    libc-dev \
+    libc-dev && \
     apt-get autoremove -y
