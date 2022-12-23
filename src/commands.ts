@@ -5,14 +5,15 @@ import glob from "glob"
 import path from "path"
 
 import { config } from "src/config"
+import { LoggerContext } from "src/logger"
 import { CmdJson } from "src/schema/schema.cmd"
 import { CommandRunner } from "src/shell"
 import { CommandConfigs } from "src/types"
 
 const CMD_ROOT_FOLDER = "commands"
 
-export async function fetchCommandsConfiguration(devBranch?: string): Promise<CommandConfigs> {
-  const cmdRunner = new CommandRunner()
+export async function fetchCommandsConfiguration(ctx: LoggerContext, devBranch?: string): Promise<CommandConfigs> {
+  const cmdRunner = new CommandRunner(ctx)
   const scriptsFolder = "scripts"
   const scriptsPath = path.join(config.dataPath, scriptsFolder)
 

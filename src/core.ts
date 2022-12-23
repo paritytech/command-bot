@@ -45,10 +45,10 @@ export const isRequesterAllowed = async (
   octokit: ExtendedOctokit,
   username: string,
 ): Promise<boolean> => {
-  const { allowedOrganizations } = ctx
+  const { allowedOrganizations, logger } = ctx
 
   for (const organizationId of allowedOrganizations) {
-    if (await isOrganizationMember({ organizationId, username, octokit })) {
+    if (await isOrganizationMember({ organizationId, username, octokit, logger })) {
       return true
     }
   }
@@ -75,11 +75,11 @@ export const prepareBranch = async function* (
     itemsToRedact.push(token)
   }
 
-  const cmdRunner = new CommandRunner({ itemsToRedact })
+  const cmdRunner = new CommandRunner(ctx, { itemsToRedact })
 
   yield cmdRunner.run("mkdir", ["-p", repoPath])
 
-  const repoCmdRunner = new CommandRunner({ itemsToRedact, cwd: repoPath })
+  const repoCmdRunner = new CommandRunner(ctx, { itemsToRedact, cwd: repoPath })
 
   // Clone the repository if it does not exist
   yield repoCmdRunner.run("git", ["clone", "--quiet", `${url}/${upstream.owner}/${upstream.repo}.git`, repoPath], {

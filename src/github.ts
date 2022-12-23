@@ -2,9 +2,9 @@ import { OctokitResponse } from "@octokit/plugin-paginate-rest/dist-types/types"
 import { RequestError } from "@octokit/request-error"
 import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types"
 import { Mutex } from "async-mutex"
+import { Logger } from "opstooling-js"
 import { Probot } from "probot"
 
-import { logger } from "src/logger"
 import { PullRequestTask } from "src/task"
 import { CommandOutput, Context } from "src/types"
 import { displayError, Err, millisecondsDelay, Ok } from "src/utils"
@@ -35,7 +35,8 @@ let requestDelay = Promise.resolve()
 const rateLimitRemainingHeader = "x-ratelimit-remaining"
 const rateLimitResetHeader = "x-ratelimit-reset"
 const retryAfterHeader = "retry-after"
-export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
+export const getOctokit = (octokit: Octokit, ctx: Context): ExtendedOctokit => {
+  const { logger: log } = ctx
   /*
     Check that this Octokit instance has not been augmented before because
     side-effects of this function should not be stacked; e.g. registering
@@ -53,7 +54,7 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
   })
 
   octokit.hook.wrap("request", async (request, options) => {
-    logger.debug({ request, options }, "Preparing to send a request to the GitHub API")
+    log.debug({ request, options }, "Preparing to send a request to the GitHub API")
 
     let triesCount = 0
     /* FIXME to get a good return type here, the function should be split.
@@ -67,7 +68,7 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
 
         for (; triesCount < 3; triesCount++) {
           if (triesCount) {
-            logger.debug({}, `Retrying Octokit request (tries so far: ${triesCount})`)
+            log.debug({}, `Retrying Octokit request (tries so far: ${triesCount})`)
           }
 
           try {
@@ -78,7 +79,7 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
             }
 
             const { status, message } = error
-            logger.error(
+            log.error(
               error,
               `Error while querying GitHub API: url: ${error.request.url}, status: ${status}, message: ${message}`,
             )
@@ -103,14 +104,14 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
                     const { headers } = response
                     if (parseInt(headers[rateLimitRemainingHeader] ?? "") === 0) {
                       // https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limit-http-headers
-                      logger.warn(
+                      log.warn(
                         {},
                         `GitHub API limits were hit! The "${rateLimitResetHeader}" response header will be read to figure out until when we're supposed to wait...`,
                       )
                       const rateLimitResetHeaderValue = headers[rateLimitResetHeader]
                       const resetEpoch = parseInt(rateLimitResetHeaderValue ?? "") * 1000
                       if (Number.isNaN(resetEpoch)) {
-                        logger.error(
+                        log.error(
                           { rateLimitResetHeaderValue, rateLimitResetHeader, headers },
                           `GitHub response header "${rateLimitResetHeader}" could not be parsed as epoch`,
                         )
@@ -118,7 +119,7 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
                         const currentEpoch = Date.now()
                         const duration = resetEpoch - currentEpoch
                         if (duration < 0) {
-                          logger.error(
+                          log.error(
                             { rateLimitResetHeaderValue, resetEpoch, currentEpoch, headers },
                             `Parsed epoch value for GitHub response header "${rateLimitResetHeader}" is smaller than the current date`,
                           )
@@ -131,7 +132,7 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
                       const retryAfterHeaderValue = headers[retryAfterHeader]
                       const duration = parseInt(String(retryAfterHeaderValue)) * 1000
                       if (Number.isNaN(duration)) {
-                        logger.error(
+                        log.error(
                           { retryAfterHeader, retryAfterHeaderValue, headers },
                           `GitHub response header "${retryAfterHeader}" could not be parsed as seconds`,
                         )
@@ -148,7 +149,7 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
           */
                       !isApiRateLimitResponse
                     ) {
-                      logger.info(
+                      log.info(
                         { headers, fallbackWaitDuration, message },
                         "Falling back to default wait duration since other heuristics were not fulfilled",
                       )
@@ -160,7 +161,7 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
               return new Err(error)
             }
 
-            logger.debug({}, `Waiting for ${waitDuration}ms until requests can be made again...`)
+            log.debug({}, `Waiting for ${waitDuration}ms until requests can be made again...`)
             await millisecondsDelay(waitDuration)
           }
         }
@@ -196,12 +197,12 @@ export type Comment = {
   data: unknown | null // TODO: quite a complex type inside
 }
 export const createComment = async (
-  { disablePRComment }: Context,
+  { disablePRComment, logger: log }: Context,
   octokit: Octokit,
   ...args: Parameters<typeof octokit.issues.createComment>
 ): Promise<Comment> => {
   if (disablePRComment) {
-    logger.info({ call: "createComment", args }, "createComment")
+    log.info({ call: "createComment", args }, "createComment")
     return { status: 201, id: 0, htmlUrl: "", data: null }
   } else {
     const { data, status } = await octokit.issues.createComment(...args)
@@ -210,12 +211,12 @@ export const createComment = async (
 }
 
 export const updateComment = async (
-  { disablePRComment }: Context,
+  { disablePRComment, logger: log }: Context,
   octokit: Octokit,
   ...args: Parameters<typeof octokit.issues.updateComment>
 ): Promise<void> => {
   if (disablePRComment) {
-    logger.info({ call: "updateComment", args }, "createComment")
+    log.info({ call: "updateComment", args }, "createComment")
   } else {
     await octokit.issues.updateComment(...args)
   }
@@ -225,10 +226,12 @@ export const isOrganizationMember = async ({
   organizationId,
   username,
   octokit,
+  logger: log,
 }: {
   organizationId: number
   username: string
   octokit: ExtendedOctokit
+  logger: Logger
 }): Promise<boolean> => {
   try {
     const response = await octokit.orgs.userMembershipByOrganizationId({ organization_id: organizationId, username })
@@ -242,10 +245,10 @@ export const isOrganizationMember = async ({
         doesn't need to be flagged as an error
       */
       if (error?.status !== 404) {
-        logger.fatal(error, "Organization membership API call responded with unexpected status code")
+        log.fatal(error, "Organization membership API call responded with unexpected status code")
       }
     } else {
-      logger.fatal(error, "Caught unexpected error in isOrganizationMember")
+      log.fatal(error, "Caught unexpected error in isOrganizationMember")
     }
     return false
   }

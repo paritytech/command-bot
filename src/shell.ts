@@ -6,7 +6,7 @@ import { Logger } from "opstooling-js"
 import path from "path"
 import { Readable as ReadableStream } from "stream"
 
-import { logger } from "src/logger"
+import { LoggerContext } from "src/logger"
 import { ToString } from "src/types"
 import { redact } from "src/utils"
 
@@ -33,6 +33,7 @@ export class CommandRunner {
   private commandOutputBuffer: ["stdout" | "stderr", string][] = []
 
   constructor(
+    private ctx: LoggerContext,
     private configuration?: {
       itemsToRedact?: string[]
       shouldTrackProgress?: boolean
@@ -40,6 +41,7 @@ export class CommandRunner {
       onChild?: (child: ChildProcess) => void
     },
   ) {
+    const { logger } = ctx
     this.logger = logger.child({ commandId: randomUUID() })
   }
 
@@ -136,8 +138,9 @@ export class CommandRunner {
   }
 }
 
-export const validateSingleShellCommand = async (command: string): Promise<string | Error> => {
-  const cmdRunner = new CommandRunner()
+export const validateSingleShellCommand = async (ctx: LoggerContext, command: string): Promise<string | Error> => {
+  const { logger } = ctx
+  const cmdRunner = new CommandRunner(ctx)
   const commandAstText = await cmdRunner.run("shfmt", ["--tojson"], { stdinInput: command })
   if (commandAstText instanceof Error) {
     return new Error(`Command AST could not be parsed for "${command}"`)

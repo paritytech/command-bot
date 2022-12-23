@@ -10,7 +10,7 @@ import { fetchCommandsConfiguration } from "src/commands"
 import { isRequesterAllowed } from "src/core"
 import { getSortedTasks } from "src/db"
 import { createComment, ExtendedOctokit, getOctokit, getPostPullRequestResult, updateComment } from "src/github"
-import { logger as parentLogger } from "src/logger"
+import { logger as parentLogger, LoggerContext } from "src/logger"
 import { CmdJson } from "src/schema/schema.cmd"
 import { validateSingleShellCommand } from "src/shell"
 import { cancelTask, getNextTaskId, PullRequestTask, queueTask, serializeTaskQueuedDate } from "src/task"
@@ -42,7 +42,7 @@ export type ParsedBotCommand = QueueCommand | CancelCommand
 
 export const parsePullRequestBotCommandLine = async (
   rawCommandLine: string,
-  ctx: Pick<Context, "logger">,
+  ctx: LoggerContext,
 ): Promise<undefined | Error | ParsedBotCommand> => {
   const { logger } = ctx
   let commandLine = rawCommandLine.trim()
@@ -116,7 +116,7 @@ export const parsePullRequestBotCommandLine = async (
         }
       }
 
-      const commandsConfiguration = await fetchCommandsConfiguration(variables[PIPELINE_SCRIPTS_REF])
+      const commandsConfiguration = await fetchCommandsConfiguration(ctx, variables[PIPELINE_SCRIPTS_REF])
       const configuration = commandsConfiguration[configurationName]?.command?.configuration
 
       if (typeof configuration === "undefined" || !Object.keys(configuration).length) {
@@ -138,7 +138,7 @@ export const parsePullRequestBotCommandLine = async (
 
       assert(configuration.commandStart, "command start should exist")
 
-      const command = await validateSingleShellCommand([...configuration.commandStart, commandLinePart].join(" "))
+      const command = await validateSingleShellCommand(ctx, [...configuration.commandStart, commandLinePart].join(" "))
       if (command instanceof Error) {
         return command
       }
@@ -168,8 +168,11 @@ type WebhookHandler<E extends WebhookEvents> = (
 
 const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ctx, octokit, payload) => {
   const { repositoryCloneDirectory, gitlab, logger } = ctx
-
   const { issue, comment, repository, installation } = payload
+  const pr = { owner: repository.owner.login, repo: repository.name, number: issue.number }
+  const commentParams = { owner: pr.owner, repo: pr.repo, issue_number: pr.number }
+
+  logger.options.context = { ...logger.options.context, repo: repository.name, comment: commentParams, pr }
 
   if (!("pull_request" in issue)) {
     logger.debug(payload, `Skipping payload because it's not from a pull request`)
@@ -192,9 +195,6 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ct
     logger.debug(payload, `Skipping payload because comment.user.type (${comment.user?.type}) is not "User"`)
     return
   }
-
-  const pr = { owner: repository.owner.login, repo: repository.name, number: issue.number }
-  const commentParams = { owner: pr.owner, repo: pr.repo, issue_number: pr.number }
 
   let getError = (body: string) => new PullRequestError(pr, { body, requester })
 
@@ -409,7 +409,7 @@ const setupEvent = <E extends WebhookEvents>(
 
     const installationId: number | undefined =
       "installation" in event.payload ? event.payload.installation?.id : undefined
-    const octokit = getOctokit(await bot.auth(installationId))
+    const octokit = getOctokit(await bot.auth(installationId), ctx)
 
     void handler(ctx, octokit, event.payload as WebhookEventPayload<E>)
       .then(async (result) => {

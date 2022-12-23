@@ -26,7 +26,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
   const { logger, gitlab } = ctx
   const { pipelineScripts } = config
 
-  const cmdRunner = new CommandRunner({ itemsToRedact: [gitlab.accessToken], cwd: task.repoPath })
+  const cmdRunner = new CommandRunner(ctx, { itemsToRedact: [gitlab.accessToken], cwd: task.repoPath })
 
   /*
     Save the head SHA before doing any modifications to the branch so that

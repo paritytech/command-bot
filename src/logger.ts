@@ -2,6 +2,8 @@ import { Logger, LoggerOptions } from "opstooling-js"
 import { Logger as ProbotLogger } from "pino"
 import { getLog } from "probot/lib/helpers/get-log"
 
+import { Context } from "src/types"
+
 export const logFormat = ((): "json" | null => {
   const value = process.env.LOG_FORMAT
   switch (value) {
@@ -37,6 +39,7 @@ export const minLogLevel = ((): "debug" | "info" | "warn" | "error" => {
 
 const loggerOptions: LoggerOptions = { name: "command-bot", minLogLevel, logFormat, impl: console }
 
+export type LoggerContext = Pick<Context, "logger">
 export const logger = new Logger(loggerOptions)
 
 export let probotLogger: ProbotLogger | undefined = undefined
