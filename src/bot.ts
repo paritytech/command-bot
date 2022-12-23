@@ -10,7 +10,7 @@ import { fetchCommandsConfiguration } from "src/commands"
 import { isRequesterAllowed } from "src/core"
 import { getSortedTasks } from "src/db"
 import { createComment, ExtendedOctokit, getOctokit, getPostPullRequestResult, updateComment } from "src/github"
-import { logger } from "src/logger"
+import { logger as parentLogger } from "src/logger"
 import { CmdJson } from "src/schema/schema.cmd"
 import { validateSingleShellCommand } from "src/shell"
 import { cancelTask, getNextTaskId, PullRequestTask, queueTask, serializeTaskQueuedDate } from "src/task"
@@ -42,7 +42,9 @@ export type ParsedBotCommand = QueueCommand | CancelCommand
 
 export const parsePullRequestBotCommandLine = async (
   rawCommandLine: string,
+  ctx: Pick<Context, "logger">,
 ): Promise<undefined | Error | ParsedBotCommand> => {
+  const { logger } = ctx
   let commandLine = rawCommandLine.trim()
 
   // Add trailing whitespace so that /cmd can be differentiated from /cmd-[?]
@@ -85,7 +87,7 @@ export const parsePullRequestBotCommandLine = async (
           return !!value
         }),
       ).argv
-      logger.info({ botArgs, botOptionsLinePart }, "Parsed bot arguments")
+      logger.debug({ botArgs, botOptionsLinePart }, "Parsed bot arguments")
 
       const configurationNameLongArg = "configuration"
       const configurationNameShortArg = "c"
@@ -165,29 +167,29 @@ type WebhookHandler<E extends WebhookEvents> = (
 ) => Promise<PullRequestError | undefined>
 
 const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ctx, octokit, payload) => {
-  const { repositoryCloneDirectory, gitlab } = ctx
+  const { repositoryCloneDirectory, gitlab, logger } = ctx
 
   const { issue, comment, repository, installation } = payload
 
   if (!("pull_request" in issue)) {
-    logger.info(payload, `Skipping payload because it's not from a pull request`)
+    logger.debug(payload, `Skipping payload because it's not from a pull request`)
     return
   }
 
   const requester = comment.user?.login
 
   if (!requester) {
-    logger.info(payload, "Skipping payload because it has no requester")
+    logger.debug(payload, "Skipping payload because it has no requester")
     return
   }
 
   if (payload.action !== "created") {
-    logger.info(payload, "Skipping payload because it's not for created comments")
+    logger.debug(payload, "Skipping payload because it's not for created comments")
     return
   }
 
   if (comment.user?.type !== "User") {
-    logger.info(payload, `Skipping payload because comment.user.type (${comment.user?.type}) is not "User"`)
+    logger.debug(payload, `Skipping payload because comment.user.type (${comment.user?.type}) is not "User"`)
     return
   }
 
@@ -199,7 +201,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ct
   try {
     const commands: ParsedBotCommand[] = []
     for (const line of getLines(comment.body)) {
-      const parsedCommand = await parsePullRequestBotCommandLine(line)
+      const parsedCommand = await parsePullRequestBotCommandLine(line, ctx)
 
       if (parsedCommand === undefined) {
         continue
@@ -221,7 +223,7 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ct
     }
 
     for (const parsedCommand of commands) {
-      logger.info(parsedCommand, "Processing parsed command")
+      logger.debug({ parsedCommand }, "Processing parsed command")
       switch (parsedCommand.subcommand) {
         case "queue": {
           const installationId = installation?.id
@@ -386,9 +388,10 @@ const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ct
       }
     }
   } catch (rawError) {
-    logger.fatal(displayError(rawError))
     const errMessage = intoError(rawError)
-    return getError(`Exception caught in webhook handler\n${errMessage.message}`)
+    const msg = `Exception caught in webhook handler\n${errMessage.message}`
+    logger.fatal(displayError(rawError), msg)
+    return getError(msg)
   }
 }
 
@@ -399,10 +402,10 @@ const setupEvent = <E extends WebhookEvents>(
   handler: WebhookHandler<E>,
 ) => {
   bot.on(eventName, async (event) => {
-    const eventLogger = logger.child({ eventId: event.id, eventName })
+    const eventLogger = parentLogger.child({ eventId: event.id, eventName })
     const ctx: Context = { ...parentCtx, logger: eventLogger }
 
-    eventLogger.info(`Received bot event ${eventName}`, null, [event, eventName])
+    eventLogger.debug({ event, eventName }, `Received bot event ${eventName}`)
 
     const installationId: number | undefined =
       "installation" in event.payload ? event.payload.installation?.id : undefined
@@ -420,6 +423,8 @@ const setupEvent = <E extends WebhookEvents>(
             body: `${comment.requester ? `@${comment.requester} ` : ""}${comment.body}`,
           }
 
+          eventLogger.warn(sharedCommentParams, `Got PullRequestError ${pr.repo}#${pr.number} -> ${comment.body}`)
+
           if (comment.commentId) {
             await updateComment(ctx, octokit, { ...sharedCommentParams, comment_id: comment.commentId })
           } else {
@@ -428,7 +433,7 @@ const setupEvent = <E extends WebhookEvents>(
         }
       })
       .catch((error) => {
-        logger.fatal(error, "Exception caught in webhook handler")
+        eventLogger.fatal(error, "Exception caught in webhook handler")
       })
   })
 }

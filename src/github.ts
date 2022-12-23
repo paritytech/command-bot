@@ -53,7 +53,7 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
   })
 
   octokit.hook.wrap("request", async (request, options) => {
-    logger.info({ request, options }, "Preparing to send a request to the GitHub API")
+    logger.debug({ request, options }, "Preparing to send a request to the GitHub API")
 
     let triesCount = 0
     /* FIXME to get a good return type here, the function should be split.
@@ -67,7 +67,7 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
 
         for (; triesCount < 3; triesCount++) {
           if (triesCount) {
-            logger.info(`Retrying Octokit request (tries so far: ${triesCount})`)
+            logger.debug({}, `Retrying Octokit request (tries so far: ${triesCount})`)
           }
 
           try {
@@ -79,6 +79,7 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
 
             const { status, message } = error
             logger.error(
+              error,
               `Error while querying GitHub API: url: ${error.request.url}, status: ${status}, message: ${message}`,
             )
             const isApiRateLimitResponse = message.startsWith("You have exceeded a secondary rate limit.")
@@ -103,6 +104,7 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
                     if (parseInt(headers[rateLimitRemainingHeader] ?? "") === 0) {
                       // https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limit-http-headers
                       logger.warn(
+                        {},
                         `GitHub API limits were hit! The "${rateLimitResetHeader}" response header will be read to figure out until when we're supposed to wait...`,
                       )
                       const rateLimitResetHeaderValue = headers[rateLimitResetHeader]
@@ -158,7 +160,7 @@ export const getOctokit = (octokit: Octokit): ExtendedOctokit => {
               return new Err(error)
             }
 
-            logger.info(`Waiting for ${waitDuration}ms until requests can be made again...`)
+            logger.debug({}, `Waiting for ${waitDuration}ms until requests can be made again...`)
             await millisecondsDelay(waitDuration)
           }
         }
@@ -199,7 +201,7 @@ export const createComment = async (
   ...args: Parameters<typeof octokit.issues.createComment>
 ): Promise<Comment> => {
   if (disablePRComment) {
-    logger.info({ call: "createComment", args })
+    logger.info({ call: "createComment", args }, "createComment")
     return { status: 201, id: 0, htmlUrl: "", data: null }
   } else {
     const { data, status } = await octokit.issues.createComment(...args)
@@ -213,7 +215,7 @@ export const updateComment = async (
   ...args: Parameters<typeof octokit.issues.updateComment>
 ): Promise<void> => {
   if (disablePRComment) {
-    logger.info({ call: "updateComment", args })
+    logger.info({ call: "updateComment", args }, "createComment")
   } else {
     await octokit.issues.updateComment(...args)
   }
@@ -252,8 +254,9 @@ export const isOrganizationMember = async ({
 export const getPostPullRequestResult =
   (ctx: Context, octokit: Octokit, task: PullRequestTask): ((result: CommandOutput) => Promise<void>) =>
   async (result: CommandOutput) => {
+    const { logger: log } = ctx
     try {
-      logger.info({ result, task }, "Posting pull request result")
+      log.info({ result, task }, "Posting pull request result")
 
       const {
         gitRef: { upstream, prNumber },
@@ -270,6 +273,6 @@ export const getPostPullRequestResult =
         }`,
       })
     } catch (error) {
-      logger.error({ error, result, task }, "Caught error while trying to post pull request result")
+      log.error({ error, result, task }, "Caught error while trying to post pull request result")
     }
   }

@@ -33,10 +33,10 @@ export const setup = async (
 
   const taskDb = new TaskDB(getDb(taskDbPath))
   const tasks = await getSortedTasks({ taskDb, logger })
-  logger.info(tasks, "Tasks found at the start of the application")
+  logger.info({ tasks }, "Tasks found at the start of the application")
 
   if (shouldClearTaskDatabaseOnStart) {
-    logger.info("Clearing the task database during setup")
+    logger.info({}, "Clearing the task database during setup")
     for (const { id } of tasks) {
       await taskDb.db.del(id)
     }
@@ -84,7 +84,7 @@ export const setup = async (
         matrixClient
           .start()
           .then(() => {
-            logger.info(`Connected to Matrix homeserver ${matrixConfiguration.homeServer}`)
+            logger.info({}, `Connected to Matrix homeserver ${matrixConfiguration.homeServer}`)
             resolve(new Ok(matrixClient))
           })
           .catch((error) => {

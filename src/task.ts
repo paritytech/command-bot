@@ -14,7 +14,7 @@ import { prepareBranch } from "src/core"
 import { getSortedTasks } from "src/db"
 import { getPostPullRequestResult, updateComment } from "src/github"
 import { cancelGitlabPipeline, restoreTaskGitlabContext, runCommandInGitlabPipeline } from "src/gitlab"
-import { logger } from "src/logger"
+import { logger as log } from "src/logger"
 import { CommandOutput, Context, GitRef } from "src/types"
 import { displayError, getNextUniqueIncrementalId, intoError } from "src/utils"
 
@@ -95,7 +95,7 @@ export const queueTask = async (
   queuedTasks.set(task.id, taskEventChannel)
 
   const ctx = { ...parentCtx, logger: parentCtx.logger.child({ taskId: task.id }) }
-  const { taskDb, getFetchEndpoint, gitlab } = ctx
+  const { taskDb, getFetchEndpoint, gitlab, logger } = ctx
   const { db } = taskDb
 
   await db.put(task.id, JSON.stringify(task))
@@ -106,7 +106,7 @@ export const queueTask = async (
   const terminate = async () => {
     if (terminateTaskExecution) {
       await terminateTaskExecution()
-      logger.info(`terminateTaskExecution, command: ${task.command}, task: ${task.id}`)
+      logger.info({ task }, `terminateTaskExecution, command: ${task.command}, task: ${task.id}`)
       terminateTaskExecution = undefined
       taskEventChannel.emit(taskExecutionTerminationEvent)
     }
@@ -127,7 +127,7 @@ export const queueTask = async (
   const afterTaskRun = (result: CommandOutput | null) => {
     const wasAlive = taskIsAlive
 
-    logger.info(result, "AfterTaskRun handler")
+    logger.debug(result, "AfterTaskRun handler")
 
     void terminate().catch((error) => {
       logger.error(error, "Failed to terminate task on afterTaskRun")
@@ -246,7 +246,7 @@ export const queueTask = async (
 }
 
 export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot): Promise<void> => {
-  const { taskDb, matrix } = ctx
+  const { taskDb, matrix, logger } = ctx
   const { db } = taskDb
 
   /*
@@ -392,13 +392,14 @@ export const getSendTaskMatrixResult =
       )
     } catch (rawError) {
       const error = intoError(rawError)
-      logger.error(extractRequestError(error), "Caught error when sending Matrix message")
+      log.error(extractRequestError(error), "Caught error when sending Matrix message")
     }
   }
 
 export const cancelTask = async (ctx: Context, taskId: Task | string): Promise<Error | undefined> => {
   const {
     taskDb: { db },
+    logger,
   } = ctx
 
   const task =

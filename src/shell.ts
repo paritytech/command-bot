@@ -64,7 +64,7 @@ export class CommandRunner {
 
       const rawCommand = `${execPath} ${args.join(" ")}`
       const commandDisplayed = itemsToRedact?.length ? redact(rawCommand, itemsToRedact) : rawCommand
-      log.info(`Executing command ${commandDisplayed}`)
+      log.info({ execPath, args }, `Executing command ${commandDisplayed}`)
 
       const child = spawn(execPath, args, { cwd, stdio: "pipe" })
 
@@ -87,6 +87,7 @@ export class CommandRunner {
 
       child.on("close", (exitCode, signal) => {
         log.info(
+          { exitCode, signal },
           `Command "${commandDisplayed}" finished with exit code ${exitCode ?? "??"}${
             signal ? `and signal ${signal}` : ""
           }`,
@@ -144,7 +145,7 @@ export const validateSingleShellCommand = async (command: string): Promise<strin
   const commandAst = JSON.parse(commandAstText) as {
     Stmts: { Cmd: { Type?: string } }[]
   }
-  logger.info(commandAst.Stmts[0].Cmd, `Parsed AST for "${command}"`)
+  logger.debug(commandAst.Stmts[0].Cmd, `Parsed AST for "${command}"`)
   if (commandAst.Stmts.length !== 1 || commandAst.Stmts[0].Cmd.Type !== "CallExpr") {
     return new Error(`Command "${command}" failed validation: the resulting command line should have a single command`)
   }
