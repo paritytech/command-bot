@@ -17,12 +17,13 @@ export const logFormat = ((): "json" | null => {
   }
 })()
 
-export const minLogLevel = ((): "info" | "warn" | "error" => {
+export const minLogLevel = ((): "debug" | "info" | "warn" | "error" => {
   const value: string | undefined = process.env.MIN_LOG_LEVEL
   switch (value) {
     case undefined: {
       return "info"
     }
+    case "debug":
     case "info":
     case "warn":
     case "error": {
