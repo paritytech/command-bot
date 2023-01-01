@@ -45,7 +45,7 @@ const main = async () => {
   })
 
   await server.start()
-  logger.info("Probot has started!")
+  logger.info({}, "Probot has started!")
 
   if (config.pingPort) {
     // Signal that we have started listening until Probot kicks in

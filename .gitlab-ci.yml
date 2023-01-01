@@ -158,6 +158,7 @@ build-docker-ci:
       --set env.GITLAB_ACCESS_TOKEN="$GITLAB_ACCESS_TOKEN"
       --set env.GITLAB_ACCESS_TOKEN_USERNAME="$GITLAB_ACCESS_TOKEN_USERNAME"
       --set env.LOG_FORMAT=json
+      --set env.MIN_LOG_LEVEL=debug
 
 # TODO: rename to .deploy-k8s when prod is moved to parity-prod
 .deploy-k8s-stg:                   &deploy-k8s-stg
@@ -191,6 +192,7 @@ build-docker-ci:
       --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
       --set env.PING_PORT="$PING_PORT"
       --set env.LOG_FORMAT=json
+      --set env.MIN_LOG_LEVEL=debug
       $CI_PROJECT_NAME helm-stg/
 
 .uninstall-deployment:             &uninstall-deployment

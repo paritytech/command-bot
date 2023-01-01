@@ -21,6 +21,7 @@ common:
     TASK_DB_VERSION: v3
     PING_PORT: 3001
     LOG_FORMAT: json
+    MIN_LOG_LEVEL: debug
     DB_CLIENT: postgres
     DB_PORT: 5432
   secrets:

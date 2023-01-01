@@ -151,7 +151,7 @@ export const setupApi = (ctx: Context, server: Server): void => {
       )
     }
 
-    const command = await validateSingleShellCommand([...configuration.commandStart, ...args].join(" "))
+    const command = await validateSingleShellCommand(ctx, [...configuration.commandStart, ...args].join(" "))
     if (command instanceof Error) {
       return errorResponse(res, next, 422, command.message)
     }

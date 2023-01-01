@@ -26,7 +26,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
   const { logger, gitlab } = ctx
   const { pipelineScripts } = config
 
-  const cmdRunner = new CommandRunner({ itemsToRedact: [gitlab.accessToken], cwd: task.repoPath })
+  const cmdRunner = new CommandRunner(ctx, { itemsToRedact: [gitlab.accessToken], cwd: task.repoPath })
 
   /*
     Save the head SHA before doing any modifications to the branch so that
@@ -114,13 +114,16 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
 
   const branchPresenceUrl = `${gitlabProjectApi}/repository/branches/${branchNameUrlEncoded}`
   for (let waitForBranchTryCount = 0; waitForBranchTryCount < waitForBranchMaxTries; waitForBranchTryCount++) {
-    logger.info(branchPresenceUrl, `Sending request to see if the branch for task ${task.id} is ready`)
+    logger.debug({ branchPresenceUrl }, `Sending request to see if the branch for task ${task.id} is ready`)
     const response = await fetch(branchPresenceUrl, { headers: { "PRIVATE-TOKEN": gitlab.accessToken } })
     if (
       // The branch was not yet registered on GitLab; wait for it...
       response.status === 404
     ) {
-      logger.info(`Branch of task ${task.id} was not found. Waiting before retrying...`)
+      logger.warn(
+        { branchPresenceUrl, task, response },
+        `Branch of task ${task.id} was not found. Waiting before retrying...`,
+      )
       await millisecondsDelay(waitForBranchRetryDelay)
     } else if (response.ok) {
       wasBranchRegistered = true
@@ -137,7 +140,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
   }
 
   const pipelineCreationUrl = `${gitlabProjectApi}/pipeline?ref=${branchNameUrlEncoded}`
-  logger.info(pipelineCreationUrl, `Sending request to create a pipeline for task ${task.id}`)
+  logger.debug({ pipelineCreationUrl, task }, `Sending request to create a pipeline for task ${task.id}`)
   const pipeline = await validatedFetch<{
     id: number
     project_id: number
@@ -147,10 +150,10 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
       .keys({ id: Joi.number().required(), project_id: Joi.number().required() })
       .options({ allowUnknown: true }),
   )
-  logger.info(pipeline, `Created pipeline for task ${task.id}`)
+  logger.info({ pipeline, task }, `Created pipeline for task ${task.id}`)
 
   const jobFetchUrl = `${gitlabProjectApi}/pipelines/${pipeline.id}/jobs`
-  logger.info(jobFetchUrl, `Sending request to fetch the GitLab job created for task ${task.id}`)
+  logger.debug({ jobFetchUrl, task, pipeline }, `Sending request to fetch the GitLab job created for task ${task.id}`)
   const [job] = await validatedFetch<
     [
       {
@@ -164,7 +167,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
       .length(1)
       .required(),
   )
-  logger.info(job, `Fetched job for task ${task.id}`)
+  logger.info({ job, task, pipeline }, `Fetched job for task ${task.id}`)
 
   return getAliveTaskGitlabContext(ctx, { id: pipeline.id, projectId: pipeline.project_id, jobWebUrl: job.web_url })
 }
@@ -235,7 +238,7 @@ export const cancelGitlabPipeline = async (
   { gitlab, logger }: Context,
   pipeline: TaskGitlabPipeline,
 ): Promise<void> => {
-  logger.info(pipeline, "Cancelling GitLab pipeline")
+  logger.info({ pipeline }, "Cancelling GitLab pipeline")
   await validatedFetch(
     fetch(
       /*
