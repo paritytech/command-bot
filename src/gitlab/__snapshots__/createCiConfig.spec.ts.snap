@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`getGitlabCiYmlConfig PIPELINE_SCRIPTS_REF and other VARs are applied, while PIPELINE_SCRIPTS_REPOSITORY is not overrideable 1`] = `
+exports[`createCiConfig PIPELINE_SCRIPTS_REF and other VARs are applied, while PIPELINE_SCRIPTS_REPOSITORY is not overrideable 1`] = `
 {
   "command": {
     "artifacts": {

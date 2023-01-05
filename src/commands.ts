@@ -10,6 +10,7 @@ import { CmdJson } from "src/schema/schema.cmd"
 import { CommandRunner } from "src/shell"
 import { CommandConfigs } from "src/types"
 
+export const PIPELINE_SCRIPTS_REF = "PIPELINE_SCRIPTS_REF"
 const CMD_ROOT_FOLDER = "commands"
 
 export async function fetchCommandsConfiguration(ctx: LoggerContext, devBranch?: string): Promise<CommandConfigs> {

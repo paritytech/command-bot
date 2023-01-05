@@ -49,13 +49,15 @@ type TaskBase<T> = {
   command: string
 }
 
+export type GitRefPR = GitRef & { prNumber: number }
+
 export type PullRequestTask = TaskBase<"PullRequestTask"> & {
   comment: {
     id: number
     htmlUrl: string
   }
   installationId: number
-  gitRef: GitRef & { prNumber: number }
+  gitRef: GitRefPR
 }
 
 export type ApiTask = TaskBase<"ApiTask"> & {
