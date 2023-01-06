@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # for downloading shfmt: wget ca-certificates
 # Needed for building RocksDB bindings for Node.js: build-essential python3
-# Git is needed for both pre-commit and also for cloning repositories before
+# Git is needed for cloning repositories before
 # running the bot's commands
 RUN apt-get update && \
     apt-get install -y --quiet --no-install-recommends \
@@ -46,15 +46,10 @@ CMD yarn start
 FROM base AS ci
 
 # CI pipeline utilities
-# python3-* is needed for pre-commit
 RUN apt-get install -y --quiet --no-install-recommends \
-    python3 \
     make \
     bash \
     sed \
-    python3-distutils \
-    python3-pkg-resources \
     gcc \
-    python3-dev \
     libc-dev && \
     apt-get autoremove -y

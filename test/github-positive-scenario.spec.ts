@@ -16,7 +16,7 @@ const restFixtures = getRestFixtures({
     headBranch: "prBranch1",
     comments: [],
   },
-  gitlab: { cmdBranch: "cmd-bot/4" },
+  gitlab: { cmdBranch: "cmd-bot/4-1" },
 })
 
 const jsonResponseHeaders = { "content-type": "application/json" }
@@ -26,6 +26,7 @@ const mockedEndpoints: Record<string, MockedEndpoint> = {}
 type CommandDataProviderItem = {
   suitName: string
   commandLine: string
+  taskId: number
   expected: {
     startMessage: string
     finishMessage: string
@@ -35,6 +36,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   {
     suitName: "[sample] command",
     commandLine: "/cmd queue -c sample $ helloworld",
+    taskId: 1,
     expected: {
       startMessage:
         'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh" helloworld". This comment will be updated later.',
@@ -45,6 +47,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   {
     suitName: "[fmt] command with args",
     commandLine: "/cmd queue -c fmt $ 1",
+    taskId: 2,
     expected: {
       startMessage:
         'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh" 1". This comment will be updated later.',
@@ -54,6 +57,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   {
     suitName: "[fmt] command no args",
     commandLine: "/cmd queue -c fmt",
+    taskId: 3,
     expected: {
       startMessage:
         'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"". This comment will be updated later.',
@@ -63,6 +67,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   {
     suitName: "[bench-bot] command",
     commandLine: "/cmd queue -c bench $ runtime kusama-dev pallet_referenda",
+    taskId: 4,
     expected: {
       startMessage:
         'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" runtime kusama-dev pallet_referenda". This comment will be updated later.',
@@ -74,6 +79,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
     suitName: "[try-runtime] command",
     commandLine:
       "/cmd queue -v RUST_LOG=remote-ext=debug,runtime=trace -c try-runtime $ --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443",
+    taskId: 5,
     expected: {
       startMessage:
         'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443". This comment will be updated later.',
@@ -103,14 +109,13 @@ beforeAll(async () => {
     .thenReply(200, restFixtures.github.pullRequest, jsonResponseHeaders)
 
   mockedEndpoints.pipeline = await mockServers.gitLab
-    .forGet("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/repository/branches/cmd-bot%2F4")
+    .forGet(/\/api\/v4\/projects\/paritytech-stg%2Fcommand-bot-test\/repository\/branches\/cmd-bot%2F4-\d+/)
     .thenReply(200, restFixtures.gitlab.branches, jsonResponseHeaders)
 })
 
 describe.each(commandsDataProvider)(
   "$suitName: Positive scenario (GitHub webhook)",
-  // eslint-disable-next-line unused-imports/no-unused-vars-ts
-  ({ suitName, commandLine, expected }) => {
+  ({ suitName, commandLine, taskId, expected }) => {
     let commentThatBotLeft: {
       author: string
       body: string
@@ -164,7 +169,7 @@ describe.each(commandsDataProvider)(
 
       const mockedPipelineEndpoint = await mockServers.gitLab
         .forPost("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/pipeline")
-        .withQuery({ ref: "cmd-bot/4" })
+        .withQuery({ ref: "cmd-bot/4-" + taskId })
         .thenReply(201, restFixtures.gitlab.pendingPipeline, jsonResponseHeaders)
 
       await mockServers.gitLab

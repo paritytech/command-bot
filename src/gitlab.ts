@@ -7,20 +7,31 @@ import path from "path"
 import yaml from "yaml"
 
 import { config } from "src/config"
+import { createCiConfig } from "src/gitlab/createCiConfig"
 import { CommandRunner } from "src/shell"
 import { Task, taskExecutionTerminationEvent, TaskGitlabPipeline } from "src/task"
-import { Context, PipelineScripts } from "src/types"
+import { Context } from "src/types"
 import { millisecondsDelay, validatedFetch } from "src/utils"
+
+type GitlabTaskContext = TaskGitlabPipeline & {
+  terminate: () => Promise<Error | undefined>
+  waitUntilFinished: (taskEventChannel: EventEmitter) => Promise<unknown>
+}
 
 // Integration tests don't like waiting for 16 seconds
 const pipelineUpdateInterval = process.env.GITLAB_PIPELINE_UPDATE_INTERVAL
   ? envNumberVar("GITLAB_PIPELINE_UPDATE_INTERVAL")
   : 16384
 
-const getPipelineScriptsCloneCommand = ({ withRef }: { withRef: boolean }) =>
-  `git clone --progress --verbose --depth 1 ${
-    withRef ? `--branch "$PIPELINE_SCRIPTS_REF"` : ""
-  } "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"`
+function getCiBranchName(task: Task): string {
+  // take first part (number)
+  const id = task.id.replace(/(\d+).*/g, "$1")
+  return `cmd-bot/${
+    "prNumber" in task.gitRef
+      ? `${task.gitRef.prNumber}-${id}`
+      : `${task.gitRef.contributor.owner}/${task.gitRef.contributor.branch}-${id}`
+  }`
+}
 
 export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Promise<GitlabTaskContext> => {
   const { logger, gitlab } = ctx
@@ -58,14 +69,11 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
 
   await writeFile(
     path.join(task.repoPath, ".gitlab-ci.yml"),
-    yaml.stringify(getGitlabCiYmlConfig(headSha, task, pipelineScripts, jobTaskInfoMessage)),
+    yaml.stringify(createCiConfig(headSha, task, pipelineScripts, jobTaskInfoMessage)),
   )
 
-  const branchName = `cmd-bot/${
-    "prNumber" in task.gitRef
-      ? task.gitRef.prNumber
-      : `${task.gitRef.contributor.owner}/${task.gitRef.contributor.branch}`
-  }`
+  const branchName = getCiBranchName(task)
+
   await cmdRunner.run("git", ["branch", "-D", branchName], {
     testAllowedErrorMessage: (err) => err.endsWith("not found."),
   })
@@ -172,68 +180,6 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
   return getAliveTaskGitlabContext(ctx, { id: pipeline.id, projectId: pipeline.project_id, jobWebUrl: job.web_url })
 }
 
-export function getGitlabCiYmlConfig(
-  headSha: string,
-  task: Task,
-  pipelineScripts: PipelineScripts,
-  jobTaskInfoMessage: string,
-): object {
-  const artifactsFolderPath = ".git/.artifacts"
-  return {
-    workflow: { rules: [{ if: `$CI_PIPELINE_SOURCE == "api"` }, { if: `$CI_PIPELINE_SOURCE == "web"` }] },
-    command: {
-      timeout: "24 hours",
-      ...task.gitlab.job,
-      script: [
-        `echo "This job is related to task ${task.id}. ${jobTaskInfoMessage}."`,
-        /*
-          The scripts repository might be left over from a previous run in the
-          same Gitlab shell executor
-        */
-        'rm -rf "$PIPELINE_SCRIPTS_DIR"',
-        // prettier-ignore
-        'if [ "${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then ' +
-        'if [ "${PIPELINE_SCRIPTS_REF:-}" ]; then ' +
-        getPipelineScriptsCloneCommand({ withRef: true }) + "; " +
-        "else " +
-        getPipelineScriptsCloneCommand({ withRef: false }) + "; " +
-        "fi" + "; " +
-        "fi",
-        `export ARTIFACTS_DIR="$PWD/${artifactsFolderPath}"`,
-        /*
-          The artifacts directory might be left over from a previous run in
-          the same Gitlab shell executor
-        */
-        'rm -rf "$ARTIFACTS_DIR"',
-        'mkdir -p "$ARTIFACTS_DIR"',
-        task.command,
-      ],
-      artifacts: {
-        name: "${CI_JOB_NAME}_${CI_COMMIT_REF_NAME}",
-        expire_in: "7 days",
-        when: "always",
-        paths: [artifactsFolderPath],
-      },
-      variables: {
-        // overrideable variables
-        PIPELINE_SCRIPTS_REF: pipelineScripts?.ref,
-        ...task.gitlab.job.variables,
-        // non-overrideable variables
-        GH_OWNER: task.gitRef.upstream.owner,
-        GH_OWNER_REPO: task.gitRef.upstream.repo,
-        ...(task.gitRef.upstream.branch ? { GH_OWNER_BRANCH: task.gitRef.upstream.branch } : {}),
-        GH_CONTRIBUTOR: task.gitRef.contributor.owner,
-        GH_CONTRIBUTOR_REPO: task.gitRef.contributor.repo,
-        GH_CONTRIBUTOR_BRANCH: task.gitRef.contributor.branch,
-        GH_HEAD_SHA: headSha,
-        COMMIT_MESSAGE: task.command,
-        PIPELINE_SCRIPTS_REPOSITORY: pipelineScripts?.repository,
-        PIPELINE_SCRIPTS_DIR: ".git/.scripts",
-      },
-    },
-  }
-}
-
 export const cancelGitlabPipeline = async (
   { gitlab, logger }: Context,
   pipeline: TaskGitlabPipeline,
@@ -288,11 +234,6 @@ export const restoreTaskGitlabContext = async (
   }
 
   return getAliveTaskGitlabContext(ctx, pipeline)
-}
-
-type GitlabTaskContext = TaskGitlabPipeline & {
-  terminate: () => Promise<Error | undefined>
-  waitUntilFinished: (taskEventChannel: EventEmitter) => Promise<unknown>
 }
 
 const getAliveTaskGitlabContext = (ctx: Context, pipeline: TaskGitlabPipeline): GitlabTaskContext => {

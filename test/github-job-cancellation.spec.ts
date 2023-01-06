@@ -16,7 +16,7 @@ const restFixures = getRestFixtures({
     headBranch: "prBranch1",
     comments: [{ author: "somedev123", body: "/cmd queue -c sample $ hi", id: 500 }],
   },
-  gitlab: { cmdBranch: "cmd-bot/4" },
+  gitlab: { cmdBranch: "cmd-bot/4-1" },
 })
 
 const jsonResponseHeaders = { "content-type": "application/json" }
@@ -61,7 +61,7 @@ describe("Job cancellation (GitHub webhook)", () => {
       .thenReply(200, restFixures.github.pullRequest, jsonResponseHeaders)
 
     mockedEndpoints.pipeline = await mockServers.gitLab
-      .forGet("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/repository/branches/cmd-bot%2F4")
+      .forGet(/\/api\/v4\/projects\/paritytech-stg%2Fcommand-bot-test\/repository\/branches\/cmd-bot%2F4-\d+/)
       .thenReply(200, restFixures.gitlab.branches, jsonResponseHeaders)
   })
 
@@ -80,7 +80,7 @@ describe("Job cancellation (GitHub webhook)", () => {
 
     const mockedPipelineEndpoint = await mockServers.gitLab
       .forPost("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/pipeline")
-      .withQuery({ ref: "cmd-bot/4" })
+      .withQuery({ ref: "cmd-bot/4-1" })
       .thenReply(201, restFixures.gitlab.pendingPipeline, jsonResponseHeaders)
 
     await mockServers.gitLab

@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals"
 
-import { getGitlabCiYmlConfig } from "src/gitlab"
+import { createCiConfig } from "src/gitlab/createCiConfig"
 import { logger } from "src/logger"
 import { Task } from "src/task"
 
@@ -9,7 +9,7 @@ jest.mock("src/commands")
 logger.options.minLogLevel = "fatal"
 
 function getTaskStub(opts: { vars: Record<string, string> } = { vars: {} }): Task {
-  const task: Task = {
+  return {
     gitlab: {
       job: { tags: ["any"], variables: opts.vars, image: "image" },
       pipeline: { id: 12, jobWebUrl: "jobWebUrl", projectId: 99 },
@@ -31,12 +31,11 @@ function getTaskStub(opts: { vars: Record<string, string> } = { vars: {} }): Tas
     comment: { id: 55, htmlUrl: "htmlUrl" },
     installationId: 888,
   }
-  return task
 }
 
-describe("getGitlabCiYmlConfig", () => {
+describe("createCiConfig", () => {
   test(`PIPELINE_SCRIPTS_REF and other VARs are applied, while PIPELINE_SCRIPTS_REPOSITORY is not overrideable`, () => {
-    const res = getGitlabCiYmlConfig(
+    const res = createCiConfig(
       "headSha",
       getTaskStub({
         vars: {

@@ -1,7 +1,8 @@
 import { jest } from "@jest/globals"
 
-import { ParsedBotCommand, parsePullRequestBotCommandLine } from "./bot"
-import { logger } from "./logger"
+import { parsePullRequestBotCommandLine } from "src/bot/parsePullRequestBotCommandLine"
+import { ParsedBotCommand } from "src/bot/types"
+import { logger } from "src/logger"
 
 jest.mock("src/commands")
 jest.mock("src/db")
