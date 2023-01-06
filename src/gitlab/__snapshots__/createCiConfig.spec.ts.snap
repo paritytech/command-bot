@@ -13,12 +13,27 @@ exports[`createCiConfig PIPELINE_SCRIPTS_REF and other VARs are applied, while P
     },
     "image": "image",
     "script": [
-      "echo "This job is related to task 123. job Task info message."",
-      "rm -rf "$PIPELINE_SCRIPTS_DIR"",
-      "if [ "\${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then if [ "\${PIPELINE_SCRIPTS_REF:-}" ]; then git clone --progress --verbose --depth 1 --branch "$PIPELINE_SCRIPTS_REF" "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"; else git clone --progress --verbose --depth 1  "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"; fi; fi",
-      "export ARTIFACTS_DIR="$PWD/.git/.artifacts"",
-      "rm -rf "$ARTIFACTS_DIR"",
-      "mkdir -p "$ARTIFACTS_DIR"",
+      "
+        echo "This job is related to task 123. job Task info message."
+
+        # The scripts repository might be left over from a previous run in the
+        # same Gitlab shell executor
+
+        rm -rf "$PIPELINE_SCRIPTS_DIR"
+        if [ "\${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then
+          if [ "\${PIPELINE_SCRIPTS_REF:-}" ]; then
+            git clone --progress --verbose --depth 1 --branch "$PIPELINE_SCRIPTS_REF" "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"
+          else
+            git clone --progress --verbose --depth 1 "$PIPELINE_SCRIPTS_DIR"
+          fi
+        fi
+        export ARTIFACTS_DIR="$PWD/.git/.artifacts"
+        # The scripts repository might be left over from a previous run in the
+        # same Gitlab shell executor
+
+        rm -rf "$PIPELINE_SCRIPTS_DIR"
+        mkdir -p "$ARTIFACTS_DIR"
+        ",
       "echo 123",
     ],
     "tags": [
