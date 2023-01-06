@@ -1,11 +1,6 @@
 import { Task } from "src/task"
 import { PipelineScripts } from "src/types"
 
-const getPipelineScriptsCloneCommand = ({ withRef }: { withRef: boolean }) =>
-  `git clone --progress --verbose --depth 1 ${
-    withRef ? `--branch "$PIPELINE_SCRIPTS_REF"` : ""
-  } "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"`
-
 export function createCiConfig(
   headSha: string,
   task: Task,
@@ -19,27 +14,27 @@ export function createCiConfig(
       timeout: "24 hours",
       ...task.gitlab.job,
       script: [
-        `echo "This job is related to task ${task.id}. ${jobTaskInfoMessage}."`,
-        /*
-          The scripts repository might be left over from a previous run in the
-          same Gitlab shell executor
-        */
-        'rm -rf "$PIPELINE_SCRIPTS_DIR"',
-        // prettier-ignore
-        'if [ "${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then ' +
-        'if [ "${PIPELINE_SCRIPTS_REF:-}" ]; then ' +
-        getPipelineScriptsCloneCommand({ withRef: true }) + "; " +
-        "else " +
-        getPipelineScriptsCloneCommand({ withRef: false }) + "; " +
-        "fi" + "; " +
-        "fi",
-        `export ARTIFACTS_DIR="$PWD/${artifactsFolderPath}"`,
-        /*
-          The artifacts directory might be left over from a previous run in
-          the same Gitlab shell executor
-        */
-        'rm -rf "$ARTIFACTS_DIR"',
-        'mkdir -p "$ARTIFACTS_DIR"',
+        `
+        echo "This job is related to task ${task.id}. ${jobTaskInfoMessage}."
+
+        # The scripts repository might be left over from a previous run in the
+        # same Gitlab shell executor
+
+        rm -rf "$PIPELINE_SCRIPTS_DIR"
+        if [ "\${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then
+          if [ "\${PIPELINE_SCRIPTS_REF:-}" ]; then
+            git clone --progress --verbose --depth 1 --branch "$PIPELINE_SCRIPTS_REF" "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"
+          else
+            git clone --progress --verbose --depth 1 "$PIPELINE_SCRIPTS_DIR"
+          fi
+        fi
+        export ARTIFACTS_DIR="$PWD/${artifactsFolderPath}"
+        # The scripts repository might be left over from a previous run in the
+        # same Gitlab shell executor
+
+        rm -rf "$PIPELINE_SCRIPTS_DIR"
+        mkdir -p "$ARTIFACTS_DIR"
+        `,
         task.command,
       ],
       artifacts: {
