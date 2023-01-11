@@ -53,6 +53,7 @@ test-lint:
   <<:                              *common-refs
   stage:                           test
   script:
+    - apk add git
     - yarn --immutable
     - yarn lint
 
@@ -60,6 +61,7 @@ test-unit:
   <<:                              *common-refs
   stage:                           test
   script:
+    - apk add git
     - yarn --immutable
     - yarn test:unit
 
@@ -67,6 +69,7 @@ test-integration:
   <<:                              *common-refs
   stage:                           test
   script:
+    - apk add git
     - yarn --immutable
     - yarn test:integration
 
