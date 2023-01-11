@@ -20,18 +20,13 @@ RUN apt-get update && \
     git config --global user.name command-bot && \
     git config --global user.email "opstooling+commandbot@parity.io"
 
-# ---------------------- build ---------------------- #
-
-FROM base as builder
-
 COPY . /builder
 WORKDIR /builder
-RUN yarn --ignore-optional --immutable
-RUN yarn build
+RUN yarn --ignore-optional --immutable && yarn build
 
 # ---------------------- app ---------------------- #
 
-FROM builder AS app
+FROM base AS app
 
 WORKDIR /app
 
@@ -40,16 +35,3 @@ COPY --from=builder /builder/ /app
 RUN chown -R node:node /app
 
 CMD yarn start
-
-# ---------------------- ci ---------------------- #
-
-FROM base AS ci
-
-# CI pipeline utilities
-RUN apt-get install -y --quiet --no-install-recommends \
-    make \
-    bash \
-    sed \
-    gcc \
-    libc-dev && \
-    apt-get autoremove -y
