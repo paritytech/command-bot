@@ -6,9 +6,8 @@ stages:
 
 variables:
   IMAGE_NAME:                      "docker.io/paritytech/command-bot"
-  CI_IMAGE:                        "docker.io/node:16.13.2-bullseye-slim"
+  CI_IMAGE:                        "docker.io/paritytech/command-bot:ci"
   BUILDAH_IMAGE:                   "quay.io/buildah/stable:v1.27"
-  KUBE_NAMESPACE:                  try-runtime
   DOCKER_TAG:                      ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
   DATA_PATH:                       /data
   PING_PORT:                       3001
@@ -53,7 +52,6 @@ test-lint:
   <<:                              *common-refs
   stage:                           test
   script:
-    - apk add git
     - yarn --immutable
     - yarn lint
 
@@ -61,7 +59,6 @@ test-unit:
   <<:                              *common-refs
   stage:                           test
   script:
-    - apk add git
     - yarn --immutable
     - yarn test:unit
 
@@ -69,7 +66,6 @@ test-integration:
   <<:                              *common-refs
   stage:                           test
   script:
-    - apk add git
     - yarn --immutable
     - yarn test:integration
 
@@ -82,7 +78,22 @@ build-docker:
     - buildah bud
       --format=docker
       --tag "$IMAGE_NAME:$DOCKER_TAG"
-      --file "$DOCKERFILE" .
+      --file Dockerfile .
+
+build-push-docker-app:
+  stage:                           build
+  <<:                              *publish-refs
+  image:                           $BUILDAH_IMAGE
+  script:
+    - echo "$Docker_Hub_Pass_Parity" |
+      buildah login --username "$Docker_Hub_User_Parity" --password-stdin docker.io
+    - buildah bud
+      --format=docker
+      --tag "$IMAGE_NAME:$DOCKER_TAG"
+      --file Dockerfile .
+    - buildah push --format=v2s2 "$IMAGE_NAME:$DOCKER_TAG"
+  after_script:
+    - buildah logout --all
 
 #### App deployment
 
@@ -119,21 +130,6 @@ build-docker:
       --set env.LOG_FORMAT=json
       --set env.MIN_LOG_LEVEL=debug
       $CI_PROJECT_NAME helm/
-
-build-push-docker-app:
-  stage:                           build
-  <<:                              *publish-refs
-  image:                           $BUILDAH_IMAGE
-  script:
-    - echo "$Docker_Hub_Pass_Parity" |
-      buildah login --username "$Docker_Hub_User_Parity" --password-stdin docker.io
-    - buildah bud
-      --format=docker
-      --tag "$IMAGE_NAME:$DOCKER_TAG"
-      --file $DOCKERFILE .
-    - buildah push --format=v2s2 "$IMAGE_NAME:$DOCKER_TAG"
-  after_script:
-    - buildah logout --all
 
 deploy-stg:
   stage:                           staging
