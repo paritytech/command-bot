@@ -30,7 +30,7 @@ FROM base AS app
 
 WORKDIR /app
 
-COPY --from=builder /builder/ /app
+COPY --from=base /builder/ /app
 
 RUN chown -R node:node /app
 
