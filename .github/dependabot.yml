@@ -9,7 +9,6 @@ updates:
       # @types/node should be bumped manually once we change the Node.js version used
       - dependency-name: "@types/node"
       - dependency-name: "*"
-        # Ignore minor/patch upgrades; only bother with opening the upgrade PR
-        # when a new major release comes out; security updates are nevertheless
-        # unaffected by this setting and will continue to work.
-        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
+        # Ignore version upgrades.
+        # Security updates are nevertheless. unaffected by this setting and will continue to work.
+        update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
