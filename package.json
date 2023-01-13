@@ -48,7 +48,7 @@
     "mockttp": "^3.6.2",
     "nodemon": "2.0.19",
     "prettier": "^2.7.1",
-    "rimraf": "3.0.2",
+    "rimraf": "4.0.4",
     "selfsigned": "^2.1.0",
     "smee-client": "^1.2.3",
     "ts-jest": "^29.0.0",
