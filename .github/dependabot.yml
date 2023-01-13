@@ -10,5 +10,5 @@ updates:
       - dependency-name: "@types/node"
       - dependency-name: "*"
         # Ignore version upgrades.
-        # Security updates are nevertheless. unaffected by this setting and will continue to work.
+        # Security updates are nevertheless unaffected by this setting and will continue to work.
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
