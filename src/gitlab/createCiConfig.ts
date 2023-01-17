@@ -19,20 +19,19 @@ export function createCiConfig(
 
         # The scripts repository might be left over from a previous run in the
         # same Gitlab shell executor
-
         rm -rf "$PIPELINE_SCRIPTS_DIR"
+
         if [ "\${PIPELINE_SCRIPTS_REPOSITORY:-}" ]; then
           if [ "\${PIPELINE_SCRIPTS_REF:-}" ]; then
             git clone --progress --verbose --depth 1 --branch "$PIPELINE_SCRIPTS_REF" "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"
           else
-            git clone --progress --verbose --depth 1 "$PIPELINE_SCRIPTS_DIR"
+            git clone --progress --verbose --depth 1 "$PIPELINE_SCRIPTS_REPOSITORY" "$PIPELINE_SCRIPTS_DIR"
           fi
         fi
         export ARTIFACTS_DIR="$PWD/${artifactsFolderPath}"
-        # The scripts repository might be left over from a previous run in the
-        # same Gitlab shell executor
-
-        rm -rf "$PIPELINE_SCRIPTS_DIR"
+        # The artifacts directory might be left over from a previous run in
+        # the same Gitlab shell executor
+        rm -rf "$ARTIFACTS_DIR"
         mkdir -p "$ARTIFACTS_DIR"
         `.split("\n"),
         task.command,
