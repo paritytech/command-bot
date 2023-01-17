@@ -1,7 +1,6 @@
 import { EmitterWebhookEventName } from "@octokit/webhooks/dist-types/types"
 import { IssueCommentCreatedEvent } from "@octokit/webhooks-types"
 
-import { CancelCommand, GenericCommand } from "src/bot/ParsedCommand"
 import { ExtendedOctokit } from "src/github"
 import { Context, PullRequestError } from "src/types"
 
@@ -16,8 +15,6 @@ export type CommentData = {
   repo: string
   issue_number: number
 }
-
-export type ParsedBotCommand = GenericCommand | CancelCommand
 
 export type WebhookEvents = Extract<EmitterWebhookEventName, "issue_comment.created">
 

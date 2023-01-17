@@ -1,9 +1,9 @@
 import { displayError, intoError } from "opstooling-js"
 import path from "path"
 
-import { CancelCommand, GenericCommand } from "src/bot/ParsedCommand"
-import { parsePullRequestBotCommandLine } from "src/bot/parsePullRequestBotCommandLine"
-import { CommentData, ParsedBotCommand, PullRequestData, WebhookHandler } from "src/bot/types"
+import { CancelCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
+import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine"
+import { CommentData, PullRequestData, WebhookHandler } from "src/bot/types"
 import { isRequesterAllowed } from "src/core"
 import { getSortedTasks } from "src/db"
 import { createComment, getPostPullRequestResult, updateComment } from "src/github"
@@ -44,7 +44,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
   let getError = (body: string) => new PullRequestError(pr, { body, requester })
 
   try {
-    const commands: ParsedBotCommand[] = []
+    const commands: ParsedCommand[] = []
     for (const line of getLines(comment.body)) {
       const parsedCommand = await parsePullRequestBotCommandLine(line, ctx)
 
@@ -69,6 +69,10 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
 
     for (const parsedCommand of commands) {
       logger.debug({ parsedCommand }, "Processing parsed command")
+
+      if (parsedCommand instanceof HelpCommand) {
+        await createComment(ctx, octokit, { ...commentParams, body: `Here's a link` })
+      }
 
       if (parsedCommand instanceof GenericCommand) {
         const installationId = installation?.id

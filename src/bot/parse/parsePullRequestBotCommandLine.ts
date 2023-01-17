@@ -2,8 +2,7 @@ import assert from "assert"
 import yargs from "yargs"
 
 import { botPullRequestCommentMention, botPullRequestIgnoreCommands } from "src/bot"
-import { CancelCommand, GenericCommand } from "src/bot/ParsedCommand"
-import { ParsedBotCommand } from "src/bot/types"
+import { CancelCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
 import { fetchCommandsConfiguration, PIPELINE_SCRIPTS_REF } from "src/command-configs/fetchCommandsConfiguration"
 import { LoggerContext } from "src/logger"
 import { validateSingleShellCommand } from "src/shell"
@@ -12,7 +11,7 @@ import { arrayify } from "src/utils"
 export const parsePullRequestBotCommandLine = async (
   rawCommandLine: string,
   ctx: LoggerContext,
-): Promise<undefined | Error | ParsedBotCommand> => {
+): Promise<undefined | Error | ParsedCommand> => {
   const { logger } = ctx
   let commandLine = rawCommandLine.trim()
 
@@ -39,6 +38,9 @@ export const parsePullRequestBotCommandLine = async (
   commandLine = commandLine.slice(subcommand.length).trim()
 
   switch (subcommand) {
+    case "help": {
+      return new HelpCommand()
+    }
     case "cancel": {
       return new CancelCommand(commandLine.trim())
     }

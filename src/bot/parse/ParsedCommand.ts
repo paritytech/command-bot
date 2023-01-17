@@ -1,7 +1,11 @@
 import { CmdJson } from "src/schema/schema.cmd"
 
-export class ParsedCommand {
-  constructor(public subcommand: string) {}
+interface IParseCommand {
+  subcommand: string
+}
+
+export abstract class ParsedCommand implements IParseCommand {
+  protected constructor(public subcommand: string) {}
 }
 
 export class CancelCommand extends ParsedCommand {
@@ -9,9 +13,16 @@ export class CancelCommand extends ParsedCommand {
     super("cancel")
   }
 }
+
+export class HelpCommand extends ParsedCommand {
+  constructor() {
+    super("help")
+  }
+}
+
 export class GenericCommand extends ParsedCommand {
   constructor(
-    public subcommand: string,
+    subcommand: string,
     public configuration: Pick<CmdJson["command"]["configuration"], "gitlab" | "commandStart"> & {
       optionalCommandArgs?: boolean
     },

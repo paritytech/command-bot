@@ -1,8 +1,7 @@
 import { jest } from "@jest/globals"
 
-import { CancelCommand, GenericCommand } from "src/bot/ParsedCommand"
-import { parsePullRequestBotCommandLine } from "src/bot/parsePullRequestBotCommandLine"
-import { ParsedBotCommand } from "src/bot/types"
+import { CancelCommand, GenericCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
+import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine"
 import { logger } from "src/logger"
 
 jest.mock("src/command-configs/fetchCommandsConfiguration")
@@ -13,7 +12,7 @@ logger.options.minLogLevel = "fatal"
 type DataProvider = {
   suitName: string
   commandLine: string
-  expectedResponse?: undefined | ParsedBotCommand | Error
+  expectedResponse?: undefined | ParsedCommand | Error
 }
 
 const dataProvider: DataProvider[] = [
