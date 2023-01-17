@@ -14,7 +14,7 @@ const restFixures = getRestFixtures({
     repo: "command-bot-test",
     prAuthor: "somedev123",
     headBranch: "prBranch1",
-    comments: [{ author: "somedev123", body: "/cmd queue -c sample $ hi", id: 500 }],
+    comments: [{ author: "somedev123", body: "bot sample $ hi", id: 500 }],
   },
   gitlab: { cmdBranch: "cmd-bot/4-1" },
 })

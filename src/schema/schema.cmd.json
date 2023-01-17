@@ -92,13 +92,13 @@
                       },
                       "anyOf": [
                         {
-                          "required": ["type_one_of"]
+                          "required": ["label", "type_one_of"]
                         },
                         {
-                          "required": ["type_many_of"]
+                          "required": ["label", "type_many_of"]
                         },
                         {
-                          "required": ["type_rule"]
+                          "required": ["label", "type_rule"]
                         }
                       ]
                     }

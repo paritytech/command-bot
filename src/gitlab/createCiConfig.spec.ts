@@ -4,7 +4,7 @@ import { createCiConfig } from "src/gitlab/createCiConfig"
 import { logger } from "src/logger"
 import { Task } from "src/task"
 
-jest.mock("src/commands")
+jest.mock("src/command-configs/fetchCommandsConfiguration")
 
 logger.options.minLogLevel = "fatal"
 

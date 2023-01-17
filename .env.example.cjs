@@ -62,7 +62,7 @@ process.env.GITLAB_ACCESS_TOKEN_USERNAME ??= "placeholder"
   pipelines with ref $PIPELINE_SCRIPTS_REF. Leave it unset to disable
   $PIPELINE_SCRIPTS.
 */
-process.env.PIPELINE_SCRIPTS_REPOSITORY ??= "https://github.com/paritytech/command-bot-scripts.git"
+process.env.PIPELINE_SCRIPTS_REPOSITORY ??= "https://github.com/paritytech/command-bot-scripts/"
 process.env.PIPELINE_SCRIPTS_REF ??= "main"
 
 /*

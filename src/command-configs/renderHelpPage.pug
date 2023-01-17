@@ -1,0 +1,170 @@
+html
+  head
+    title Help - Command Bot
+    meta(name="color-scheme" content="light dark")
+    //link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.1.0/github-markdown-dark.css" integrity="sha512-q0UqxA0Ka1VxVBMFJoNfTVBYFWXqkNeF1N6WZPyLNULkF9YdpAuS/dqsN3/ClxBUzHJGrrkgLJFUlzFgXunXDQ==" crossorigin="anonymous" referrerpolicy="no-referrer")
+    link(rel="stylesheet" href="https://cdn.jsdelivr.net/npm/minstyle.io@2.0.1/dist/css/minstyle.io.min.css")
+    script(type="text/javascript" src="https://cdn.jsdelivr.net/npm/dark-mode-switcher@0.0.1/dist/dark.min.js")
+
+  - var commandStart = "bot"
+  body
+    article.container
+      div.ms-hero.mb-lg
+        div.ms-hero-body
+          h1.ms-hero-title Command Bot - Help
+          div.ms-hero-content
+            p
+              | Based on
+              a(href=repoLink) #{repoLink}
+            p rev: #{scriptsRevision}
+            p running custom commands, like:
+              br
+              code bot command-name [-v VAR=value] $ argument1 argument2
+            p to add new command, go to #{config.pipelineScripts.repository} and follow readme
+              | to test a newly added command,
+              a(href="\#link-new-command") follow this section
+
+      div.row
+        div.col-3
+          div.sticky
+            | Commands Navigation:
+            each cfg, commandName in commandConfigs
+              ul
+                li
+                  a(href="\#link-" + commandName) #{ commandName }
+                  if cfg.command.presets
+                    each preset, presetName in cfg.command.presets
+                      ul
+                        li
+                          a(href="\#link-" + presetName) #{ presetName }
+            | Env Variables
+            ul
+              li
+                a(href="\#link-companion") Patch Companion
+              li
+                a(href="\#link-new-command") How to test new command (test dev branch)
+              li
+                a(href="\#link-rust") Rust Log, etc
+
+
+        div.col-8
+          each cfg, commandName in commandConfigs
+            div.command
+              h3(id="link-" + commandName) #{ commandName }
+              p #{ cfg.command.description }
+
+              if cfg.command.presets
+                each preset, presetName in cfg.command.presets
+                  div.preset
+                    h5.mb-sm(id="link-"+presetName) #{presetName}
+                    p #{ preset.description }
+                    table.ms-table
+                      thead
+                        tr
+                          th
+                            | Command
+                          th
+                            | $
+                          if preset.args
+                            each arg, argKey in preset.args
+                              th.center
+                                | [#{arg.label}]
+
+                      if preset.args
+                        tr
+                          td #{commandName}
+                          td
+                            | &nbsp;$&nbsp;
+                          each arg, argKey in preset.args
+                            td.center
+                              if arg.type_one_of
+                                each one in arg.type_one_of
+                                  div.mb-sm #{one}
+                              if arg.type_rule
+                                div #{arg.type_rule}
+                      else
+                        p no arguments
+
+                    p Example:
+                      code
+                        | #{commandStart} #{commandName}
+                        if preset.args
+                          | &nbsp;$&nbsp;
+                          each arg, argKey in preset.args
+                            if arg.type_one_of
+                              | #{arg.type_one_of[0]}
+                            if arg.type_rule
+                              i custom_string
+                            | &nbsp;
+              else
+                p Example:
+                  code
+                    | #{commandStart} #{commandName}
+
+            hr
+          div(id="link-companion").command
+            h5 Patch Companion
+
+            p Syntax (after command name):
+            p
+              code [-v PATCH_repo=pull_request_id]
+
+            p Examples:
+            p
+              code #{commandStart} bench [-v PATCH_substrate=11341] $ overhead westend
+            p
+              code #{commandStart} try-runtime [-v PATCH_polkadot=3341] $ westend
+
+          div(id="link-new-command").command
+            h5 Test new command.
+            p When you create/modify a command in #{repoLink} repo, you can test it before merging to master
+
+            p Syntax (after command name):
+            p
+              code [-v PIPELINE_SCRIPTS_REF=your_branch]
+
+            p Examples:
+            p
+              code #{commandStart} new-command [-v PIPELINE_SCRIPTS_REF=mak/new-command] $ new-arg
+
+          div(id="link-rust").command
+            h5 Rust Log, etc
+            p You can define custom env variables like for RUST env
+            p Syntax (after command name):
+            p
+              code [-v RUST_LOG=remote-ext=debug,runtime=trace]
+
+            p Examples:
+            p
+              code #{commandStart} try-runtime [-v RUST_LOG=remote-ext=debug,runtime=trace] $ westend
+
+    style.
+
+      .command {
+          margin-bottom: 100px;
+      }
+
+      .preset {
+          margin-bottom: 50px
+      }
+
+      .sticky {
+          position: -webkit-sticky; /* Safari */
+          position: sticky;
+          top: 0;
+          max-height: 100vh;
+          max-height: 100 dvh; /* iOS dynamic viewport height */
+          overflow-y: auto;
+      }
+
+      .mb-sm {
+          margin-bottom: 5px;
+      }
+
+      .mb-lg {
+          margin-bottom: 30px;
+      }
+
+      .center {
+          text-align: center;
+      }

@@ -1,9 +1,10 @@
 import assert from "assert"
 import yargs from "yargs"
 
-import { botPullRequestCommentMention } from "src/bot"
+import { botPullRequestCommentMention, botPullRequestIgnoreCommands } from "src/bot"
+import { CancelCommand, GenericCommand } from "src/bot/ParsedCommand"
 import { ParsedBotCommand } from "src/bot/types"
-import { fetchCommandsConfiguration, PIPELINE_SCRIPTS_REF } from "src/commands"
+import { fetchCommandsConfiguration, PIPELINE_SCRIPTS_REF } from "src/command-configs/fetchCommandsConfiguration"
 import { LoggerContext } from "src/logger"
 import { validateSingleShellCommand } from "src/shell"
 import { arrayify } from "src/utils"
@@ -15,56 +16,40 @@ export const parsePullRequestBotCommandLine = async (
   const { logger } = ctx
   let commandLine = rawCommandLine.trim()
 
-  // Add trailing whitespace so that /cmd can be differentiated from /cmd-[?]
+  // Add trailing whitespace so that bot can be differentiated from /cmd-[?]
   if (!commandLine.startsWith(`${botPullRequestCommentMention} `)) {
     return
   }
 
-  // remove "/cmd "
+  // remove "bot "
   commandLine = commandLine.slice(botPullRequestCommentMention.length).trim()
 
-  const subcommand = (() => {
-    const nextToken = /^\w+/.exec(commandLine)?.[0]
-    if (!nextToken) {
-      return new Error(`Must provide a subcommand in line ${rawCommandLine}.`)
-    }
-    switch (nextToken) {
-      case "cancel":
-      case "queue": {
-        return nextToken
-      }
-      default: {
-        return new Error(`Invalid subcommand "${nextToken}" in line ${rawCommandLine}.`)
-      }
-    }
-  })()
-  if (subcommand instanceof Error) {
-    return subcommand
+  // get first word as a subcommand
+  const subcommand = commandLine.split(" ")[0]
+
+  if (!subcommand) {
+    return new Error(`Must provide a subcommand in line ${rawCommandLine}.`)
   }
 
-  commandLine = commandLine.slice(subcommand.length)
+  // ignore some commands
+  if (botPullRequestIgnoreCommands.includes(subcommand)) {
+    return
+  }
+
+  commandLine = commandLine.slice(subcommand.length).trim()
 
   switch (subcommand) {
-    case "queue": {
-      const commandStartSymbol = " $ "
+    case "cancel": {
+      return new CancelCommand(commandLine.trim())
+    }
+    default: {
+      const commandStartSymbol = "$ "
       const [botOptionsLinePart, commandLinePart] = commandLine.split(commandStartSymbol)
 
-      const botArgs = await yargs(
-        botOptionsLinePart.split(" ").filter((value) => {
-          botOptionsLinePart
-          return !!value
-        }),
-      ).argv
+      const botArgs = await yargs(botOptionsLinePart.split(" ").filter((value) => !!value)).argv
       logger.debug({ botArgs, botOptionsLinePart }, "Parsed bot arguments")
 
-      const configurationNameLongArg = "configuration"
-      const configurationNameShortArg = "c"
-      const configurationName = botArgs[configurationNameLongArg] ?? botArgs[configurationNameShortArg]
-      if (typeof configurationName !== "string") {
-        return new Error(
-          `Configuration ("-${configurationNameShortArg}" or "--${configurationNameLongArg}") should be specified exactly once`,
-        )
-      }
+      const configurationName = subcommand
 
       const variables: Record<string, string> = {}
       const variableValueSeparator = "="
@@ -111,15 +96,7 @@ export const parsePullRequestBotCommandLine = async (
         return command
       }
 
-      return { subcommand, configuration, variables, command }
-    }
-    case "cancel": {
-      return { subcommand, taskId: commandLine.trim() }
-    }
-    default: {
-      const exhaustivenessCheck: never = subcommand
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      throw new Error(`Subcommand is not handled: ${exhaustivenessCheck}`)
+      return new GenericCommand(subcommand, configuration, variables, command)
     }
   }
 }

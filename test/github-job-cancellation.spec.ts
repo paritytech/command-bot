@@ -14,7 +14,7 @@ const restFixures = getRestFixtures({
     repo: "command-bot-test",
     prAuthor: "somedev123",
     headBranch: "prBranch1",
-    comments: [{ author: "somedev123", body: "/cmd queue -c sample $ hi", id: 500 }],
+    comments: [{ author: "somedev123", body: "bot sample $ hi", id: 500 }],
   },
   gitlab: { cmdBranch: "cmd-bot/4-1" },
 })
@@ -24,7 +24,7 @@ const jsonResponseHeaders = { "content-type": "application/json" }
 const mockedEndpoints: Record<string, MockedEndpoint> = {}
 
 describe("Job cancellation (GitHub webhook)", () => {
-  const cancelCommandRegex = /`\/cmd cancel (.+?)`/
+  const cancelCommandRegex = /`bot cancel (.+?)`/
   let lastCommentBody: string = ""
 
   const getCommentResponse = async (request: CompletedRequest) => {
@@ -96,7 +96,7 @@ describe("Job cancellation (GitHub webhook)", () => {
       () => lastCommentBody.match(cancelCommandRegex) !== null,
       100,
       50,
-      `Expected comment body to include "/cmd cancel". Instead, got: ${lastCommentBody}`,
+      `Expected comment body to include "bot cancel". Instead, got: ${lastCommentBody}`,
     )
   })
 
@@ -108,7 +108,7 @@ describe("Job cancellation (GitHub webhook)", () => {
       .thenReply(200, restFixures.gitlab.cancelledPipeline, jsonResponseHeaders)
 
     const commandId = ensureDefined(lastCommentBody.match(cancelCommandRegex)?.[1])
-    await triggerWebhook("cancelCommandComment", { body: `/cmd cancel ${commandId}` })
+    await triggerWebhook("cancelCommandComment", { body: `bot cancel ${commandId}` })
 
     await until(async () => !(await mockedEndpoint.isPending()), 100, 50)
   })
