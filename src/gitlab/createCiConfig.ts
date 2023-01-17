@@ -14,7 +14,7 @@ export function createCiConfig(
       timeout: "24 hours",
       ...task.gitlab.job,
       script: [
-        `
+        ...`
         echo "This job is related to task ${task.id}. ${jobTaskInfoMessage}."
 
         # The scripts repository might be left over from a previous run in the
@@ -34,7 +34,7 @@ export function createCiConfig(
 
         rm -rf "$PIPELINE_SCRIPTS_DIR"
         mkdir -p "$ARTIFACTS_DIR"
-        `,
+        `.split("\n"),
         task.command,
       ],
       artifacts: {
