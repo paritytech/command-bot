@@ -1,96 +1,61 @@
-# Default values for try-runtime.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# gcloud-sqlproxy:
+#   serviceAccountName: "command-bot"
+#   serviceAccount:
+#     create: true
+#     name: command-bot
+#   networkPolicy:
+#     enabled: false
 
-replicaCount: 1
-
-image:
-  pullPolicy: Always
-
-imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
-
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: false
-  # Annotations to add to the service account
-  annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: ""
-
-podSecurityContext: {}
-  # fsGroup: 2000
-
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
-
-service:
-  type: ClusterIP
-  port: 80
-
-ingress:
-  enabled: enable
-  className: ""
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-http01
-    external-dns.alpha.kubernetes.io/target: traefik-external.parity-chains.parity.io.
-    kubernetes.io/ingress.class: traefik-external
-    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
-  hosts:
-    - host: try-runtime.parity.io
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls:
-    - secretName: try-runtime.parity.io
-      hosts:
-        - try-runtime.parity.io
-
-# We only want one instance at all times so that the execution queue can be
-# sanely tracked across multiple MRs.
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 1
-
-nodeSelector: {}
-
-affinity:
-  nodeAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      nodeSelectorTerms:
-      - matchExpressions:
-        - key: cloud.google.com/gke-nodepool
-          operator: In
-          values:
-          - try-runtime-pool
-
-tolerations:
-- key: "app"
-  operator: "Equal"
-  value: "try-runtime"
-  effect: "NoExecute"
-
-env:
-  GITLAB_PUSH_NAMESPACE: parity/mirrors
-  GITLAB_JOB_IMAGE: paritytech/ci-linux:production
-  GITLAB_DOMAIN: gitlab.parity.io
-  PIPELINE_SCRIPTS_REPOSITORY: https://github.com/paritytech/command-bot-scripts/
-
-persistence:
-  enabled: true
-  mountPath: ""
-  subPath: ""
-  annotations: {}
-  storageClass: hdd-csi
-  size: 100G
-  accessModes:
-    - ReadWriteOnce
+common:
+  fullnameOverride: "command-bot"
+  extraLabels:
+    team: "opstooling"
+  serviceAccount:
+    create: false
+  image:
+    repository: paritytech/command-bot
+  envFrom:
+    - secretRef:
+        name: command-bot
+  service:
+    ports:
+      - name: http
+        protocol: TCP
+        port: 80
+        targetPort: 3000
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-dns01
+      kubernetes.io/ingress.class: traefik-external
+      traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+      traefik.ingress.kubernetes.io/router.tls: "true"
+  persistence:
+    enabled: true
+    mountPath: ""
+    subPath: ""
+    annotations: {}
+    storageClass: hdd-csi
+    size: 100G
+    accessModes:
+      - ReadWriteOnce
+  env:
+    GITLAB_PUSH_NAMESPACE: parity/mirrors
+    GITLAB_JOB_IMAGE: paritytech/ci-linux:production
+    GITLAB_DOMAIN: gitlab.parity.io
+    PIPELINE_SCRIPTS_REPOSITORY: https://github.com/paritytech/command-bot-scripts/
+  # We only want one instance at all times so that the execution queue can be
+  # sanely tracked across multiple MRs.
+  autoscaling:
+    enabled: false
+  # Enable after endpoint is created
+  # livenessProbe:
+  #   httpGet:
+  #     path: /health
+  #     port: 8000
+  #     scheme: HTTP
+  # readinessProbe:
+  #   httpGet:
+  #     path: /health
+  #     port: 8000
+  #     scheme: HTTP
