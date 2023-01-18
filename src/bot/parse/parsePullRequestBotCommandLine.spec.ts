@@ -113,21 +113,21 @@ const dataProvider: DataProvider[] = [
     suitName: "nonexistent command, should return proper error",
     commandLine: "bot nope 123123",
     expectedResponse: new Error(
-      "Could not find matching configuration nope; available ones are bench, fmt, sample, try-runtime.",
+      'Could not find matching configuration for command "nope"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) for more details.',
     ),
   },
   {
     suitName: "not provided command, returns proper error",
     commandLine: "bot $",
     expectedResponse: new Error(
-      "Could not find matching configuration $; available ones are bench, fmt, sample, try-runtime.",
+      'Could not find matching configuration for command "$"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) for more details.',
     ),
   },
   {
     suitName: "non existed config must return error with explanation",
     commandLine: "bot xz",
     expectedResponse: new Error(
-      `Could not find matching configuration xz; available ones are bench, fmt, sample, try-runtime.`,
+      `Could not find matching configuration for command "xz"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) for more details.`,
     ),
   },
 ]
