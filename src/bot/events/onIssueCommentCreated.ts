@@ -4,12 +4,10 @@ import path from "path"
 import { CancelCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
 import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine"
 import { CommentData, PullRequestData, WebhookHandler } from "src/bot/types"
-import { getDocsFilename } from "src/command-configs/fetchCommandsConfiguration"
-import { config } from "src/config"
+import { getDocsUrl } from "src/command-configs/fetchCommandsConfiguration"
 import { isRequesterAllowed } from "src/core"
 import { getSortedTasks } from "src/db"
 import { createComment, getPostPullRequestResult, updateComment } from "src/github"
-import { DOCS_PATH } from "src/setup"
 import { cancelTask, getNextTaskId, PullRequestTask, queueTask, serializeTaskQueuedDate } from "src/task"
 import { PullRequestError } from "src/types"
 import { getLines } from "src/utils"
@@ -74,9 +72,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
       logger.debug({ parsedCommand }, "Processing parsed command")
 
       if (parsedCommand instanceof HelpCommand) {
-        const url = new URL(
-          path.join(config.cmdBotUrl, DOCS_PATH, getDocsFilename(parsedCommand.commitHash)),
-        ).toString()
+        const url = getDocsUrl(parsedCommand.commitHash)
         await createComment(ctx, octokit, { ...commentParams, body: `Here's a [link to docs](${url})` })
       }
 

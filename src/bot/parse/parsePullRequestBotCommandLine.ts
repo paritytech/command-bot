@@ -3,7 +3,11 @@ import assert from "assert"
 import { botPullRequestCommentMention, botPullRequestIgnoreCommands } from "src/bot"
 import { CancelCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
 import { parseVariables } from "src/bot/parse/parseVariables"
-import { fetchCommandsConfiguration, PIPELINE_SCRIPTS_REF } from "src/command-configs/fetchCommandsConfiguration"
+import {
+  fetchCommandsConfiguration,
+  getDocsUrl,
+  PIPELINE_SCRIPTS_REF,
+} from "src/command-configs/fetchCommandsConfiguration"
 import { LoggerContext } from "src/logger"
 import { validateSingleShellCommand } from "src/shell"
 
@@ -63,22 +67,19 @@ export const parsePullRequestBotCommandLine = async (
         return variables
       }
 
-      const { commandConfigs: commandsConfiguration } = await fetchCommandsConfiguration(
-        ctx,
-        variables[PIPELINE_SCRIPTS_REF],
-      )
-      const configuration = commandsConfiguration[subcommand]?.command?.configuration
+      const { commandConfigs, commitHash } = await fetchCommandsConfiguration(ctx, variables[PIPELINE_SCRIPTS_REF])
+      const configuration = commandConfigs[subcommand]?.command?.configuration
 
       if (typeof configuration === "undefined" || !Object.keys(configuration).length) {
         return new Error(
-          `Could not find matching configuration ${subcommand}; available ones are ${Object.keys(
-            commandsConfiguration,
-          ).join(", ")}.`,
+          `Could not find matching configuration for command "${subcommand}"; Available ones are ${Object.keys(
+            commandConfigs,
+          ).join(", ")}. Refer to [help docs](${getDocsUrl(commitHash)}) for more details.`,
         )
       }
 
       // if presets has nothing - then it means that the command doesn't need any arguments and runs as is
-      if (Object.keys(commandsConfiguration[subcommand]?.command?.presets || [])?.length === 0) {
+      if (Object.keys(commandConfigs[subcommand]?.command?.presets || [])?.length === 0) {
         configuration.optionalCommandArgs = true
       }
 

@@ -2,11 +2,9 @@ html
   head
     title Help - Command Bot
     meta(name="color-scheme" content="light dark")
-    //link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.1.0/github-markdown-dark.css" integrity="sha512-q0UqxA0Ka1VxVBMFJoNfTVBYFWXqkNeF1N6WZPyLNULkF9YdpAuS/dqsN3/ClxBUzHJGrrkgLJFUlzFgXunXDQ==" crossorigin="anonymous" referrerpolicy="no-referrer")
     link(rel="stylesheet" href="https://cdn.jsdelivr.net/npm/minstyle.io@2.0.1/dist/css/minstyle.io.min.css")
     script(type="text/javascript" src="https://cdn.jsdelivr.net/npm/dark-mode-switcher@0.0.1/dist/dark.min.js")
 
-  - var commandStart = "bot"
   body
     article.container
       div.ms-hero.mb-lg
@@ -19,7 +17,7 @@ html
             p rev: #{scriptsRevision}
             p running custom commands, like:
               br
-              code bot command-name [-v VAR=value] $ argument1 argument2
+              code bot command-name -v VAR=value $ argument1 argument2
             p to add new command, go to #{config.pipelineScripts.repository} and follow readme
               | to test a newly added command,
               a(href="\#link-new-command") follow this section
@@ -85,7 +83,7 @@ html
                       else
                         p no arguments
 
-                    p Example:
+                    p Example:&nbsp;
                       code
                         | #{commandStart} #{commandName}
                         if preset.args
@@ -97,7 +95,7 @@ html
                               i custom_string
                             | &nbsp;
               else
-                p Example:
+                p Example:&nbsp;
                   code
                     | #{commandStart} #{commandName}
 
@@ -107,13 +105,13 @@ html
 
             p Syntax (after command name):
             p
-              code [-v PATCH_repo=pull_request_id]
+              code -v PATCH_repo=pull_request_id
 
             p Examples:
             p
-              code #{commandStart} bench [-v PATCH_substrate=11341] $ overhead westend
+              code #{commandStart} bench -v PATCH_substrate=11341 $ overhead westend
             p
-              code #{commandStart} try-runtime [-v PATCH_polkadot=3341] $ westend
+              code #{commandStart} try-runtime -v PATCH_polkadot=3341 $ westend
 
           div(id="link-new-command").command
             h5 Test new command.
@@ -121,22 +119,22 @@ html
 
             p Syntax (after command name):
             p
-              code [-v PIPELINE_SCRIPTS_REF=your_branch]
+              code -v PIPELINE_SCRIPTS_REF=your_branch
 
             p Examples:
             p
-              code #{commandStart} new-command [-v PIPELINE_SCRIPTS_REF=mak/new-command] $ new-arg
+              code #{commandStart} new-command -v PIPELINE_SCRIPTS_REF=mak/new-command $ new-arg
 
           div(id="link-rust").command
             h5 Rust Log, etc
             p You can define custom env variables like for RUST env
             p Syntax (after command name):
             p
-              code [-v RUST_LOG=remote-ext=debug,runtime=trace]
+              code -v RUST_LOG=remote-ext=debug,runtime=trace
 
             p Examples:
             p
-              code #{commandStart} try-runtime [-v RUST_LOG=remote-ext=debug,runtime=trace] $ westend
+              code #{commandStart} try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace $ westend
 
     style.
 
