@@ -23,6 +23,7 @@ common:
     MIN_LOG_LEVEL: debug
     DB_CLIENT: postgres
     DB_PORT: 5432
+    CMD_BOT_URL: https://command-bot.parity-prod.parity.io/
   secrets:
     ALLOWED_ORGANIZATIONS: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-prod#ALLOWED_ORGANIZATIONS
     APP_ID: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-prod#APP_ID

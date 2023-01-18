@@ -1,8 +1,8 @@
 import path from "path"
 import * as pug from "pug"
 
+import { CommandConfigs } from "src/command-configs/types"
 import { Config } from "src/config"
-import { CommandConfigs } from "src/types"
 
 export function renderHelpPage(params: {
   config: Config

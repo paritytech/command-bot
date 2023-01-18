@@ -113,6 +113,8 @@ function getBotEnv(
     GITHUB_REMOTE_URL: gitHubRemoteUrl,
     GITLAB_PIPELINE_UPDATE_INTERVAL: "300",
 
+    CMD_BOT_URL: "http://localhost:3000/",
+
     NODE_EXTRA_CA_CERTS: selfSignedCertPath,
   }
 }

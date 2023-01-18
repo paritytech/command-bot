@@ -15,7 +15,7 @@ export class CancelCommand extends ParsedCommand {
 }
 
 export class HelpCommand extends ParsedCommand {
-  constructor() {
+  constructor(public commitHash: string) {
     super("help")
   }
 }

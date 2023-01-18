@@ -6,24 +6,24 @@ import { cloneCommandBotScripts } from "src/command-configs/cloneCommandBotScrip
 import { collectCommandConfigs } from "src/command-configs/collectCommandConfigs"
 import { getScriptsRepoRevision } from "src/command-configs/getScriptsRepoRevision"
 import { renderHelpPage } from "src/command-configs/renderHelpPage"
+import { CommandConfigs, FetchCommandConfigsResult } from "src/command-configs/types"
 import { config } from "src/config"
 import { LoggerContext } from "src/logger"
+import { DOCS_DIR } from "src/setup"
 import { CommandRunner } from "src/shell"
-import { CommandConfigs } from "src/types"
 
 export const PIPELINE_SCRIPTS_REF = "PIPELINE_SCRIPTS_REF"
 
 export async function fetchCommandsConfiguration(
   ctx: LoggerContext,
   overriddenBranch?: string,
-): Promise<CommandConfigs> {
+): Promise<FetchCommandConfigsResult> {
   const cmdRunner = new CommandRunner(ctx)
-  const scriptsFolder = "scripts"
-  const scriptsPath = path.join(config.dataPath, scriptsFolder)
+  const scriptsPath = path.join(config.dataPath, "scripts")
 
   const commandConfigMutex = new Mutex()
 
-  return await commandConfigMutex.runExclusive<CommandConfigs>(async () => {
+  return await commandConfigMutex.runExclusive<FetchCommandConfigsResult>(async () => {
     await cmdRunner.run("mkdir", ["-p", scriptsPath])
 
     if (overriddenBranch && /([^\w\d\-_/]+)/g.test(overriddenBranch)) {
@@ -36,15 +36,23 @@ export async function fetchCommandsConfiguration(
 
     const scriptsRevPath = path.join(scriptsPath, scriptsRevision)
     const commandsOutputPath = path.join(scriptsRevPath, "commands.json")
-    const commandsHelpPath = path.join(scriptsRevPath, "help.html")
+    const commandsHelpPath = path.join(DOCS_DIR, getDocsFilename(scriptsRevision))
 
     if (!fs.existsSync(scriptsRevPath) || !fs.existsSync(commandsOutputPath)) {
       await cloneCommandBotScripts(cmdRunner, scriptsRevPath, overriddenBranch)
       const commandConfigs = collectCommandConfigs(scriptsRevPath)
+
       fs.writeFileSync(commandsHelpPath, renderHelpPage({ config, commandConfigs, scriptsRevision, headBranch }))
       fs.writeFileSync(commandsOutputPath, JSON.stringify(commandConfigs))
     }
 
-    return JSON.parse(fs.readFileSync(commandsOutputPath).toString()) as CommandConfigs
+    return {
+      commitHash: scriptsRevision,
+      commandConfigs: JSON.parse(fs.readFileSync(commandsOutputPath).toString()) as CommandConfigs,
+    }
   })
+}
+
+export function getDocsFilename(scriptsRevision: string): string {
+  return `${scriptsRevision}.html`
 }

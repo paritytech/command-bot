@@ -3,8 +3,8 @@ import fs from "fs"
 import glob from "glob"
 import path from "path"
 
+import { CommandConfigs } from "src/command-configs/types"
 import { CmdJson } from "src/schema/schema.cmd"
-import { CommandConfigs } from "src/types"
 
 const CMD_ROOT_FOLDER = "commands"
 

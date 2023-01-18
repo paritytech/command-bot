@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals"
 
-import { CancelCommand, GenericCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
+import { CancelCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
 import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine"
 import { logger } from "src/logger"
 
@@ -16,7 +16,6 @@ type DataProvider = {
 }
 
 const dataProvider: DataProvider[] = [
-  { suitName: "empty command line returns nothing (ignores)", commandLine: "", expectedResponse: undefined },
   {
     suitName: "unrelated to bot comment returns nothing (ignores)",
     commandLine: "something from comments",
@@ -87,11 +86,29 @@ const dataProvider: DataProvider[] = [
     commandLine: "bot bench",
     expectedResponse: new Error(`Could not find start of command ("$ ")`),
   },
+
+  /*
+    Help cases
+   */
+  { suitName: "help", commandLine: "bot help", expectedResponse: new HelpCommand("123hash") },
+
+  /*
+    Cancel cases
+   */
+  { suitName: "cancel no-taskId", commandLine: "bot cancel", expectedResponse: new CancelCommand("") },
+  { suitName: "cancel with taskId", commandLine: "bot cancel 123123", expectedResponse: new CancelCommand("123123") },
+
+  /*
+     Ignore cases
+      */
+  { suitName: "empty command line returns nothing (ignores)", commandLine: "", expectedResponse: undefined },
   { suitName: "no subcommand - ignore", commandLine: "bot ", expectedResponse: undefined },
   { suitName: "ignored command", commandLine: "bot merge", expectedResponse: undefined },
   { suitName: "ignored command 2", commandLine: "bot rebase", expectedResponse: undefined },
-  { suitName: "cancel no-taskId", commandLine: "bot cancel", expectedResponse: new CancelCommand("") },
-  { suitName: "cancel with taskId", commandLine: "bot cancel 123123", expectedResponse: new CancelCommand("123123") },
+
+  /*
+    Expected Error cases
+   */
   {
     suitName: "nonexistent command, should return proper error",
     commandLine: "bot nope 123123",

@@ -16,3 +16,4 @@ process.env.DATA_PATH ??= path.join(__dirname, "data")
 process.env.ALLOWED_ORGANIZATIONS ??= "123,456"
 process.env.MASTER_TOKEN ??= "placeholder"
 process.env.TASK_DB_VERSION ??= "123"
+process.env.CMD_BOT_URL ??= "http://localhost:3000/"

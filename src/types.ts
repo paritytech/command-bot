@@ -2,7 +2,6 @@ import { MatrixClient } from "matrix-bot-sdk"
 import { Logger } from "opstooling-js"
 
 import type { AccessDB, TaskDB } from "src/db"
-import { CmdJson } from "src/schema/schema.cmd"
 
 export type GitRef = {
   contributor: {
@@ -59,5 +58,3 @@ export class PullRequestError {
 export type ToString = { toString: () => string }
 
 export type CommandOutput = Error | string
-
-export type CommandConfigs = { [key: string]: CmdJson }

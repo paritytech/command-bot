@@ -1,18 +1,16 @@
 import assert from "assert"
-import yargs from "yargs"
 
 import { botPullRequestCommentMention, botPullRequestIgnoreCommands } from "src/bot"
 import { CancelCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
+import { parseVariables } from "src/bot/parse/parseVariables"
 import { fetchCommandsConfiguration, PIPELINE_SCRIPTS_REF } from "src/command-configs/fetchCommandsConfiguration"
 import { LoggerContext } from "src/logger"
 import { validateSingleShellCommand } from "src/shell"
-import { arrayify } from "src/utils"
 
 export const parsePullRequestBotCommandLine = async (
   rawCommandLine: string,
   ctx: LoggerContext,
 ): Promise<undefined | Error | ParsedCommand> => {
-  const { logger } = ctx
   let commandLine = rawCommandLine.trim()
 
   // Add trailing whitespace so that bot can be differentiated from /cmd-[?]
@@ -39,7 +37,18 @@ export const parsePullRequestBotCommandLine = async (
 
   switch (subcommand) {
     case "help": {
-      return new HelpCommand()
+      const str = commandLine.trim()
+      const variables = await parseVariables(ctx, str)
+      if (variables instanceof Error) {
+        return variables
+      }
+
+      const { commitHash: commandsConfigsCommitHash } = await fetchCommandsConfiguration(
+        ctx,
+        variables[PIPELINE_SCRIPTS_REF],
+      )
+
+      return new HelpCommand(commandsConfigsCommitHash)
     }
     case "cancel": {
       return new CancelCommand(commandLine.trim())
@@ -48,42 +57,28 @@ export const parsePullRequestBotCommandLine = async (
       const commandStartSymbol = "$ "
       const [botOptionsLinePart, commandLinePart] = commandLine.split(commandStartSymbol)
 
-      const botArgs = await yargs(botOptionsLinePart.split(" ").filter((value) => !!value)).argv
-      logger.debug({ botArgs, botOptionsLinePart }, "Parsed bot arguments")
+      const variables = await parseVariables(ctx, botOptionsLinePart)
 
-      const configurationName = subcommand
-
-      const variables: Record<string, string> = {}
-      const variableValueSeparator = "="
-      for (const tok of arrayify(botArgs.var).concat(arrayify(botArgs.v))) {
-        switch (typeof tok) {
-          case "string": {
-            const valueSeparatorIndex = tok.indexOf(variableValueSeparator)
-            if (valueSeparatorIndex === -1) {
-              return new Error(`Variable token "${tok}" doesn't have a value separator ('${variableValueSeparator}')`)
-            }
-            variables[tok.slice(0, valueSeparatorIndex)] = tok.slice(valueSeparatorIndex + 1)
-            break
-          }
-          default: {
-            return new Error(`Variable token "${String(tok)}" should be a string of the form NAME=VALUE`)
-          }
-        }
+      if (variables instanceof Error) {
+        return variables
       }
 
-      const commandsConfiguration = await fetchCommandsConfiguration(ctx, variables[PIPELINE_SCRIPTS_REF])
-      const configuration = commandsConfiguration[configurationName]?.command?.configuration
+      const { commandConfigs: commandsConfiguration } = await fetchCommandsConfiguration(
+        ctx,
+        variables[PIPELINE_SCRIPTS_REF],
+      )
+      const configuration = commandsConfiguration[subcommand]?.command?.configuration
 
       if (typeof configuration === "undefined" || !Object.keys(configuration).length) {
         return new Error(
-          `Could not find matching configuration ${configurationName}; available ones are ${Object.keys(
+          `Could not find matching configuration ${subcommand}; available ones are ${Object.keys(
             commandsConfiguration,
           ).join(", ")}.`,
         )
       }
 
       // if presets has nothing - then it means that the command doesn't need any arguments and runs as is
-      if (Object.keys(commandsConfiguration[configurationName]?.command?.presets || [])?.length === 0) {
+      if (Object.keys(commandsConfiguration[subcommand]?.command?.presets || [])?.length === 0) {
         configuration.optionalCommandArgs = true
       }
 

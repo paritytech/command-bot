@@ -67,6 +67,7 @@ export type Config = {
   gitlabDomain: string
   gitlabPushNamespace: string
   gitlabJobImage: string
+  cmdBotUrl: string
 }
 
 export const config: Config = {
@@ -95,4 +96,5 @@ export const config: Config = {
   gitlabDomain: envVar("GITLAB_DOMAIN"),
   gitlabPushNamespace: envVar("GITLAB_PUSH_NAMESPACE"),
   gitlabJobImage: envVar("GITLAB_JOB_IMAGE"),
+  cmdBotUrl: envVar("CMD_BOT_URL"),
 }
