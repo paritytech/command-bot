@@ -18,8 +18,6 @@ export type CommandConfiguration = {
     }
   }
   commandStart: string[]
-  // allows to be run without arguments after " $ "
-  optionalCommandArgs?: boolean
 }
 
 export const commandsConfiguration: {
@@ -32,7 +30,6 @@ export const commandsConfiguration: {
   fmt: {
     gitlab: { job: { tags: ["linux-docker"], variables: {} } },
     commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"'],
-    optionalCommandArgs: true,
   },
   "bench-bot": getBenchBotCommand({ tags: ["bench-bot"] }),
   "test-bench-bot": getBenchBotCommand({ tags: ["test-bench-bot"] }),

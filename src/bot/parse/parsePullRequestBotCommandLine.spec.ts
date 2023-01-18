@@ -23,26 +23,43 @@ const dataProvider: DataProvider[] = [
   },
   {
     suitName: "check wrong set -v, validation should trigger error",
-    commandLine: "bot bench -v PIPELINE_SCRIPTS_REF $ runtime ",
-    expectedResponse: new Error(`Variable token "PIPELINE_SCRIPTS_REF" doesn't have a value separator ('=')`),
+    commandLine: "bot -v INVAL_VAR bench runtime ",
+    expectedResponse: new Error(
+      "error: option '-v --variable <value>' argument 'INVAL_VAR' is invalid. INVAL_VAR is not in KEY=value format",
+    ),
   },
   {
     suitName: "bench-bot",
-    commandLine: "bot bench -v PIPELINE_SCRIPTS_REF=hello-is-this-even-used $ runtime kusama-dev pallet_referenda",
+    commandLine:
+      "PIPELINE_SCRIPTS_REF=hello-is-this-even-used bot bench polkadot --runtime kusama-dev --pallet pallet_referenda",
     expectedResponse: new GenericCommand(
       "bench",
       {
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh"'],
         gitlab: { job: { tags: ["bench-bot"], variables: {} } },
       },
-      { PIPELINE_SCRIPTS_REF: "hello-is-this-even-used" },
-      '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" runtime kusama-dev pallet_referenda',
+      {},
+      { runtime: "kusama-dev", pallet: "pallet_referenda" },
+    ),
+  },
+  {
+    suitName: "bench-bot-with-vars",
+    commandLine:
+      "PIPELINE_SCRIPTS_REF=hello-is-this-even-used bot -v SOME_VAR=some_val bench polkadot --runtime kusama-dev --pallet pallet_referenda",
+    expectedResponse: new GenericCommand(
+      "bench",
+      {
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh"'],
+        gitlab: { job: { tags: ["bench-bot"], variables: {} } },
+      },
+      { SOME_VAR: "some_val" },
+      { runtime: "kusama-dev", pallet: "pallet_referenda" },
     ),
   },
   {
     suitName: "try-runtime-bot",
     commandLine:
-      "bot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace -v SECOND=val $ --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443",
+      "bot -v RUST_LOG=remote-ext=debug,runtime=trace -v SECOND=val try-runtime --chain=kusama-dev --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443",
     expectedResponse: new GenericCommand(
       "try-runtime",
       {
@@ -50,7 +67,7 @@ const dataProvider: DataProvider[] = [
         gitlab: { job: { tags: ["linux-docker"], variables: {} } },
       },
       { RUST_LOG: "remote-ext=debug,runtime=trace", SECOND: "val" },
-      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443',
+      { chain: "kusama-dev", uri: "wss://kusama-try-runtime-node.parity-chains.parity.io:443" },
     ),
   },
   {
@@ -61,10 +78,9 @@ const dataProvider: DataProvider[] = [
       {
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"'],
         gitlab: { job: { tags: ["linux-docker"], variables: {} } },
-        optionalCommandArgs: true,
       },
       {},
-      '"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh" 1',
+      {},
     ),
   },
   {
@@ -75,18 +91,11 @@ const dataProvider: DataProvider[] = [
       {
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"'],
         gitlab: { job: { tags: ["linux-docker"], variables: {} } },
-        optionalCommandArgs: true,
       },
       {},
-      '"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"',
+      {},
     ),
   },
-  {
-    suitName: "bench-bot, no args when not allowed, should return error",
-    commandLine: "bot bench",
-    expectedResponse: new Error(`Could not find start of command ("$ ")`),
-  },
-
   /*
     Help cases
    */

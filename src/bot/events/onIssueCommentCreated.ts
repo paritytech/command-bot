@@ -110,7 +110,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
         }
 
         const contributor = { owner: contributorUsername, repo: contributorRepository, branch: contributorBranch }
-        const commentBody = `Preparing command "${parsedCommand.command}". This comment will be updated later.`.trim()
+        const commentBody = `Preparing command "${parsedCommand.subcommand}". This comment will be updated later.`.trim()
         const createdComment = await createComment(ctx, octokit, { ...commentParams, body: commentBody })
         getError = (body: string) => new PullRequestError(pr, { body, requester, commentId: createdComment.id })
 
@@ -124,7 +124,8 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
           id: getNextTaskId(),
           tag: "PullRequestTask",
           requester,
-          command: parsedCommand.command,
+          // FIXME: arguments change
+          command: JSON.stringify(parsedCommand.options),
           comment: { id: createdComment.id, htmlUrl: createdComment.htmlUrl },
           installationId,
           gitRef: { upstream, contributor, prNumber: pr.number },

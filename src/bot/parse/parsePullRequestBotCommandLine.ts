@@ -1,100 +1,99 @@
-import assert from "assert"
+import { parse as shellQuoteParse } from "shell-quote"
 
-import { botPullRequestCommentMention, botPullRequestIgnoreCommands } from "src/bot"
 import { CancelCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
-import { parseVariables } from "src/bot/parse/parseVariables"
-import {
-  fetchCommandsConfiguration,
-  getDocsUrl,
-  PIPELINE_SCRIPTS_REF,
-} from "src/command-configs/fetchCommandsConfiguration"
+import { fetchCommandsConfiguration, getDocsUrl } from "src/command-configs/fetchCommandsConfiguration"
 import { LoggerContext } from "src/logger"
-import { validateSingleShellCommand } from "src/shell"
+import { ExtendedCommander, getCommanderFromConfiguration } from "src/command-configs/commander"
+import { ensureDefined } from "opstooling-js"
+import { botPullRequestCommentMention } from "src/bot"
+import { CommanderError } from "commander"
 
 export const parsePullRequestBotCommandLine = async (
   rawCommandLine: string,
   ctx: LoggerContext,
 ): Promise<undefined | Error | ParsedCommand> => {
   let commandLine = rawCommandLine.trim()
+  let configRef: string | undefined = undefined
+
+  if (commandLine.startsWith("PIPELINE_SCRIPTS_REF=")) {
+    const configRefMatch = commandLine.match(/^PIPELINE_SCRIPTS_REF=(\S+)\s+(.*)$/)
+
+    configRef = ensureDefined(configRefMatch?.[1])
+    commandLine = ensureDefined(configRefMatch?.[2])
+  }
 
   // Add trailing whitespace so that bot can be differentiated from /cmd-[?]
   if (!commandLine.startsWith(`${botPullRequestCommentMention} `)) {
     return
   }
+  // removing `bot ` from the argv
+  commandLine = commandLine.substring(botPullRequestCommentMention.length + 1)
 
-  // remove "bot "
-  commandLine = commandLine.slice(botPullRequestCommentMention.length).trim()
+  const quotedCommandLine = shellQuoteParse(commandLine)
+  const argvCommandLine: string[] = []
 
-  // get first word as a subcommand
-  const subcommand = commandLine.split(" ")[0]
+  for (const item of quotedCommandLine) {
+    if (typeof item !== "string") {
+      // Ditching all commands with shell operators and so on
+      return new Error(`Command "${commandLine} is invalid`)
+    }
+    argvCommandLine.push(item)
+  }
+  const { commandConfigs, commitHash } = await fetchCommandsConfiguration(ctx, configRef)
 
-  if (!subcommand) {
-    return new Error(`Must provide a subcommand in line ${rawCommandLine}.`)
+  const commander = getCommanderFromConfiguration(commandConfigs)
+  const parseError = parseCommand(commander, argvCommandLine)
+
+  if (parseError) {
+    return parseError
   }
 
-  // ignore some commands
-  if (botPullRequestIgnoreCommands.includes(subcommand)) {
+  const parseResults = ensureDefined(commander.parseResults)
+
+  if (parseResults.ignoredCommand) {
     return
   }
 
-  commandLine = commandLine.slice(subcommand.length).trim()
-
-  switch (subcommand) {
+  switch (parseResults.command) {
     case "help": {
-      const str = commandLine.trim()
-      const variables = await parseVariables(ctx, str)
-      if (variables instanceof Error) {
-        return variables
-      }
-
-      const { commitHash: commandsConfigsCommitHash } = await fetchCommandsConfiguration(
-        ctx,
-        variables[PIPELINE_SCRIPTS_REF],
-      )
-
-      return new HelpCommand(commandsConfigsCommitHash)
+      return new HelpCommand(commitHash)
     }
     case "cancel": {
-      return new CancelCommand(commandLine.trim())
+      return new CancelCommand(parseResults.commandArgs[0] || "")
+    }
+    case undefined: {
+      return new Error(
+        `Could not find matching configuration for command "${
+          parseResults.unknownCommand
+        }"; Available ones are ${Object.keys(commandConfigs).join(", ")}. Refer to [help docs](${getDocsUrl(
+          commitHash,
+        )}) for more details.`,
+      )
     }
     default: {
-      const commandStartSymbol = "$ "
-      const [botOptionsLinePart, commandLinePart] = commandLine.split(commandStartSymbol)
-
-      const variables = await parseVariables(ctx, botOptionsLinePart)
-
-      if (variables instanceof Error) {
-        return variables
-      }
-
-      const { commandConfigs, commitHash } = await fetchCommandsConfiguration(ctx, variables[PIPELINE_SCRIPTS_REF])
-      const configuration = commandConfigs[subcommand]?.command?.configuration
-
-      if (typeof configuration === "undefined" || !Object.keys(configuration).length) {
-        return new Error(
-          `Could not find matching configuration for command "${subcommand}"; Available ones are ${Object.keys(
-            commandConfigs,
-          ).join(", ")}. Refer to [help docs](${getDocsUrl(commitHash)}) for more details.`,
-        )
-      }
-
-      // if presets has nothing - then it means that the command doesn't need any arguments and runs as is
-      if (Object.keys(commandConfigs[subcommand]?.command?.presets || [])?.length === 0) {
-        configuration.optionalCommandArgs = true
-      }
-
-      if (!commandLinePart && configuration.optionalCommandArgs !== true) {
-        return new Error(`Could not find start of command ("${commandStartSymbol}")`)
-      }
-
-      assert(configuration.commandStart, "command start should exist")
-
-      const command = await validateSingleShellCommand(ctx, [...configuration.commandStart, commandLinePart].join(" "))
-      if (command instanceof Error) {
-        return command
-      }
-
-      return new GenericCommand(subcommand, configuration, variables, command)
+      const configuration = commandConfigs[parseResults.command]?.command?.configuration
+      // TODO 4th argument doesn't make much sense now
+      return new GenericCommand(
+        parseResults.command,
+        configuration,
+        commander.opts().variable,
+        parseResults.commandOptions,
+      )
     }
+  }
+}
+
+function parseCommand(commander: ExtendedCommander, argv: string[]): Error | undefined {
+  try {
+    commander.parse(argv, { from: "user" })
+  } catch (e) {
+    if (e instanceof CommanderError) {
+      // Special case of unknown command. See `commander.ts`
+      if (e.message.includes("too many arguments. Expected")) {
+        return new Error("Unknown command")
+      }
+      return new Error(e.message)
+    }
+    throw e
   }
 }

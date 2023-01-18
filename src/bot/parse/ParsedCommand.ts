@@ -23,13 +23,13 @@ export class HelpCommand extends ParsedCommand {
 export class GenericCommand extends ParsedCommand {
   constructor(
     subcommand: string,
-    public configuration: Pick<CmdJson["command"]["configuration"], "gitlab" | "commandStart"> & {
-      optionalCommandArgs?: boolean
-    },
+    public configuration: Pick<CmdJson["command"]["configuration"], "gitlab" | "commandStart">,
     public variables: {
       [k: string]: unknown
     },
-    public command: string,
+    public options: {
+      [k: string]: string
+    },
   ) {
     super(subcommand)
   }
