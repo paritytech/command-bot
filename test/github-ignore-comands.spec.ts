@@ -4,7 +4,6 @@ import { ensureDefined } from "opstooling-js"
 import { DetachedExpectation, triggerWebhook } from "./helpers"
 import { initRepo, startGitDaemons } from "./setup/gitDaemons"
 import { getBotInstance } from "./setup/bot"
-import { logger } from "../src/logger"
 
 type CommandDataProviderItem = {
   suitName: string
