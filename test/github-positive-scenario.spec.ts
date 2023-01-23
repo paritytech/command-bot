@@ -160,7 +160,7 @@ describe.each(commandsDataProvider)(
           }
         })
 
-      await triggerWebhook("queueCommandComment", { body: commandLine })
+      await triggerWebhook("startCommandComment", { body: commandLine })
       await de.promise
     })
 

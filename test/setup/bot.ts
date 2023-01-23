@@ -29,7 +29,6 @@ export async function launchBot(gitHubUrl: string, gitLabUrl: string, gitDaemons
     GitHub git: ${gitDaemons.gitHub.url},
     GitLab git: ${gitDaemons.gitLab.url}`)
 
-  await spawn("yarn", ["build"], { env: Object.assign({}, process.env, botEnv), stdio: "pipe" })
   bot = spawn("yarn", ["start"], { env: Object.assign({}, process.env, botEnv), stdio: "pipe" })
 
   await new Promise<void>((resolve, reject) => {
@@ -116,5 +115,7 @@ function getBotEnv(
     CMD_BOT_URL: "http://localhost:3000/",
 
     NODE_EXTRA_CA_CERTS: selfSignedCertPath,
+
+    MIN_LOG_LEVEL: "debug",
   }
 }

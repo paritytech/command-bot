@@ -75,7 +75,7 @@ describe("Job failure (GitHub webhook)", () => {
       .forPatch("/repos/paritytech-stg/command-bot-test/issues/comments/555")
       .thenCallback(getCommentResponse)
 
-    await triggerWebhook("queueCommandComment")
+    await triggerWebhook("startCommandComment")
 
     const mockedPipelineEndpoint = await mockServers.gitLab
       .forPost("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/pipeline")

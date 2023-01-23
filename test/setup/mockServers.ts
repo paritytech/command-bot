@@ -24,7 +24,7 @@ export async function startMockServers(): Promise<MockServers> {
 
   const requestHandler = (name: string) => (request: mockttp.Request) => {
     if (request.matchedRuleId === undefined) {
-      console.log(`Unmatched request (${name}): ${request.method} ${request.url}`)
+      console.error(`Unmatched request (${name}): ${request.method} ${request.url}`)
       process.exit(1)
     }
     console.log(`Got matching request: (${name}): ${request.method} ${request.url}`)

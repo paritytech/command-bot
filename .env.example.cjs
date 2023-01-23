@@ -129,3 +129,5 @@ process.env.MASTER_TOKEN ??= "placeholder"
   Used to generate help page, which leads to cmd bot server
 */
 process.env.CMD_BOT_URL ??= "http://localhost:3000/"
+
+process.env.MIN_LOG_LEVEL ??= "debug"

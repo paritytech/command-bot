@@ -76,7 +76,7 @@ describe("Job cancellation (GitHub webhook)", () => {
       .forPatch("/repos/paritytech-stg/command-bot-test/issues/comments/555")
       .thenCallback(getCommentResponse)
 
-    await triggerWebhook("queueCommandComment")
+    await triggerWebhook("startCommandComment")
 
     const mockedPipelineEndpoint = await mockServers.gitLab
       .forPost("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/pipeline")
@@ -116,6 +116,31 @@ describe("Job cancellation (GitHub webhook)", () => {
   test("Phase 3: cmd-bot comments about cancellation", async () => {
     await until(
       () => lastCommentBody.match(/was cancelled/) !== null,
+      100,
+      50,
+      `Expected comment body to include "was cancelled". Instead, got: ${lastCommentBody}`,
+    )
+  })
+
+  test("Phase 4: cmd-bot cancel command with no active job", async () => {
+    const mockServers = ensureDefined(getMockServers())
+
+    const mockedEndpoint = await mockServers.gitHub
+      .forPost("/repos/paritytech-stg/command-bot-test/issues/4/comments")
+      .thenCallback(getCommentResponse)
+
+    await mockServers.gitHub
+      .forPatch("/repos/paritytech-stg/command-bot-test/issues/comments/555")
+      .thenCallback(getCommentResponse)
+
+    await triggerWebhook("cancelCommandComment", { body: `bot cancel` })
+
+    await until(async () => !(await mockedEndpoint.isPending()), 100, 50)
+  })
+
+  test("Phase 5: cmd-bot cancel command with no active job returns ¯\\_(ツ)_/¯", async () => {
+    await until(
+      () => lastCommentBody.match(/No task is being executed for this pull request/) !== null,
       100,
       50,
       `Expected comment body to include "was cancelled". Instead, got: ${lastCommentBody}`,
