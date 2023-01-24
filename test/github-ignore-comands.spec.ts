@@ -27,17 +27,19 @@ describe.each(commandsDataProvider)(
   "$suitName: Non pipeline scenario (GitHub webhook)",
   ({ suitName, commandLine }) => {
     test("cmd-bot creates comment or ignores", async () => {
-      const de = new DetachedExpectation()
       const bot = ensureDefined(getBotInstance())
-      bot.stdout?.on("data", (dataBuffer: Buffer) => {
-        if (dataBuffer.toString().includes(`Skip command "${commandLine}"`)) {
-          de.satisfy()
-        }
+      const skipTriggeredPromise = new Promise((resolve, reject) => {
+        bot.stdout?.on("data", (dataBuffer: Buffer) => {
+          const data = dataBuffer.toString()
+          if (data.includes(`Skip command "${commandLine}"`)) {
+            resolve(undefined)
+          } else if (data.includes("handler finished")) {
+            reject("Expected to see \"Skip command\" output first")
+          }
+        })
       })
-
       await triggerWebhook("startCommandComment", { body: commandLine })
-
-      await de.promise
+      await expect(skipTriggeredPromise).resolves.toEqual(undefined)
     })
   },
 )

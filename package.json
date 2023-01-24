@@ -51,7 +51,6 @@
     "mockttp": "^3.6.2",
     "nodemon": "2.0.19",
     "prettier": "^2.7.1",
-    "rimraf": "^4.0.7",
     "selfsigned": "^2.1.0",
     "smee-client": "^1.2.3",
     "ts-jest": "^29.0.0",
@@ -76,7 +75,7 @@
     "fix:prettier": "prettier --write",
     "fix": "yarn fix:eslint '{*,**/*}.{cjs,ts}' && yarn fix:prettier '{*,**/*}.json'",
     "prebuild": "yarn schema",
-    "clean": "rimraf build/",
+    "clean": "rm -rf build/",
     "build": "yarn clean && tsc && copyfiles -u 1 src/**/*.pug build/",
     "start": "TS_NODE_BASEURL=./build node ./build/main.js",
     "dev": "yarn schema && nodemon --no-update-notifier -- ./src/main.ts"
