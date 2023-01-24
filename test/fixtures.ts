@@ -7,14 +7,14 @@ import { getPipelineJobsPayload } from "./fixtures/gitlab/job"
 import { getPipelinePayload } from "./fixtures/gitlab/pipeline"
 
 export const webhookFixtures: Record<string, (params: CommentWebhookParams) => string> = {
-  queueCommandComment: (params) =>
+  startCommandComment: (params) =>
     getCommentWebhookPayload({
-      ...{ body: "/cmd queue -c sample $ hi", org: "paritytech-stg", repo: "command-bot-test", login: "somedev123" },
+      ...{ body: "bot sample $ hi", org: "paritytech-stg", repo: "command-bot-test", login: "somedev123" },
       ...params,
     }),
   cancelCommandComment: (params) =>
     getCommentWebhookPayload({
-      ...{ body: "/cmd cancel", org: "paritytech-stg", repo: "command-bot-test", login: "somedev123" },
+      ...{ body: "bot cancel", org: "paritytech-stg", repo: "command-bot-test", login: "somedev123" },
       ...params,
     }),
 }

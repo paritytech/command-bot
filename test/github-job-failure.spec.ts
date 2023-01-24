@@ -14,7 +14,7 @@ const restFixures = getRestFixtures({
     repo: "command-bot-test",
     prAuthor: "somedev123",
     headBranch: "prBranch1",
-    comments: [{ author: "somedev123", body: "/cmd queue -c sample $ hi", id: 500 }],
+    comments: [{ author: "somedev123", body: "bot sample $ hi", id: 500 }],
   },
   gitlab: { cmdBranch: "cmd-bot/4-1" },
 })
@@ -75,7 +75,7 @@ describe("Job failure (GitHub webhook)", () => {
       .forPatch("/repos/paritytech-stg/command-bot-test/issues/comments/555")
       .thenCallback(getCommentResponse)
 
-    await triggerWebhook("queueCommandComment")
+    await triggerWebhook("startCommandComment")
 
     const mockedPipelineEndpoint = await mockServers.gitLab
       .forPost("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/pipeline")

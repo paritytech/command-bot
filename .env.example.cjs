@@ -62,7 +62,7 @@ process.env.GITLAB_ACCESS_TOKEN_USERNAME ??= "placeholder"
   pipelines with ref $PIPELINE_SCRIPTS_REF. Leave it unset to disable
   $PIPELINE_SCRIPTS.
 */
-process.env.PIPELINE_SCRIPTS_REPOSITORY ??= "https://github.com/paritytech/command-bot-scripts.git"
+process.env.PIPELINE_SCRIPTS_REPOSITORY ??= "https://github.com/paritytech/command-bot-scripts/"
 process.env.PIPELINE_SCRIPTS_REF ??= "main"
 
 /*
@@ -124,3 +124,10 @@ process.env.MASTER_TOKEN ??= "placeholder"
   to the smee.io URL in https://github.com/settings/apps/[app-name].
 */
 // process.env.WEBHOOK_PROXY_URL ??= "https://smee.io/fc8OfV07M1O69fm5"
+
+/*
+  Used to generate help page, which leads to cmd bot server
+*/
+process.env.CMD_BOT_URL ??= "http://localhost:3000/"
+
+process.env.MIN_LOG_LEVEL ??= "debug"

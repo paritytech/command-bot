@@ -41,9 +41,17 @@ export const setupEvent = <E extends WebhookEvents>(
             await createComment(ctx, octokit, sharedCommentParams)
           }
         }
+
+        // handler returned undefined, means skipped
+        if (typeof result === "undefined") {
+          eventLogger.debug(null, `Skip command "${event.payload.comment.body}"`)
+        }
       })
       .catch((error) => {
         eventLogger.fatal(error, "Exception caught in webhook handler")
+      })
+      .finally(() => {
+        eventLogger.debug(null, `"${eventName}" handler finished`)
       })
   })
 }

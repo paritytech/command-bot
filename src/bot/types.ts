@@ -2,25 +2,19 @@ import { EmitterWebhookEventName } from "@octokit/webhooks/dist-types/types"
 import { IssueCommentCreatedEvent } from "@octokit/webhooks-types"
 
 import { ExtendedOctokit } from "src/github"
-import { CmdJson } from "src/schema/schema.cmd"
 import { Context, PullRequestError } from "src/types"
 
-export type QueueCommand = {
-  subcommand: "queue"
-  configuration: Pick<CmdJson["command"]["configuration"], "gitlab" | "commandStart"> & {
-    optionalCommandArgs?: boolean
-  }
-  variables: {
-    [k: string]: unknown
-  }
-  command: string
-}
-export type CancelCommand = {
-  subcommand: "cancel"
-  taskId: string
+export type PullRequestData = {
+  owner: string
+  repo: string
+  number: number
 }
 
-export type ParsedBotCommand = QueueCommand | CancelCommand
+export type CommentData = {
+  owner: string
+  repo: string
+  issue_number: number
+}
 
 export type WebhookEvents = Extract<EmitterWebhookEventName, "issue_comment.created">
 

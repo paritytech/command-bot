@@ -1,5 +1,6 @@
 import { createAppAuth } from "@octokit/auth-app"
 import { request } from "@octokit/request"
+import express from "express"
 import { MatrixClient, SimpleFsStorageProvider } from "matrix-bot-sdk"
 import path from "path"
 import { Probot, Server } from "probot"
@@ -14,6 +15,9 @@ import { requeueUnterminatedTasks } from "src/task"
 import { Context } from "src/types"
 import { Err, Ok } from "src/utils"
 
+export const DOCS_PATH = "/static/docs/"
+export const DOCS_DIR = path.join(process.cwd(), DOCS_PATH)
+
 export const setup = async (
   bot: Probot,
   server: Server,
@@ -27,6 +31,9 @@ export const setup = async (
   const { dataPath } = config
   const repositoryCloneDirectory = path.join(dataPath, "repositories")
   await ensureDir(repositoryCloneDirectory)
+
+  await ensureDir(DOCS_DIR)
+  server.expressApp.use(DOCS_PATH, express.static(DOCS_DIR))
 
   const taskDbPath = path.join(dataPath, "db")
   await initDatabaseDir(taskDbPath)

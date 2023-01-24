@@ -7,6 +7,7 @@ import { PipelineScripts } from "src/types"
 import { envNumberVar, envVar } from "src/utils"
 
 const repository = envVar("PIPELINE_SCRIPTS_REPOSITORY")
+assert(!repository.endsWith(".git"), "PIPELINE_SCRIPTS_REPOSITORY shouldn't end with .git")
 const ref = process.env.PIPELINE_SCRIPTS_REF
 
 const pipelineScripts: PipelineScripts = { repository, ref }
@@ -40,7 +41,36 @@ const allowedOrganizations = envVar("ALLOWED_ORGANIZATIONS")
     return parsedValue
   })
 
-export const config = {
+export type Config = {
+  matrix: MatrixConfig | undefined
+  dataPath: string
+  pipelineScripts: PipelineScripts
+  appDbVersionPath: string
+  allowedOrganizations: number[]
+  shouldClearTaskDatabaseOnStart: boolean
+  disablePRComment: boolean
+  startDate: Date
+  pingPort: number | undefined
+  isDeployment: boolean
+  githubBaseUrl: string | undefined
+  githubRemoteUrl: string | undefined
+  webhookPort: number | undefined
+  webhookProxy: string | undefined
+  webhookSecret: string
+  masterToken: string
+  appId: number
+  privateKey: string
+  clientId: string
+  clientSecret: string
+  gitlabAccessToken: string
+  gitlabAccessTokenUsername: string
+  gitlabDomain: string
+  gitlabPushNamespace: string
+  gitlabJobImage: string
+  cmdBotUrl: string
+}
+
+export const config: Config = {
   matrix,
   dataPath,
   pipelineScripts,
@@ -66,4 +96,5 @@ export const config = {
   gitlabDomain: envVar("GITLAB_DOMAIN"),
   gitlabPushNamespace: envVar("GITLAB_PUSH_NAMESPACE"),
   gitlabJobImage: envVar("GITLAB_JOB_IMAGE"),
+  cmdBotUrl: envVar("CMD_BOT_URL"),
 }

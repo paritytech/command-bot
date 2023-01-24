@@ -35,7 +35,7 @@ type CommandDataProviderItem = {
 const commandsDataProvider: CommandDataProviderItem[] = [
   {
     suitName: "[sample] command",
-    commandLine: "/cmd queue -c sample $ helloworld",
+    commandLine: "bot sample $ helloworld",
     taskId: 1,
     expected: {
       startMessage:
@@ -46,7 +46,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   },
   {
     suitName: "[fmt] command with args",
-    commandLine: "/cmd queue -c fmt $ 1",
+    commandLine: "bot fmt $ 1",
     taskId: 2,
     expected: {
       startMessage:
@@ -56,7 +56,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   },
   {
     suitName: "[fmt] command no args",
-    commandLine: "/cmd queue -c fmt",
+    commandLine: "bot fmt",
     taskId: 3,
     expected: {
       startMessage:
@@ -66,7 +66,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   },
   {
     suitName: "[bench-bot] command",
-    commandLine: "/cmd queue -c bench $ runtime kusama-dev pallet_referenda",
+    commandLine: "bot bench $ runtime kusama-dev pallet_referenda",
     taskId: 4,
     expected: {
       startMessage:
@@ -78,7 +78,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   {
     suitName: "[try-runtime] command",
     commandLine:
-      "/cmd queue -v RUST_LOG=remote-ext=debug,runtime=trace -c try-runtime $ --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443",
+      "bot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace $ --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443",
     taskId: 5,
     expected: {
       startMessage:
@@ -160,7 +160,7 @@ describe.each(commandsDataProvider)(
           }
         })
 
-      await triggerWebhook("queueCommandComment", { body: commandLine })
+      await triggerWebhook("startCommandComment", { body: commandLine })
       await de.promise
     })
 
@@ -187,7 +187,7 @@ describe.each(commandsDataProvider)(
       const comment = ensureDefined(commentThatBotLeft)
 
       await until(
-        () => comment.body.includes("/cmd cancel"),
+        () => comment.body.includes("bot cancel"),
         100,
         50,
         "Expected bot to edit commit so it would include pipeline cancellation command." +

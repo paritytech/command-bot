@@ -9,8 +9,10 @@ Before starting to work on this project, we recommend reading the
 
 - [How it works](#how-it-works)
 - [Pull request commands](#pull-request-commands)
-  - [Queue](#pull-request-command-queue)
+  - [Help](#pull-request-command-help)
   - [Cancel](#pull-request-command-cancel)
+  - [Generic](#pull-request-command-generic)
+  - [Testing generic command in dev](#pull-request-command-generic-dev)
 - [API](#api)
   - [Create a Personal Token](#api-create-token)
   - [Queue](#api-command-queue)
@@ -41,20 +43,9 @@ command-bot executes arbitrary commands on GitLab CI from
 
 Comment in a pull request:
 
-`/cmd queue [bot-args] $ [args]`
+`bot [command] [bot-args] $ [args]`
 
-In `[bot-args]` you should provide the following options
-
-- `-c` / `--configuration`: select one of the following configurations
-
-  - `bench-bot`: runs
-    [`bench-bot`](https://github.com/paritytech/pipeline-scripts/blob/master/bench-bot.sh)
-    `[args]`
-  - `try-runtime`: runs
-    `cargo run --release --quiet --features=try-runtime try-runtime [args]`. Note
-    that you can use
-    [the dedicated internal RPC nodes](https://github.com/paritytech/devops/wiki/Internal-RPC-nodes)
-    in the arguments of this command.
+In `[bot-args]` are optional, you can provide the following options
 
 - `-v` / `--var` (optional): defines environment variables for the CI job which
   runs the command. You can specify this option multiple times for multiple
@@ -62,17 +53,25 @@ In `[bot-args]` you should provide the following options
 
 ### Example
 
-`/cmd queue -v RUST_LOG=debug -c bench $ runtime westend-dev pallet_balances`
+## Help <a name="pull-request-command-help"></a>
 
-#### Testing the updates to pipeline-scripts by overriding its default branch
+`bot cancel`
 
-`/cmd queue -v PIPELINE_SCRIPTS_REF=your-branch -c bench $ overhead assets westmint`
+Bot responds with an actual list of commands generated from pipelin
+
+## Example of one generic command Bench <a name="pull-request-command-generic"></a>
+
+`bot bench $ runtime westend-dev pallet_balances`
+
+#### Testing the updates to command-bot-scripts by overriding its default branch <a name="pull-request-command-generic-dev"></a>
+
+`bot bench -v PIPELINE_SCRIPTS_REF=your-branch $ overhead assets westmint`
 
 ## Cancel <a name="pull-request-command-cancel"></a>
 
-In the pull request where you previously ran `/cmd queue`, comment:
+In the pull request where you previously ran `bot queue`, comment:
 
-`/cmd cancel`
+`bot cancel`
 
 # API <a name="api"></a>
 
@@ -238,7 +237,7 @@ once the application starts.
 
    The `sample` configuration is available for debugging purposes.
 
-   `/cmd queue -c sample $ hi` will run `echo hi` in a GitLab job (GitLab
+   `bot sample $ hi` will run `echo hi` in a GitLab job (GitLab
    repository from Step 4).
 
 # Deployment <a name="deployment"></a>
