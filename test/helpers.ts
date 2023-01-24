@@ -9,6 +9,7 @@ import { getWebhookPort } from "./setup/bot"
 export async function triggerWebhook(
   fixture: keyof typeof webhookFixtures,
   params?: Partial<CommentWebhookParams>,
+  eventId?: string
 ): Promise<void> {
   const body = webhookFixtures[fixture]({ ...params } as CommentWebhookParams)
   // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
@@ -24,7 +25,7 @@ export async function triggerWebhook(
       "X-Hub-Signature": `sha1=${signature1}`,
       "X-Hub-Signature-256": `sha256=${signature256}`,
       "X-GitHub-Event": "issue_comment.created",
-      "X-GitHub-Delivery": "72d3162e-cc78-11e3-81ab-4c9367dc0958",
+      "X-GitHub-Delivery": eventId || "72d3162e-cc78-11e3-81ab-4c9367dc0958",
     },
   })
 }

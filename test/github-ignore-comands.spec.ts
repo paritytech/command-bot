@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "@jest/globals"
 import { ensureDefined } from "opstooling-js"
 
-import { DetachedExpectation, triggerWebhook } from "./helpers"
+import { triggerWebhook } from "./helpers"
 import { initRepo, startGitDaemons } from "./setup/gitDaemons"
 import { getBotInstance } from "./setup/bot"
 
@@ -27,19 +27,21 @@ describe.each(commandsDataProvider)(
   "$suitName: Non pipeline scenario (GitHub webhook)",
   ({ suitName, commandLine }) => {
     test("cmd-bot creates comment or ignores", async () => {
+      // name the webhook event ID, so later we can attribute logs correctly
+      const eventId = Math.floor(Math.random() * 1e10).toString()
       const bot = ensureDefined(getBotInstance())
       const skipTriggeredPromise = new Promise((resolve, reject) => {
         bot.stdout?.on("data", (dataBuffer: Buffer) => {
           const data = dataBuffer.toString()
           if (data.includes(`Skip command "${commandLine}"`)) {
-            resolve(undefined)
-          } else if (data.includes("handler finished")) {
+            resolve("Skipped")
+          } else if (data.includes("handler finished") && data.includes(eventId)) {
             reject("Expected to see \"Skip command\" output first")
           }
         })
       })
-      await triggerWebhook("startCommandComment", { body: commandLine })
-      await expect(skipTriggeredPromise).resolves.toEqual(undefined)
+      await triggerWebhook("startCommandComment", { body: commandLine }, eventId)
+      await expect(skipTriggeredPromise).resolves.toEqual("Skipped")
     })
   },
 )
