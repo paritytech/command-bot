@@ -16,4 +16,6 @@ coverage
 
 src/schema/schema.cmd.d.ts
 
-static/docs
+generated/
+
+*-error.log

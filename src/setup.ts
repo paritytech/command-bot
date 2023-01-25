@@ -15,8 +15,9 @@ import { requeueUnterminatedTasks } from "src/task"
 import { Context } from "src/types"
 import { Err, Ok } from "src/utils"
 
-export const DOCS_PATH = "/static/docs/"
-export const DOCS_DIR = path.join(process.cwd(), DOCS_PATH)
+export const DOCS_URL_PATH = "/static/docs/"
+export const GENERATED_DIR = path.join(process.cwd(), "generated")
+export const DOCS_DIR = path.join(GENERATED_DIR, "docs")
 
 export const setup = async (
   bot: Probot,
@@ -33,7 +34,7 @@ export const setup = async (
   await ensureDir(repositoryCloneDirectory)
 
   await ensureDir(DOCS_DIR)
-  server.expressApp.use(DOCS_PATH, express.static(DOCS_DIR))
+  server.expressApp.use(DOCS_URL_PATH, express.static(DOCS_DIR))
 
   const taskDbPath = path.join(dataPath, "db")
   await initDatabaseDir(taskDbPath)

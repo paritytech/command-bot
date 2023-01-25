@@ -2,6 +2,7 @@ import { jest } from "@jest/globals"
 
 import { CancelCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
 import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine"
+import { SkipEvent } from "src/bot/types"
 import { logger } from "src/logger"
 
 jest.mock("src/command-configs/fetchCommandsConfiguration")
@@ -12,14 +13,14 @@ logger.options.minLogLevel = "fatal"
 type DataProvider = {
   suitName: string
   commandLine: string
-  expectedResponse?: undefined | ParsedCommand | Error
+  expectedResponse: SkipEvent | ParsedCommand | Error
 }
 
 const dataProvider: DataProvider[] = [
   {
     suitName: "unrelated to bot comment returns nothing (ignores)",
     commandLine: "something from comments",
-    expectedResponse: undefined,
+    expectedResponse: new SkipEvent(),
   },
   {
     suitName: "check wrong set -v, validation should trigger error",
@@ -84,7 +85,9 @@ const dataProvider: DataProvider[] = [
   {
     suitName: "bench-bot, no args when not allowed, should return error",
     commandLine: "bot bench",
-    expectedResponse: new Error(`Could not find start of command ("$ ")`),
+    expectedResponse: new Error(
+      `Missing arguments for command "bench". Refer to [help docs](http://cmd-bot.docs.com/) for more details.`,
+    ),
   },
 
   /*
@@ -101,10 +104,14 @@ const dataProvider: DataProvider[] = [
   /*
      Ignore cases
       */
-  { suitName: "empty command line returns nothing (ignores)", commandLine: "", expectedResponse: undefined },
-  { suitName: "no subcommand - ignore", commandLine: "bot ", expectedResponse: undefined },
-  { suitName: "ignored command", commandLine: "bot merge", expectedResponse: undefined },
-  { suitName: "ignored command 2", commandLine: "bot rebase", expectedResponse: undefined },
+  { suitName: "empty command line returns nothing (ignores)", commandLine: "", expectedResponse: new SkipEvent() },
+  { suitName: "no subcommand - ignore", commandLine: "bot ", expectedResponse: new SkipEvent() },
+  { suitName: "ignored command", commandLine: "bot merge", expectedResponse: new SkipEvent("Ignored command: merge") },
+  {
+    suitName: "ignored command 2",
+    commandLine: "bot rebase",
+    expectedResponse: new SkipEvent("Ignored command: rebase"),
+  },
 
   /*
     Expected Error cases

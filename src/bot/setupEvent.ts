@@ -1,6 +1,6 @@
 import { Probot } from "probot"
 
-import { WebhookEventPayload, WebhookEvents, WebhookHandler } from "src/bot/types"
+import { SkipEvent, WebhookEventPayload, WebhookEvents, WebhookHandler } from "src/bot/types"
 import { createComment, getOctokit, updateComment } from "src/github"
 import { logger as parentLogger } from "src/logger"
 import { Context, PullRequestError } from "src/types"
@@ -42,9 +42,11 @@ export const setupEvent = <E extends WebhookEvents>(
           }
         }
 
-        // handler returned undefined, means skipped
-        if (typeof result === "undefined") {
-          eventLogger.debug(null, `Skip command "${event.payload.comment.body}"`)
+        if (result instanceof SkipEvent && !!result.reason.trim()) {
+          eventLogger.debug(
+            event.payload,
+            `Skip command "${event.payload.comment.body}" with reason: "${result.reason}"`,
+          )
         }
       })
       .catch((error) => {

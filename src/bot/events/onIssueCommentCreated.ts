@@ -3,7 +3,7 @@ import path from "path"
 
 import { CancelCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
 import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine"
-import { CommentData, PullRequestData, WebhookHandler } from "src/bot/types"
+import { CommentData, PullRequestData, SkipEvent, WebhookHandler } from "src/bot/types"
 import { getDocsUrl } from "src/command-configs/fetchCommandsConfiguration"
 import { isRequesterAllowed } from "src/core"
 import { getSortedTasks } from "src/db"
@@ -21,25 +21,21 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
   logger.options.context = { ...logger.options.context, repo: repository.name, comment: commentParams, pr }
 
   if (!("pull_request" in issue)) {
-    logger.debug(payload, `Skipping payload because it's not from a pull request`)
-    return
+    return new SkipEvent("Skipping payload because it's not from a pull request")
   }
 
   const requester = comment.user?.login
 
   if (!requester) {
-    logger.debug(payload, "Skipping payload because it has no requester")
-    return
+    return new SkipEvent("Skipping payload because it has no requester")
   }
 
   if (payload.action !== "created") {
-    logger.debug(payload, "Skipping payload because it's not for created comments")
-    return
+    return new SkipEvent("Skipping payload because it's not for created comments")
   }
 
   if (comment.user?.type !== "User") {
-    logger.debug(payload, `Skipping payload because comment.user.type (${comment.user?.type}) is not "User"`)
-    return
+    return new SkipEvent(`Skipping payload because comment.user.type (${comment.user?.type}) is not "User"`)
   }
 
   let getError = (body: string) => new PullRequestError(pr, { body, requester })
@@ -49,8 +45,8 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
     for (const line of getLines(comment.body)) {
       const parsedCommand = await parsePullRequestBotCommandLine(line, ctx)
 
-      if (parsedCommand === undefined) {
-        continue
+      if (parsedCommand instanceof SkipEvent) {
+        return parsedCommand
       }
 
       if (parsedCommand instanceof Error) {
@@ -61,7 +57,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
     }
 
     if (commands.length === 0) {
-      return
+      return new SkipEvent("No commands found within a comment")
     }
 
     if (!(await isRequesterAllowed(ctx, octokit, requester))) {
@@ -229,4 +225,6 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
     logger.fatal(displayError(rawError), msg)
     return getError(msg)
   }
+
+  return new SkipEvent("Reached the end of handler")
 }
