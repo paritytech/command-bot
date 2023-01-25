@@ -17,3 +17,5 @@ coverage
 src/schema/schema.cmd.d.ts
 
 generated/
+
+*-error.log
