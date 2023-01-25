@@ -9,7 +9,7 @@ import { renderHelpPage } from "src/command-configs/renderHelpPage"
 import { CommandConfigs, FetchCommandConfigsResult } from "src/command-configs/types"
 import { config } from "src/config"
 import { LoggerContext } from "src/logger"
-import { DOCS_DIR, DOCS_PATH } from "src/setup"
+import { DOCS_DIR, DOCS_URL_PATH, GENERATED_DIR } from "src/setup"
 import { CommandRunner } from "src/shell"
 
 export const PIPELINE_SCRIPTS_REF = "PIPELINE_SCRIPTS_REF"
@@ -19,7 +19,9 @@ export async function fetchCommandsConfiguration(
   overriddenBranch?: string,
 ): Promise<FetchCommandConfigsResult> {
   const cmdRunner = new CommandRunner(ctx)
-  const scriptsPath = path.join(config.dataPath, "scripts")
+  /* every re-deploy this folder will be cleaned,
+     so each command will re-download scripts and re-render docs */
+  const scriptsPath = path.join(GENERATED_DIR, "scripts")
 
   const commandConfigMutex = new Mutex()
 
@@ -54,7 +56,7 @@ export async function fetchCommandsConfiguration(
 }
 
 export function getDocsUrl(commitHash: string): string {
-  return new URL(path.join(config.cmdBotUrl, DOCS_PATH, getDocsFilename(commitHash))).toString()
+  return new URL(path.join(config.cmdBotUrl, DOCS_URL_PATH, getDocsFilename(commitHash))).toString()
 }
 
 function getDocsFilename(scriptsRevision: string): string {
