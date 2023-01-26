@@ -29,5 +29,6 @@ export function renderHelpPage(params: {
 
 // append local (or "hardcoded") commands into documentation
 function mockStaticConfig(description: string) {
-  return { command: { description } } as CmdJson
+  const config: CmdJson = { command: { description, configuration: {} } }
+  return config
 }
