@@ -40,21 +40,6 @@ export type Context = {
   }
 }
 
-export class PullRequestError {
-  constructor(
-    public pr: {
-      owner: string
-      repo: string
-      number: number
-    },
-    public comment: {
-      body: string
-      commentId?: number
-      requester?: string
-    },
-  ) {}
-}
-
 export type ToString = { toString: () => string }
 
 export type CommandOutput = Error | string

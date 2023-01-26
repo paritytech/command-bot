@@ -222,6 +222,101 @@ export const updateComment = async (
   }
 }
 
+export const reactToComment = async (
+  ctx: Context,
+  octokit: Octokit,
+  ...args: Parameters<typeof octokit.reactions.createForIssueComment>
+): Promise<number | undefined> => {
+  const response = await octokit.reactions.createForIssueComment(...args)
+
+  if (response.status === 201) {
+    return response.data.id
+  } else {
+    ctx.logger.error(response, `reactToComment response unsuccessful`)
+  }
+}
+
+export const removeReactionToComment = async (
+  ctx: Context,
+  octokit: Octokit,
+  ...args: Parameters<typeof octokit.reactions.deleteForIssueComment>
+): Promise<void> => {
+  const response = await octokit.reactions.deleteForIssueComment(...args)
+
+  if (response.status !== 204) {
+    ctx.logger.error(response, `reactToComment response unsuccessful`)
+  }
+}
+
+export const cleanComments = async (
+  ctx: Context,
+  octokit: Octokit,
+  ...args: Parameters<typeof octokit.issues.listComments>
+): Promise<void> => {
+  if (ctx.disablePRComment) {
+    ctx.logger.info({ call: "cleanComments", args }, "cleanComments")
+  } else {
+    const limit = 100
+    const params = args[0]
+
+    if (params) {
+      const botCommentIds = []
+      let stopped = false
+      params.page = 1
+      params.per_page = limit
+
+      while (!stopped) {
+        const response = await octokit.issues.listComments(params)
+        /* https://docs.github.com/en/rest/issues/comments?apiVersion=2022-11-28#list-issue-comments
+           if there's more than LIMIT comments, github doesn't provide a total comments number,
+           so we need to query all, until we reach the end */
+        if (response.status === 200) {
+          // check if we got enough comments
+          if (response.data.length < limit) {
+            // if enough, then stop this
+            stopped = true
+            ctx.logger.debug(null, "cleanComments: stop paging")
+          } else {
+            // not enough: add +1 page to params
+            params.page = params.page + 1
+            ctx.logger.debug(null, `cleanComments: increase page ${params.page}`)
+          }
+          // save ids
+          botCommentIds.push(...response.data.filter((comment) => comment.user?.type === "Bot").map((r) => r.id))
+        } else {
+          ctx.logger.error(response, "cleanComments: listComments ended up unsuccessfully")
+          stopped = true
+        }
+      }
+
+      ctx.logger.debug(botCommentIds, "cleanComments: collected bot comment ids")
+
+      if (botCommentIds.length) {
+        for (const id of botCommentIds) {
+          await deleteIssueComment(ctx, octokit, { id, repo: params.repo, owner: params.owner })
+        }
+      } else {
+        ctx.logger.info(null, "no comments to clean")
+      }
+    } else {
+      throw new Error("Parameters should be provided to clean comments")
+    }
+  }
+}
+
+async function deleteIssueComment(
+  ctx: Context,
+  octokit: Octokit,
+  params: { id: number; repo: string; owner: string },
+): Promise<void> {
+  const { id, repo, owner } = params
+  const deleteResponse = await octokit.issues.deleteComment({ comment_id: id, repo, owner })
+
+  if (deleteResponse.status !== 204) {
+    ctx.logger.error(deleteResponse, `Failed to clean comment`)
+  }
+}
+
 export const isOrganizationMember = async ({
   organizationId,
   username,

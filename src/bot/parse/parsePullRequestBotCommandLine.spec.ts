@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals"
 
-import { CancelCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
+import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
 import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine"
 import { SkipEvent } from "src/bot/types"
 import { logger } from "src/logger"
@@ -94,6 +94,8 @@ const dataProvider: DataProvider[] = [
     Help cases
    */
   { suitName: "help", commandLine: "bot help", expectedResponse: new HelpCommand("123hash") },
+  { suitName: "help", commandLine: "bot clean", expectedResponse: new CleanCommand() },
+  { suitName: "help", commandLine: "bot clear", expectedResponse: new CleanCommand() },
 
   /*
     Cancel cases

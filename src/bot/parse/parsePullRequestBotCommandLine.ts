@@ -1,7 +1,7 @@
 import assert from "assert"
 
 import { botPullRequestCommentMention, botPullRequestIgnoreCommands } from "src/bot"
-import { CancelCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
+import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
 import { parseVariables } from "src/bot/parse/parseVariables"
 import { SkipEvent } from "src/bot/types"
 import {
@@ -57,6 +57,10 @@ export const parsePullRequestBotCommandLine = async (
     }
     case "cancel": {
       return new CancelCommand(commandLine.trim())
+    }
+    case "clear":
+    case "clean": {
+      return new CleanCommand()
     }
     default: {
       const commandStartSymbol = "$ "
