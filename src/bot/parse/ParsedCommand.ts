@@ -1,7 +1,7 @@
-import { CmdJson } from "src/schema/schema.cmd"
+import { CmdJson } from "src/schema/schema.cmd";
 
 interface IParseCommand {
-  subcommand: string
+  subcommand: string;
 }
 
 export abstract class ParsedCommand implements IParseCommand {
@@ -10,19 +10,19 @@ export abstract class ParsedCommand implements IParseCommand {
 
 export class CancelCommand extends ParsedCommand {
   constructor(public taskId: string) {
-    super("cancel")
+    super("cancel");
   }
 }
 
 export class CleanCommand extends ParsedCommand {
   constructor() {
-    super("clean")
+    super("clean");
   }
 }
 
 export class HelpCommand extends ParsedCommand {
   constructor(public commitHash: string) {
-    super("help")
+    super("help");
   }
 }
 
@@ -30,13 +30,13 @@ export class GenericCommand extends ParsedCommand {
   constructor(
     subcommand: string,
     public configuration: Pick<CmdJson["command"]["configuration"], "gitlab" | "commandStart"> & {
-      optionalCommandArgs?: boolean
+      optionalCommandArgs?: boolean;
     },
     public variables: {
-      [k: string]: unknown
+      [k: string]: unknown;
     },
     public command: string,
   ) {
-    super(subcommand)
+    super(subcommand);
   }
 }

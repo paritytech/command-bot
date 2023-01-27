@@ -8,4 +8,4 @@ module.exports = {
   forceExit: true,
   testMatch: ["<rootDir>/test/**/*.spec.ts"],
   testTimeout: 30000,
-}
+};

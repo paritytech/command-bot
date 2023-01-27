@@ -5765,9 +5765,9 @@ onetime@^5.1.2:
   dependencies:
     mimic-fn "^2.1.0"
 
-"opstooling-js-style@https://github.com/paritytech/opstooling-js-style.git#^v1.0.0":
+"opstooling-js-style@https://github.com/paritytech/opstooling-js-style.git#master":
   version "0.0.0"
-  resolved "https://github.com/paritytech/opstooling-js-style.git#40d8a53227e1d5b5e662ea3f3d12cc0c912e3d48"
+  resolved "https://github.com/paritytech/opstooling-js-style.git#c298d0f732d93712e4397fd53baa3317a3022c8c"
   dependencies:
     "@typescript-eslint/eslint-plugin" "^5.21.0"
     "@typescript-eslint/parser" "^5.21.0"

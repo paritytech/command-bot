@@ -1,74 +1,74 @@
-import assert from "assert"
-import path from "path"
+import assert from "assert";
+import path from "path";
 
-import { isNewDBVersionRequested } from "src/db"
-import { ensureDirSync } from "src/shell"
-import { PipelineScripts } from "src/types"
-import { envNumberVar, envVar } from "src/utils"
+import { isNewDBVersionRequested } from "src/db";
+import { ensureDirSync } from "src/shell";
+import { PipelineScripts } from "src/types";
+import { envNumberVar, envVar } from "src/utils";
 
-const repository = envVar("PIPELINE_SCRIPTS_REPOSITORY")
-assert(!repository.endsWith(".git"), "PIPELINE_SCRIPTS_REPOSITORY shouldn't end with .git")
-const ref = process.env.PIPELINE_SCRIPTS_REF
+const repository = envVar("PIPELINE_SCRIPTS_REPOSITORY");
+assert(!repository.endsWith(".git"), "PIPELINE_SCRIPTS_REPOSITORY shouldn't end with .git");
+const ref = process.env.PIPELINE_SCRIPTS_REF;
 
-const pipelineScripts: PipelineScripts = { repository, ref }
+const pipelineScripts: PipelineScripts = { repository, ref };
 
-const disablePRComment = !!process.env.DISABLE_PR_COMMENT
+const disablePRComment = !!process.env.DISABLE_PR_COMMENT;
 
-const dataPath = envVar("DATA_PATH")
-ensureDirSync(dataPath)
+const dataPath = envVar("DATA_PATH");
+ensureDirSync(dataPath);
 
-export const appDbVersionPath = path.join(dataPath, "task-db-version")
-const taskDbVersion = process.env.TASK_DB_VERSION?.trim() || ""
+export const appDbVersionPath = path.join(dataPath, "task-db-version");
+const taskDbVersion = process.env.TASK_DB_VERSION?.trim() || "";
 
 export type MatrixConfig = {
-  homeServer: string
-  accessToken: string
-}
+  homeServer: string;
+  accessToken: string;
+};
 const matrix: MatrixConfig | undefined = (() => {
   if (process.env.MATRIX_HOMESERVER) {
-    return { homeServer: process.env.MATRIX_HOMESERVER, accessToken: envVar("MATRIX_ACCESS_TOKEN") }
+    return { homeServer: process.env.MATRIX_HOMESERVER, accessToken: envVar("MATRIX_ACCESS_TOKEN") };
   } else {
-    return undefined
+    return undefined;
   }
-})()
+})();
 
 const allowedOrganizations = envVar("ALLOWED_ORGANIZATIONS")
   .split(",")
   .filter((value) => value.length !== 0)
   .map((value) => {
-    const parsedValue = parseInt(value)
-    assert(parsedValue)
-    return parsedValue
-  })
+    const parsedValue = parseInt(value);
+    assert(parsedValue);
+    return parsedValue;
+  });
 
 export type Config = {
-  matrix: MatrixConfig | undefined
-  dataPath: string
-  pipelineScripts: PipelineScripts
-  appDbVersionPath: string
-  allowedOrganizations: number[]
-  shouldClearTaskDatabaseOnStart: boolean
-  disablePRComment: boolean
-  startDate: Date
-  pingPort: number | undefined
-  isDeployment: boolean
-  githubBaseUrl: string | undefined
-  githubRemoteUrl: string | undefined
-  webhookPort: number | undefined
-  webhookProxy: string | undefined
-  webhookSecret: string
-  masterToken: string
-  appId: number
-  privateKey: string
-  clientId: string
-  clientSecret: string
-  gitlabAccessToken: string
-  gitlabAccessTokenUsername: string
-  gitlabDomain: string
-  gitlabPushNamespace: string
-  gitlabJobImage: string
-  cmdBotUrl: string
-}
+  matrix: MatrixConfig | undefined;
+  dataPath: string;
+  pipelineScripts: PipelineScripts;
+  appDbVersionPath: string;
+  allowedOrganizations: number[];
+  shouldClearTaskDatabaseOnStart: boolean;
+  disablePRComment: boolean;
+  startDate: Date;
+  pingPort: number | undefined;
+  isDeployment: boolean;
+  githubBaseUrl: string | undefined;
+  githubRemoteUrl: string | undefined;
+  webhookPort: number | undefined;
+  webhookProxy: string | undefined;
+  webhookSecret: string;
+  masterToken: string;
+  appId: number;
+  privateKey: string;
+  clientId: string;
+  clientSecret: string;
+  gitlabAccessToken: string;
+  gitlabAccessTokenUsername: string;
+  gitlabDomain: string;
+  gitlabPushNamespace: string;
+  gitlabJobImage: string;
+  cmdBotUrl: string;
+};
 
 export const config: Config = {
   matrix,
@@ -97,4 +97,4 @@ export const config: Config = {
   gitlabPushNamespace: envVar("GITLAB_PUSH_NAMESPACE"),
   gitlabJobImage: envVar("GITLAB_JOB_IMAGE"),
   cmdBotUrl: envVar("CMD_BOT_URL"),
-}
+};

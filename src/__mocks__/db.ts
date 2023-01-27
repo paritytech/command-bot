@@ -1,3 +1,3 @@
-import { jest } from "@jest/globals"
+import { jest } from "@jest/globals";
 
-export const isNewDBVersionRequested = jest.fn(() => false)
+export const isNewDBVersionRequested = jest.fn(() => false);

@@ -10,4 +10,4 @@ module.exports = {
   collectCoverage: false,
   coverageDirectory: "coverage",
   setupFiles: ["./.env.unit-tests.cjs"],
-}
+};
