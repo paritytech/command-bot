@@ -5765,7 +5765,7 @@ onetime@^5.1.2:
   dependencies:
     mimic-fn "^2.1.0"
 
-"opstooling-js-style@https://github.com/paritytech/opstooling-js-style.git#master":
+"opstooling-js-style@https://github.com/paritytech/opstooling-js-style.git#c298d0f732d93712e4397fd53baa3317a3022c8c":
   version "0.0.0"
   resolved "https://github.com/paritytech/opstooling-js-style.git#c298d0f732d93712e4397fd53baa3317a3022c8c"
   dependencies:
