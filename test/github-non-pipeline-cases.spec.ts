@@ -27,7 +27,9 @@ type CommandDataProviderItem = {
   suitName: string
   commandLine: string
   expected: {
-    startMessage: string
+    startMessage?: string
+    startReaction?: string
+    finishReaction?: string
   }
 }
 const commandsDataProvider: CommandDataProviderItem[] = [
@@ -41,7 +43,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
     commandLine: "bot hrlp", // intentional typo
     expected: {
       startMessage:
-        '@somedev123 Could not find matching configuration for command "hrlp"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://localhost:3000/static/docs/',
+        '@somedev123 Could not find matching configuration for command "hrlp"; Available ones are bench, fmt, sample, try-runtime, help, clean. Refer to [help docs](http://localhost:3000/static/docs/',
     },
   },
   {
@@ -49,6 +51,15 @@ const commandsDataProvider: CommandDataProviderItem[] = [
     commandLine: "bot cancel",
     expected: { startMessage: "@somedev123 No task is being executed for this pull request" },
   },
+  // TODO: add test for clean after moving to opstooling-testing
+  // {
+  //   suitName: "[clean] command",
+  //   commandLine: "bot clean",
+  //   expected: {
+  //     startReaction: "eyes",
+  //     finishReaction: "+1"
+  //   },
+  // },
 ]
 
 beforeAll(async () => {

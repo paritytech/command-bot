@@ -1,20 +1,27 @@
 import { displayError, intoError } from "opstooling-js"
 import path from "path"
 
-import { CancelCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
+import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
 import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine"
-import { CommentData, PullRequestData, SkipEvent, WebhookHandler } from "src/bot/types"
+import { CommentData, FinishedEvent, PullRequestData, PullRequestError, SkipEvent, WebhookHandler } from "src/bot/types"
 import { getDocsUrl } from "src/command-configs/fetchCommandsConfiguration"
 import { isRequesterAllowed } from "src/core"
 import { getSortedTasks } from "src/db"
-import { createComment, getPostPullRequestResult, updateComment } from "src/github"
+import {
+  cleanComments,
+  createComment,
+  getPostPullRequestResult,
+  reactToComment,
+  removeReactionToComment,
+  updateComment,
+} from "src/github"
 import { cancelTask, getNextTaskId, PullRequestTask, queueTask, serializeTaskQueuedDate } from "src/task"
-import { PullRequestError } from "src/types"
 import { getLines } from "src/utils"
 
 export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ctx, octokit, payload) => {
   const { repositoryCloneDirectory, gitlab, logger } = ctx
   const { issue, comment, repository, installation } = payload
+
   const pr: PullRequestData = { owner: repository.owner.login, repo: repository.name, number: issue.number }
   const commentParams: CommentData = { owner: pr.owner, repo: pr.repo, issue_number: pr.number }
 
@@ -38,7 +45,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
     return new SkipEvent(`Skipping payload because comment.user.type (${comment.user?.type}) is not "User"`)
   }
 
-  let getError = (body: string) => new PullRequestError(pr, { body, requester })
+  let getError = (body: string) => new PullRequestError(pr, { body, requester, requesterCommentId: comment.id })
 
   try {
     const commands: ParsedCommand[] = []
@@ -70,6 +77,18 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
       if (parsedCommand instanceof HelpCommand) {
         const url = getDocsUrl(parsedCommand.commitHash)
         await createComment(ctx, octokit, { ...commentParams, body: `Here's a [link to docs](${url})` })
+      }
+
+      if (parsedCommand instanceof CleanCommand) {
+        const reactionParams = { owner: pr.owner, repo: pr.repo, comment_id: comment.id }
+        const reactionId = await reactToComment(ctx, octokit, { ...reactionParams, content: "eyes" })
+        await cleanComments(ctx, octokit, { ...commentParams })
+        await Promise.all([
+          reactionId
+            ? await removeReactionToComment(ctx, octokit, { ...reactionParams, reaction_id: reactionId })
+            : null,
+          await reactToComment(ctx, octokit, { ...reactionParams, content: "+1" }),
+        ])
       }
 
       if (parsedCommand instanceof GenericCommand) {
@@ -108,7 +127,8 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
         const contributor = { owner: contributorUsername, repo: contributorRepository, branch: contributorBranch }
         const commentBody = `Preparing command "${parsedCommand.command}". This comment will be updated later.`.trim()
         const createdComment = await createComment(ctx, octokit, { ...commentParams, body: commentBody })
-        getError = (body: string) => new PullRequestError(pr, { body, requester, commentId: createdComment.id })
+        getError = (body: string) =>
+          new PullRequestError(pr, { body, requester, botCommentId: createdComment.id, requesterCommentId: comment.id })
 
         const queuedDate = new Date()
 
@@ -226,5 +246,5 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
     return getError(msg)
   }
 
-  return new SkipEvent("Reached the end of handler")
+  return new FinishedEvent(pr, comment)
 }

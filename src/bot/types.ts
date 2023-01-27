@@ -1,8 +1,8 @@
 import { EmitterWebhookEventName } from "@octokit/webhooks/dist-types/types"
-import { IssueCommentCreatedEvent } from "@octokit/webhooks-types"
+import { IssueComment, IssueCommentCreatedEvent } from "@octokit/webhooks-types"
 
 import { ExtendedOctokit } from "src/github"
-import { Context, PullRequestError } from "src/types"
+import { Context } from "src/types"
 
 export type PullRequestData = {
   owner: string
@@ -22,12 +22,27 @@ export type WebhookEventPayload<E extends WebhookEvents> = E extends "issue_comm
   ? IssueCommentCreatedEvent
   : never
 
+export class PullRequestError {
+  constructor(
+    public pr: PullRequestData,
+    public comment: {
+      body: string
+      botCommentId?: number
+      requesterCommentId: number
+      requester?: string
+    },
+  ) {}
+}
+
 export type WebhookHandler<E extends WebhookEvents> = (
   ctx: Context,
   octokit: ExtendedOctokit,
   event: WebhookEventPayload<E>,
-) => Promise<PullRequestError | SkipEvent>
+) => Promise<PullRequestError | SkipEvent | FinishedEvent>
 
 export class SkipEvent {
   constructor(public reason: string = "") {}
+}
+export class FinishedEvent {
+  constructor(public pr: PullRequestData, public comment: IssueComment) {}
 }

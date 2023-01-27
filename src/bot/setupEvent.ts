@@ -1,9 +1,16 @@
 import { Probot } from "probot"
 
-import { SkipEvent, WebhookEventPayload, WebhookEvents, WebhookHandler } from "src/bot/types"
+import {
+  FinishedEvent,
+  PullRequestError,
+  SkipEvent,
+  WebhookEventPayload,
+  WebhookEvents,
+  WebhookHandler,
+} from "src/bot/types"
 import { createComment, getOctokit, updateComment } from "src/github"
 import { logger as parentLogger } from "src/logger"
-import { Context, PullRequestError } from "src/types"
+import { Context } from "src/types"
 
 export const setupEvent = <E extends WebhookEvents>(
   parentCtx: Context,
@@ -35,18 +42,18 @@ export const setupEvent = <E extends WebhookEvents>(
 
           eventLogger.warn(sharedCommentParams, `Got PullRequestError ${pr.repo}#${pr.number} -> ${comment.body}`)
 
-          if (comment.commentId) {
-            await updateComment(ctx, octokit, { ...sharedCommentParams, comment_id: comment.commentId })
-          } else {
-            await createComment(ctx, octokit, sharedCommentParams)
-          }
-        }
-
-        if (result instanceof SkipEvent && !!result.reason.trim()) {
+          comment.botCommentId
+            ? await updateComment(ctx, octokit, { ...sharedCommentParams, comment_id: comment.botCommentId })
+            : await createComment(ctx, octokit, sharedCommentParams)
+        } else if (result instanceof SkipEvent && !!result.reason.trim()) {
           eventLogger.debug(
             event.payload,
             `Skip command "${event.payload.comment.body}" with reason: "${result.reason}"`,
           )
+        } else if (result instanceof FinishedEvent) {
+          eventLogger.info({ result }, "Finished command")
+        } else {
+          eventLogger.error({ event: event.payload, result }, "Unknown result type")
         }
       })
       .catch((error) => {
