@@ -28,7 +28,7 @@ export class PullRequestError {
     public comment: {
       body: string
       botCommentId?: number
-      requestercommentId: number
+      requesterCommentId: number
       requester?: string
     },
   ) {}

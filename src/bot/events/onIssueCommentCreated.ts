@@ -45,7 +45,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
     return new SkipEvent(`Skipping payload because comment.user.type (${comment.user?.type}) is not "User"`)
   }
 
-  let getError = (body: string) => new PullRequestError(pr, { body, requester, requestercommentId: comment.id })
+  let getError = (body: string) => new PullRequestError(pr, { body, requester, requesterCommentId: comment.id })
 
   try {
     const commands: ParsedCommand[] = []
@@ -128,7 +128,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
         const commentBody = `Preparing command "${parsedCommand.command}". This comment will be updated later.`.trim()
         const createdComment = await createComment(ctx, octokit, { ...commentParams, body: commentBody })
         getError = (body: string) =>
-          new PullRequestError(pr, { body, requester, botCommentId: createdComment.id, requestercommentId: comment.id })
+          new PullRequestError(pr, { body, requester, botCommentId: createdComment.id, requesterCommentId: comment.id })
 
         const queuedDate = new Date()
 
