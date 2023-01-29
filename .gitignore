@@ -8,9 +8,8 @@ data*
 .vscode
 
 # FIXME: tmporary irnogre, but test folder should be linted, fix issues
-test/*
-/test/.test-ca.pem
-/test/.test-ca.key
+src/test/.test-ca.pem
+src/test/.test-ca.key
 
 coverage
 

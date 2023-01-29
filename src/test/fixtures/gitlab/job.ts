@@ -54,5 +54,5 @@ export function getPipelineJobsPayload(params: { status: string }): string {
         organization: "",
       },
     },
-  ])
+  ]);
 }

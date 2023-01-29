@@ -1,6 +1,6 @@
-import { ChildProcess } from "child_process"
-import net from "net"
-import { until } from "opstooling-js"
+import { ChildProcess } from "child_process";
+import net from "net";
+import { until } from "opstooling-js";
 
 /**
  * As we need to find unused ports for our bot, we also need to know them in the test environment,
@@ -15,32 +15,32 @@ import { until } from "opstooling-js"
  *  thus, spawning multiple servers together, and closing them together as well
  */
 export async function findFreePorts(amount: number): Promise<number[]> {
-  const servers: net.Server[] = []
+  const servers: net.Server[] = [];
 
   while (servers.length < amount) {
-    servers.push(net.createServer())
+    servers.push(net.createServer());
   }
   const ports = await Promise.all(
     servers.map(
       (srv) =>
         new Promise<number>((res, rej) =>
           srv.listen(0, () => {
-            const addr = srv.address()
+            const addr = srv.address();
             if (addr === null || typeof addr === "string") {
-              rej(addr)
+              rej(addr);
             } else {
-              res(addr.port)
+              res(addr.port);
             }
           }),
         ),
     ),
-  )
-  await Promise.all(servers.map((srv) => new Promise<void>((res) => srv.close(() => res()))))
-  return ports
+  );
+  await Promise.all(servers.map((srv) => new Promise<void>((res) => srv.close(() => res()))));
+  return ports;
 }
 
 export async function killAndWait(cp: ChildProcess): Promise<void> {
-  const p = new Promise((resolve) => cp.on("exit", resolve))
-  cp.kill()
-  await Promise.race([until(() => cp.exitCode !== null, 100), p])
+  const p = new Promise((resolve) => cp.on("exit", resolve));
+  cp.kill();
+  await Promise.race([until(() => cp.exitCode !== null, 100), p]);
 }
