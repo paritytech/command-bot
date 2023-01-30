@@ -1,12 +1,12 @@
-import { config } from "src/config"
-import { CommandRunner } from "src/shell"
+import { config } from "src/config";
+import { CommandRunner } from "src/shell";
 
 export async function cloneCommandBotScripts(
   cmdRunner: CommandRunner,
   scriptsRevPath: string,
   devBranch?: string,
 ): Promise<void> {
-  const scriptsBranchForClone = devBranch ? ["--branch", devBranch] : []
+  const scriptsBranchForClone = devBranch ? ["--branch", devBranch] : [];
   await cmdRunner.run(
     "git",
     [
@@ -19,5 +19,5 @@ export async function cloneCommandBotScripts(
       scriptsRevPath,
     ],
     { testAllowedErrorMessage: (err) => err.endsWith("already exists and is not an empty directory.") },
-  )
+  );
 }

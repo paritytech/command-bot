@@ -1,20 +1,20 @@
-import { jest } from "@jest/globals"
+import { jest } from "@jest/globals";
 
-import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand"
-import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine"
-import { SkipEvent } from "src/bot/types"
-import { logger } from "src/logger"
+import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand";
+import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine";
+import { SkipEvent } from "src/bot/types";
+import { logger } from "src/logger";
 
-jest.mock("src/command-configs/fetchCommandsConfiguration")
-jest.mock("src/db")
+jest.mock("src/command-configs/fetchCommandsConfiguration");
+jest.mock("src/db");
 
-logger.options.minLogLevel = "fatal"
+logger.options.minLogLevel = "fatal";
 
 type DataProvider = {
-  suitName: string
-  commandLine: string
-  expectedResponse: SkipEvent | ParsedCommand | Error
-}
+  suitName: string;
+  commandLine: string;
+  expectedResponse: SkipEvent | ParsedCommand | Error;
+};
 
 const dataProvider: DataProvider[] = [
   {
@@ -139,13 +139,13 @@ const dataProvider: DataProvider[] = [
       `Could not find matching configuration for command "xz"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) for more details.`,
     ),
   },
-]
+];
 
 describe("parsePullRequestBotCommandLine", () => {
   for (const { suitName, commandLine, expectedResponse } of dataProvider) {
     test(`test commandLine: ${commandLine} [${suitName}]`, async () => {
-      const res = await parsePullRequestBotCommandLine(commandLine, { logger })
-      expect(res).toEqual(expectedResponse)
-    })
+      const res = await parsePullRequestBotCommandLine(commandLine, { logger });
+      expect(res).toEqual(expectedResponse);
+    });
   }
-})
+});

@@ -1,23 +1,23 @@
-import { createAppAuth } from "@octokit/auth-app"
-import { request } from "@octokit/request"
-import express from "express"
-import { MatrixClient, SimpleFsStorageProvider } from "matrix-bot-sdk"
-import path from "path"
-import { Probot, Server } from "probot"
+import { createAppAuth } from "@octokit/auth-app";
+import { request } from "@octokit/request";
+import express from "express";
+import { MatrixClient, SimpleFsStorageProvider } from "matrix-bot-sdk";
+import path from "path";
+import { Probot, Server } from "probot";
 
-import { setupApi } from "src/api"
-import { setupBot } from "src/bot"
-import { config } from "src/config"
-import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db"
-import { logger } from "src/logger"
-import { ensureDir, initDatabaseDir } from "src/shell"
-import { requeueUnterminatedTasks } from "src/task"
-import { Context } from "src/types"
-import { Err, Ok } from "src/utils"
+import { setupApi } from "src/api";
+import { setupBot } from "src/bot";
+import { config } from "src/config";
+import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db";
+import { logger } from "src/logger";
+import { ensureDir, initDatabaseDir } from "src/shell";
+import { requeueUnterminatedTasks } from "src/task";
+import { Context } from "src/types";
+import { Err, Ok } from "src/utils";
 
-export const DOCS_URL_PATH = "/static/docs/"
-export const GENERATED_DIR = path.join(process.cwd(), "generated")
-export const DOCS_DIR = path.join(GENERATED_DIR, "docs")
+export const DOCS_URL_PATH = "/static/docs/";
+export const GENERATED_DIR = path.join(process.cwd(), "generated");
+export const DOCS_DIR = path.join(GENERATED_DIR, "docs");
 
 export const setup = async (
   bot: Probot,
@@ -26,33 +26,33 @@ export const setup = async (
     shouldClearTaskDatabaseOnStart,
     ...partialContext
   }: Pick<Context, "disablePRComment" | "allowedOrganizations" | "gitlab"> & {
-    shouldClearTaskDatabaseOnStart?: boolean
+    shouldClearTaskDatabaseOnStart?: boolean;
   },
 ): Promise<void> => {
-  const { dataPath } = config
-  const repositoryCloneDirectory = path.join(dataPath, "repositories")
-  await ensureDir(repositoryCloneDirectory)
+  const { dataPath } = config;
+  const repositoryCloneDirectory = path.join(dataPath, "repositories");
+  await ensureDir(repositoryCloneDirectory);
 
-  await ensureDir(DOCS_DIR)
-  server.expressApp.use(DOCS_URL_PATH, express.static(DOCS_DIR))
+  await ensureDir(DOCS_DIR);
+  server.expressApp.use(DOCS_URL_PATH, express.static(DOCS_DIR));
 
-  const taskDbPath = path.join(dataPath, "db")
-  await initDatabaseDir(taskDbPath)
+  const taskDbPath = path.join(dataPath, "db");
+  await initDatabaseDir(taskDbPath);
 
-  const taskDb = new TaskDB(getDb(taskDbPath))
-  const tasks = await getSortedTasks({ taskDb, logger })
-  logger.info({ tasks }, "Tasks found at the start of the application")
+  const taskDb = new TaskDB(getDb(taskDbPath));
+  const tasks = await getSortedTasks({ taskDb, logger });
+  logger.info({ tasks }, "Tasks found at the start of the application");
 
   if (shouldClearTaskDatabaseOnStart) {
-    logger.info({}, "Clearing the task database during setup")
+    logger.info({}, "Clearing the task database during setup");
     for (const { id } of tasks) {
-      await taskDb.db.del(id)
+      await taskDb.db.del(id);
     }
   }
 
-  const accessDbPath = path.join(dataPath, "access_db")
-  await initDatabaseDir(accessDbPath)
-  const accessDb = new AccessDB(getDb(accessDbPath))
+  const accessDbPath = path.join(dataPath, "access_db");
+  await initDatabaseDir(accessDbPath);
+  const accessDb = new AccessDB(getDb(accessDbPath));
 
   const authInstallation = createAppAuth({
     appId: config.appId,
@@ -63,24 +63,24 @@ export const setup = async (
       // GITHUB_BASE_URL variable allows us to mock requests to GitHub from integration tests
       ...(config.githubBaseUrl ? { baseUrl: config.githubBaseUrl } : {}),
     }),
-  })
+  });
   const getFetchEndpoint = async (installationId: number | null) => {
-    let token: string | null = null
-    let url: string
+    let token: string | null = null;
+    let url: string;
 
     if (config.githubRemoteUrl) {
-      url = config.githubRemoteUrl
+      url = config.githubRemoteUrl;
     } else if (installationId) {
-      token = (await authInstallation({ type: "installation", installationId })).token
-      url = `https://x-access-token:${token}@github.com`
+      token = (await authInstallation({ type: "installation", installationId })).token;
+      url = `https://x-access-token:${token}@github.com`;
     } else {
-      url = "http://github.com"
+      url = "http://github.com";
     }
 
-    return { url, token }
-  }
+    return { url, token };
+  };
 
-  const matrixConfiguration = config.matrix
+  const matrixConfiguration = config.matrix;
   const matrixClientSetup: Ok<MatrixClient | null> | Err<unknown> = await (matrixConfiguration === undefined
     ? Promise.resolve(new Ok(null))
     : new Promise((resolve) => {
@@ -88,25 +88,25 @@ export const setup = async (
           matrixConfiguration.homeServer,
           matrixConfiguration.accessToken,
           new SimpleFsStorageProvider(path.join(dataPath, "matrix.json")),
-        )
+        );
         matrixClient
           .start()
           .then(() => {
-            logger.info({}, `Connected to Matrix homeserver ${matrixConfiguration.homeServer}`)
-            resolve(new Ok(matrixClient))
+            logger.info({}, `Connected to Matrix homeserver ${matrixConfiguration.homeServer}`);
+            resolve(new Ok(matrixClient));
           })
           .catch((error) => {
-            resolve(new Err(error))
-          })
-      }))
+            resolve(new Err(error));
+          });
+      }));
   if (matrixClientSetup instanceof Err) {
-    throw matrixClientSetup.value
+    throw matrixClientSetup.value;
   }
 
-  const { value: matrix } = matrixClientSetup
+  const { value: matrix } = matrixClientSetup;
 
   if (config.isDeployment && matrix === null) {
-    throw new Error("Matrix configuration is expected for deployments")
+    throw new Error("Matrix configuration is expected for deployments");
   }
 
   const ctx: Context = {
@@ -118,11 +118,11 @@ export const setup = async (
     logger,
     matrix,
     repositoryCloneDirectory,
-  }
+  };
 
-  void requeueUnterminatedTasks(ctx, bot)
+  void requeueUnterminatedTasks(ctx, bot);
 
-  setupBot(ctx, bot)
+  setupBot(ctx, bot);
 
-  setupApi(ctx, server)
-}
+  setupApi(ctx, server);
+};

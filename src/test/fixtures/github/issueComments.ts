@@ -1,25 +1,25 @@
 export function getIssueCommentsPayload(params: {
-  org: string
-  repo: string
-  comments: { author: string; body: string; id: number }[]
+  org: string;
+  repo: string;
+  comments: { author: string; body: string; id: number }[];
 }): string {
-  const comments = params.comments.map((comment) => getCommentPayload({ org: params.org, repo: params.repo, comment }))
+  const comments = params.comments.map((comment) => getCommentPayload({ org: params.org, repo: params.repo, comment }));
 
-  return JSON.stringify(comments)
+  return JSON.stringify(comments);
 }
 
 export function getIssueCommentPayload(params: {
-  org: string
-  repo: string
-  comment: { author: string; body: string; id: number }
+  org: string;
+  repo: string;
+  comment: { author: string; body: string; id: number };
 }): string {
-  return JSON.stringify(getCommentPayload(params))
+  return JSON.stringify(getCommentPayload(params));
 }
 
 function getCommentPayload(params: {
-  org: string
-  repo: string
-  comment: { author: string; body: string; id: number }
+  org: string;
+  repo: string;
+  comment: { author: string; body: string; id: number };
 }) {
   return {
     url: `https://api.github.com/repos/${params.org}/${params.repo}/issues/comments/${params.comment.id}`,
@@ -64,5 +64,5 @@ function getCommentPayload(params: {
       eyes: 0,
     },
     performed_via_github_app: null,
-  }
+  };
 }

@@ -1,5 +1,5 @@
-import { Task } from "src/task"
-import { PipelineScripts } from "src/types"
+import { Task } from "src/task";
+import { PipelineScripts } from "src/types";
 
 export function createCiConfig(
   headSha: string,
@@ -7,7 +7,7 @@ export function createCiConfig(
   pipelineScripts: PipelineScripts,
   jobTaskInfoMessage: string,
 ): object {
-  const artifactsFolderPath = ".git/.artifacts"
+  const artifactsFolderPath = ".git/.artifacts";
   return {
     workflow: { rules: [{ if: `$CI_PIPELINE_SOURCE == "api"` }, { if: `$CI_PIPELINE_SOURCE == "web"` }] },
     command: {
@@ -59,5 +59,5 @@ export function createCiConfig(
         PIPELINE_SCRIPTS_DIR: ".git/.scripts",
       },
     },
-  }
+  };
 }

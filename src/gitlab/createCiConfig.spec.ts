@@ -1,12 +1,12 @@
-import { jest } from "@jest/globals"
+import { jest } from "@jest/globals";
 
-import { createCiConfig } from "src/gitlab/createCiConfig"
-import { logger } from "src/logger"
-import { Task } from "src/task"
+import { createCiConfig } from "src/gitlab/createCiConfig";
+import { logger } from "src/logger";
+import { Task } from "src/task";
 
-jest.mock("src/command-configs/fetchCommandsConfiguration")
+jest.mock("src/command-configs/fetchCommandsConfiguration");
 
-logger.options.minLogLevel = "fatal"
+logger.options.minLogLevel = "fatal";
 
 function getTaskStub(opts: { vars: Record<string, string> } = { vars: {} }): Task {
   return {
@@ -30,7 +30,7 @@ function getTaskStub(opts: { vars: Record<string, string> } = { vars: {} }): Tas
     requester: "requester",
     comment: { id: 55, htmlUrl: "htmlUrl" },
     installationId: 888,
-  }
+  };
 }
 
 describe("createCiConfig", () => {
@@ -46,7 +46,7 @@ describe("createCiConfig", () => {
       }),
       { ref: "OVERRIDABLE", repository: "NON_OVERRIDEABLE" },
       "job Task info message",
-    )
-    expect(res).toMatchSnapshot()
-  })
-})
+    );
+    expect(res).toMatchSnapshot();
+  });
+});

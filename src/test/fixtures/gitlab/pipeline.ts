@@ -26,5 +26,5 @@ export function getPipelinePayload(params: { status: string }): string {
     queued_duration: 0.01,
     coverage: null,
     web_url: "https://example.com/foo/bar/pipelines/61",
-  })
+  });
 }
