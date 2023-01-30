@@ -4872,18 +4872,7 @@ joi-to-typescript@^4.0.5:
   resolved "https://registry.yarnpkg.com/joi-to-typescript/-/joi-to-typescript-4.0.5.tgz#1f441bd52a0644703a248dc3c96c9365e7696015"
   integrity sha512-VzI4ILDblFJFx9HfGXHZOdT6K729mKzhcvGSNTd2uJxfBOWKWonh5YdabttWdvHmiDzPfdJwzB2/zH8xRgV3EQ==
 
-joi@^17.6.0:
-  version "17.6.0"
-  resolved "https://registry.npmjs.org/joi/-/joi-17.6.0.tgz"
-  integrity sha512-OX5dG6DTbcr/kbMFj0KGYxuew69HPcAE3K/sZpEV2nP6e/j/C0HV+HNiBPCASxdx5T7DMoa0s8UeHWMnb6n2zw==
-  dependencies:
-    "@hapi/hoek" "^9.0.0"
-    "@hapi/topo" "^5.0.0"
-    "@sideway/address" "^4.1.3"
-    "@sideway/formula" "^3.0.0"
-    "@sideway/pinpoint" "^2.0.0"
-
-joi@^17.6.4:
+joi@^17.6.0, joi@^17.6.4:
   version "17.7.0"
   resolved "https://registry.yarnpkg.com/joi/-/joi-17.7.0.tgz#591a33b1fe1aca2bc27f290bcad9b9c1c570a6b3"
   integrity sha512-1/ugc8djfn93rTE3WRKdCzGGt/EtiYKxITMO4Wiv6q5JL1gl9ePt4kBsl1S499nbosspfctIQTpYIhSmHA3WAg==
@@ -5782,9 +5771,10 @@ onetime@^5.1.2:
     prettier "^2.6.2"
     prettier-plugin-compactify "^0.1.6"
 
-"opstooling-js@https://github.com/paritytech/opstooling-js#v0.0.16":
+"opstooling-js@https://github.com/paritytech/opstooling-js#v0.0.17":
   version "0.0.0"
-  resolved "https://github.com/paritytech/opstooling-js#53461cd76eb48dcf72b136c5ae4aeedd320043c1"
+  uid a71044f3d4bcc6bb71dd41aab1b4133b89c7dafc
+  resolved "https://github.com/paritytech/opstooling-js#a71044f3d4bcc6bb71dd41aab1b4133b89c7dafc"
   dependencies:
     "@octokit/rest" "^18.12.0"
     async-mutex "^0.3.2"
