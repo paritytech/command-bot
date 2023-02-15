@@ -20,7 +20,7 @@ const dataProvider: DataProvider[] = [
   {
     suitName: "unrelated to bot comment returns nothing (ignores)",
     commandLine: "something from comments",
-    expectedResponse: new SkipEvent(),
+    expectedResponse: new SkipEvent("Not a command"),
   },
   {
     suitName: "check wrong set -v, validation should trigger error",
@@ -106,8 +106,12 @@ const dataProvider: DataProvider[] = [
   /*
      Ignore cases
       */
-  { suitName: "empty command line returns nothing (ignores)", commandLine: "", expectedResponse: new SkipEvent() },
-  { suitName: "no subcommand - ignore", commandLine: "bot ", expectedResponse: new SkipEvent() },
+  {
+    suitName: "empty command line returns nothing (ignores)",
+    commandLine: "",
+    expectedResponse: new SkipEvent("Not a command"),
+  },
+  { suitName: "no subcommand - ignore", commandLine: "bot ", expectedResponse: new SkipEvent("Not a command") },
   { suitName: "ignored command", commandLine: "bot merge", expectedResponse: new SkipEvent("Ignored command: merge") },
   {
     suitName: "ignored command 2",
