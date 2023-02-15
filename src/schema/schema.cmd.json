@@ -6,6 +6,9 @@
     "command": {
       "type": "object",
       "properties": {
+        "excluded": {
+          "type": "boolean"
+        },
         "description": {
           "type": "string"
         },

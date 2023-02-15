@@ -6,17 +6,15 @@ timestamp=$(date +%s)
 dev_branch=$(git rev-parse --abbrev-ref HEAD)
 
 # replace possible "/" with "-"
+# Because of a docker, as it uses git tag for tagging the image so if there's a / symbol
+# docker thinks that it's actually a path. but not part of the tag name.
 dev_branch_sanitized=${dev_branch/\//-}
 
 stg_branch="stg-v0.0.${timestamp}-${dev_branch_sanitized}"
 
-git checkout -b "$stg_branch"
-git push origin "$stg_branch"
+git push origin HEAD:"$stg_branch"
 
 # wait a bit before deleting branch, so gitlab triggers pipeline
 sleep 10
 
 git push origin --delete "$stg_branch"
-
-# get back to initial branch
-git checkout "$dev_branch"
