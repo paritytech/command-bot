@@ -49,7 +49,7 @@ export async function launchBot(gitHubUrl: string, gitLabUrl: string, gitDaemons
           return false;
         }
       },
-      500,
+      1000,
       50,
       `bot did not start to listen on ping port: ${ensureDefined(pingPort)}`,
     ).then(resolve, reject);
