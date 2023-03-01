@@ -9,6 +9,7 @@ import {
   getDocsUrl,
   PIPELINE_SCRIPTS_REF,
 } from "src/command-configs/fetchCommandsConfiguration";
+import { config } from "src/config";
 import { LoggerContext } from "src/logger";
 import { validateSingleShellCommand } from "src/shell";
 
@@ -20,7 +21,7 @@ export const parsePullRequestBotCommandLine = async (
 
   // Add trailing whitespace so that bot can be differentiated from /cmd-[?]
   if (!commandLine.startsWith(`${botPullRequestCommentMention} `)) {
-    return new SkipEvent();
+    return new SkipEvent("Not a command");
   }
 
   // remove "bot "
@@ -75,13 +76,13 @@ export const parsePullRequestBotCommandLine = async (
       const { commandConfigs, commitHash } = await fetchCommandsConfiguration(ctx, variables[PIPELINE_SCRIPTS_REF]);
       const configuration = commandConfigs[subcommand]?.command?.configuration;
 
-      const helpStr = `Refer to [help docs](${getDocsUrl(commitHash)}) for more details.`;
+      const helpStr = `Refer to [help docs](${getDocsUrl(commitHash)}) and/or [source code](${
+        config.pipelineScripts.repository
+      }).`;
 
       if (typeof configuration === "undefined" || !Object.keys(configuration).length) {
         return new Error(
-          `Could not find matching configuration for command "${subcommand}"; Available ones are ${Object.keys(
-            commandConfigs,
-          ).join(", ")}. ${helpStr}`,
+          `Unknown command "${subcommand}"; Available ones are ${Object.keys(commandConfigs).join(", ")}. ${helpStr}`,
         );
       }
 

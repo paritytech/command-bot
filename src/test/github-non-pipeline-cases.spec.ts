@@ -43,7 +43,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
     commandLine: "bot hrlp", // intentional typo
     expected: {
       startMessage:
-        '@somedev123 Could not find matching configuration for command "hrlp"; Available ones are bench, fmt, sample, try-runtime, help, clean. Refer to [help docs](http://localhost:3000/static/docs/',
+        '@somedev123 Unknown command "hrlp"; Available ones are bench-all, bench-vm, bench, fmt, merge, rebase, sample, try-runtime. Refer to [help docs](http://localhost:3000/static/docs/',
     },
   },
   {

@@ -56,19 +56,17 @@ html
                   div.preset
                     h5.mb-sm(id="link-"+presetName) #{presetName}
                     p #{ preset.description }
-                    table.ms-table
-                      thead
-                        tr
-                          th
-                            | Command
-                          th
-                            | $
-                          if preset.args
+                    if preset.args
+                      table.ms-table
+                        thead
+                          tr
+                            th
+                              | Command
+                            th
+                              | $
                             each arg, argKey in preset.args
                               th.center
                                 | [#{arg.label}]
-
-                      if preset.args
                         tr
                           td #{commandName}
                           td
@@ -80,8 +78,6 @@ html
                                   div.mb-sm #{one}
                               if arg.type_rule
                                 div #{arg.type_rule}
-                      else
-                        p no arguments
 
                     p Example:&nbsp;
                       code
@@ -92,7 +88,10 @@ html
                             if arg.type_one_of
                               | #{arg.type_one_of[0]}
                             if arg.type_rule
-                              i custom_string
+                              if arg.example
+                                i #{arg.example}
+                              else
+                                i #{arg.type_rule}
                             | &nbsp;
               else
                 p Example:&nbsp;
