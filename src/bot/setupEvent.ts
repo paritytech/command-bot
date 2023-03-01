@@ -47,8 +47,8 @@ export const setupEvent = <E extends WebhookEvents>(
             : await createComment(ctx, octokit, sharedCommentParams);
         } else if (result instanceof SkipEvent && !!result.reason.trim()) {
           eventLogger.debug(
-            event.payload,
-            `Skip command "${event.payload.comment.body}" with reason: "${result.reason}"`,
+            { command: event.payload.comment.body, payload: event.payload },
+            `Skip command with reason: "${result.reason}"`,
           );
         } else if (result instanceof FinishedEvent) {
           eventLogger.info({ result }, "Finished command");

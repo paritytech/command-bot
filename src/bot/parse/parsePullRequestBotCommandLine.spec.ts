@@ -86,7 +86,7 @@ const dataProvider: DataProvider[] = [
     suitName: "bench-bot, no args when not allowed, should return error",
     commandLine: "bot bench",
     expectedResponse: new Error(
-      `Missing arguments for command "bench". Refer to [help docs](http://cmd-bot.docs.com/) for more details.`,
+      `Missing arguments for command "bench". Refer to [help docs](http://cmd-bot.docs.com/) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
     ),
   },
 
@@ -126,21 +126,21 @@ const dataProvider: DataProvider[] = [
     suitName: "nonexistent command, should return proper error",
     commandLine: "bot nope 123123",
     expectedResponse: new Error(
-      'Could not find matching configuration for command "nope"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) for more details.',
+      'Unknown command "nope"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     ),
   },
   {
     suitName: "not provided command, returns proper error",
     commandLine: "bot $",
     expectedResponse: new Error(
-      'Could not find matching configuration for command "$"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) for more details.',
+      'Unknown command "$"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     ),
   },
   {
     suitName: "non existed config must return error with explanation",
     commandLine: "bot xz",
     expectedResponse: new Error(
-      `Could not find matching configuration for command "xz"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) for more details.`,
+      `Unknown command "xz"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
     ),
   },
 ];
