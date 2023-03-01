@@ -1,7 +1,7 @@
 import assert from "assert";
 import Joi from "joi";
 import fetch from "node-fetch";
-import { normalizeValue } from "opstooling-js";
+import { Logger, normalizeValue } from "opstooling-js";
 
 export const envVar = (name: string): string => {
   const val = process.env[name];
@@ -70,8 +70,12 @@ export class Err<T> {
   constructor(public value: T) {}
 }
 
+/**
+ * @throws Joi.ValidationError
+ */
 export const validatedFetch = async <T>(
-  response: ReturnType<typeof fetch>,
+  logger: Logger,
+  fetchFn: ReturnType<typeof fetch>,
   schema: Joi.AnySchema,
   { decoding }: { decoding: "json" } = { decoding: "json" },
 ): Promise<T> => {
@@ -79,19 +83,26 @@ export const validatedFetch = async <T>(
   const body = await (async () => {
     switch (decoding) {
       case "json": {
-        return await (await response).json();
+        return await (await fetchFn).json();
       }
       default: {
         const exhaustivenessCheck: never = decoding;
         // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-        throw new Error(`Not exhaustive: ${exhaustivenessCheck}`);
+        const msg = `Not exhaustive: ${exhaustivenessCheck}`;
+        logger.fatal(msg);
+        throw new Error(msg);
       }
     }
   })();
+
   const validation = schema.validate(body);
+
   if (validation.error) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    logger.error({ error: validation.error, response: body }, `Fetch validation error`);
     throw validation.error;
   }
+
   return validation.value as T;
 };
 
