@@ -35,7 +35,7 @@ export function renderHelpPage(params: {
 function prepareConfigs(cmdConfigs: CommandConfigs): CommandConfigs {
   const newCmdConfigs: CommandConfigs = {};
 
-  // make it so they go first
+  // these commands are added here, as they are defined inside of bot
   newCmdConfigs.help = mockStaticConfig("Generates help page & provides a link");
   newCmdConfigs.clean = mockStaticConfig("Clears bot comments in PR");
 

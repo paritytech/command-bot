@@ -20,6 +20,7 @@ export const getPingPort = (): number | null => pingPort;
 export async function launchBot(gitHubUrl: string, gitLabUrl: string, gitDaemons: GitDaemons): Promise<ChildProcess> {
   rmSync(path.join(process.cwd(), "data", "access_db"), { recursive: true, force: true });
   rmSync(path.join(process.cwd(), "data", "db"), { recursive: true, force: true });
+  rmSync(path.join(process.cwd(), "generated"), { recursive: true, force: true });
   [webhookPort, pingPort] = await findFreePorts(2);
 
   const botEnv = getBotEnv(gitHubUrl, gitLabUrl, gitDaemons.gitHub.url, gitDaemons.gitLab.url);

@@ -91,6 +91,9 @@
                         },
                         "type_rule": {
                           "type": "string"
+                        },
+                        "example": {
+                          "type": "string"
                         }
                       },
                       "anyOf": [
@@ -101,14 +104,14 @@
                           "required": ["label", "type_many_of"]
                         },
                         {
-                          "required": ["label", "type_rule"]
+                          "required": ["label", "type_rule", "example"]
                         }
                       ]
                     }
                   }
                 }
               },
-              "required": ["args", "description"]
+              "required": ["description"]
             }
           }
         }
