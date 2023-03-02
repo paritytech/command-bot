@@ -34,7 +34,7 @@ describe.each(commandsDataProvider)(
       const skipTriggeredPromise = new Promise((resolve, reject) => {
         bot.stdout?.on("data", (dataBuffer: Buffer) => {
           const data = dataBuffer.toString();
-          if (data.includes(`Skip command "${commandLine}"`)) {
+          if (data.includes(`Skip command with reason: "Ignored command:`) && data.includes(eventId)) {
             resolve("Skipped");
           } else if (data.includes("handler finished") && data.includes(eventId)) {
             reject('Expected to see "Skip command" output first');

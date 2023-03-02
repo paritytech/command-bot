@@ -1,4 +1,5 @@
 import { afterAll, beforeAll } from "@jest/globals";
+import { delay } from "opstooling-js";
 
 import { getBotInstance, launchBot } from "./bot";
 import { startGitDaemons, stopGitDaemons } from "./gitDaemons";
@@ -17,6 +18,8 @@ beforeAll(async () => {
 
   await launchBot(mockServers.gitHub.url, mockServers.gitLab.url, gitDaemons);
   console.log("Bot launched");
+
+  await delay(1000);
 });
 
 afterAll(async () => {
@@ -30,4 +33,6 @@ afterAll(async () => {
 
   await stopMockServers();
   console.log("MockServers stopped");
+
+  await delay(1000);
 });
