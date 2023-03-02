@@ -129,7 +129,11 @@ export const queueTask = async (
   const afterTaskRun = (result: CommandOutput | null) => {
     const wasAlive = taskIsAlive;
 
-    logger.debug(result, "AfterTaskRun handler");
+    if (result instanceof Error) {
+      logger.error(result, "AfterTaskRun returned an error");
+    } else {
+      logger.debug(result, "AfterTaskRun handler");
+    }
 
     void terminate().catch((error) => {
       logger.error(error, "Failed to terminate task on afterTaskRun");

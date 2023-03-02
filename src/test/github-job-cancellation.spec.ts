@@ -91,7 +91,7 @@ describe("Job cancellation (GitHub webhook)", () => {
       .forGet("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/pipelines/61/jobs")
       .thenReply(200, restFixures.gitlab.jobs, jsonResponseHeaders);
 
-    await until(async () => !(await mockedPipelineEndpoint.isPending()), 100, 50);
+    await until(async () => !(await mockedPipelineEndpoint.isPending()), 300, 50);
     await until(
       () => lastCommentBody.match(cancelCommandRegex) !== null,
       100,
@@ -110,7 +110,7 @@ describe("Job cancellation (GitHub webhook)", () => {
     const commandId = ensureDefined(lastCommentBody.match(cancelCommandRegex)?.[1]);
     await triggerWebhook("cancelCommandComment", { body: `bot cancel ${commandId}` });
 
-    await until(async () => !(await mockedEndpoint.isPending()), 100, 50);
+    await until(async () => !(await mockedEndpoint.isPending()), 300, 50);
   });
 
   test("Phase 3: cmd-bot comments about cancellation", async () => {
@@ -135,7 +135,7 @@ describe("Job cancellation (GitHub webhook)", () => {
 
     await triggerWebhook("cancelCommandComment", { body: `bot cancel` });
 
-    await until(async () => !(await mockedEndpoint.isPending()), 100, 50);
+    await until(async () => !(await mockedEndpoint.isPending()), 300, 50);
   });
 
   test("Phase 5: cmd-bot cancel command with no active job returns ¯\\_(ツ)_/¯", async () => {

@@ -118,9 +118,13 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
   */
   let wasBranchRegistered = false;
   const waitForBranchMaxTries = 3;
-  const waitForBranchRetryDelay = 1024;
+  const waitForBranchRetryDelayMs = 2000;
 
   const branchPresenceUrl = `${gitlabProjectApi}/repository/branches/${branchNameUrlEncoded}`;
+
+  // add small preventive delay, as checking right-away most probably would cause a retry
+  await millisecondsDelay(waitForBranchRetryDelayMs);
+
   for (let waitForBranchTryCount = 0; waitForBranchTryCount < waitForBranchMaxTries; waitForBranchTryCount++) {
     logger.debug({ branchPresenceUrl }, `Sending request to see if the branch for task ${task.id} is ready`);
     const response = await fetch(branchPresenceUrl, { headers: { "PRIVATE-TOKEN": gitlab.accessToken } });
@@ -132,8 +136,9 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
         { branchPresenceUrl, task, response },
         `Branch of task ${task.id} was not found. Waiting before retrying...`,
       );
-      await millisecondsDelay(waitForBranchRetryDelay);
+      await millisecondsDelay(waitForBranchRetryDelayMs);
     } else if (response.ok) {
+      logger.debug({ branchNameUrlEncoded, response }, `Found branch ${branchNameUrlEncoded} for task ${task.id}`);
       wasBranchRegistered = true;
       break;
     } else {
@@ -143,7 +148,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
 
   if (!wasBranchRegistered) {
     throw new Error(
-      `Task's branch was not registered on GitLab after ${waitForBranchMaxTries * waitForBranchRetryDelay}ms`,
+      `Task's branch was not registered on GitLab after ${waitForBranchMaxTries * waitForBranchRetryDelayMs}ms`,
     );
   }
 
@@ -158,6 +163,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
       .keys({ id: Joi.number().required(), project_id: Joi.number().required() })
       .options({ allowUnknown: true }),
   );
+
   logger.info({ pipeline, task }, `Created pipeline for task ${task.id}`);
 
   const jobFetchUrl = `${gitlabProjectApi}/pipelines/${pipeline.id}/jobs`;

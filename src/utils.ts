@@ -70,8 +70,11 @@ export class Err<T> {
   constructor(public value: T) {}
 }
 
+/**
+ * @throws Joi.ValidationError
+ */
 export const validatedFetch = async <T>(
-  response: ReturnType<typeof fetch>,
+  fetchFn: ReturnType<typeof fetch>,
   schema: Joi.AnySchema,
   { decoding }: { decoding: "json" } = { decoding: "json" },
 ): Promise<T> => {
@@ -79,7 +82,7 @@ export const validatedFetch = async <T>(
   const body = await (async () => {
     switch (decoding) {
       case "json": {
-        return await (await response).json();
+        return await (await fetchFn).json();
       }
       default: {
         const exhaustivenessCheck: never = decoding;
@@ -88,10 +91,13 @@ export const validatedFetch = async <T>(
       }
     }
   })();
+
   const validation = schema.validate(body);
+
   if (validation.error) {
     throw validation.error;
   }
+
   return validation.value as T;
 };
 
