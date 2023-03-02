@@ -57,7 +57,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
   try {
     const commands: ParsedCommand[] = [];
     for (const line of getLines(comment.body)) {
-      const parsedCommand = await parsePullRequestBotCommandLine(line, ctx);
+      const parsedCommand = await parsePullRequestBotCommandLine(line, ctx, pr.repo);
 
       if (parsedCommand instanceof SkipEvent) {
         return parsedCommand;
