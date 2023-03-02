@@ -66,4 +66,14 @@ describe("isOptionalArgsPreset", () => {
       expect(isOptionalArgsCommand(presets, "cmd", "polkadot")).toEqual(isOptional);
     });
   }
+
+  test("test throws error if no presets found for repo", () => {
+    expect(() =>
+      isOptionalArgsCommand(
+        stubPresets({ substrate: { description: "substrate", repos: ["substrate"], args: { arg1: { label: "1" } } } }),
+        "cmd",
+        "polkadot",
+      ),
+    ).toThrow('The command: "cmd" is not supported in **polkadot** repository');
+  });
 });

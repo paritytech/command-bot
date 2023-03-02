@@ -26,7 +26,7 @@ export function isOptionalArgsCommand(cfg: CmdJson, command: string, repo: strin
 
     // if no presets found -> return error that such command is not applicable to this repo
     if (repoPresets.length === 0) {
-      throw new Error(`The command: "${command}" is not supported in **${repo}** repository; Check out \`bot help\``);
+      throw new Error(`The command: "${command}" is not supported in **${repo}** repository`);
     } else if (repoPresets.length === 1) {
       const hasArgsDefined = repoPresets.some((preset) => Object.keys(preset.args || {}).length > 0);
       // If one preset with current repo is presented ->
