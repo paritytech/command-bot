@@ -158,7 +158,6 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
     id: number;
     project_id: number;
   }>(
-    logger,
     fetch(pipelineCreationUrl, { method: "POST", headers: { "PRIVATE-TOKEN": gitlab.accessToken } }),
     Joi.object()
       .keys({ id: Joi.number().required(), project_id: Joi.number().required() })
@@ -176,7 +175,6 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
       },
     ]
   >(
-    logger,
     fetch(jobFetchUrl, { headers: { "PRIVATE-TOKEN": gitlab.accessToken } }),
     Joi.array()
       .items(Joi.object().keys({ web_url: Joi.string().required() }).options({ allowUnknown: true }))
@@ -194,7 +192,6 @@ export const cancelGitlabPipeline = async (
 ): Promise<void> => {
   logger.info({ pipeline }, "Cancelling GitLab pipeline");
   await validatedFetch(
-    logger,
     fetch(
       /*
         Note: this endpoint can be called any time, even if the pipeline has
@@ -208,12 +205,11 @@ export const cancelGitlabPipeline = async (
 };
 
 const isPipelineFinished = async (ctx: Context, pipeline: TaskGitlabPipeline) => {
-  const { gitlab, logger } = ctx;
+  const { gitlab } = ctx;
 
   const { status } = await validatedFetch<{
     status: string;
   }>(
-    logger,
     fetch(`https://${gitlab.domain}/api/v4/projects/${pipeline.projectId}/pipelines/${pipeline.id}`, {
       headers: { "PRIVATE-TOKEN": gitlab.accessToken },
     }),
