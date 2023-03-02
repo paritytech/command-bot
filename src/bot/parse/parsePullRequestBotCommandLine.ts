@@ -89,7 +89,6 @@ export const parsePullRequestBotCommandLine = async (
       }
 
       try {
-        // if presets has nothing - then it means that the command doesn't need any arguments and runs as is
         if (isOptionalArgsCommand(commandConfigs[subcommand], subcommand, repo)) {
           configuration.optionalCommandArgs = true;
         }
