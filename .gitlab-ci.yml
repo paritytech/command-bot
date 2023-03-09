@@ -105,6 +105,22 @@ build-push-docker-app:
   after_script:
     - buildah logout --all
 
+push-docker-image-description:
+  stage:                           build
+  variables:
+    CI_IMAGE:                      paritytech/dockerhub-description
+    DOCKERHUB_REPOSITORY:          paritytech/command-bot
+    DOCKER_USERNAME:               $Docker_Hub_User_Parity
+    DOCKER_PASSWORD:               $Docker_Hub_Pass_Parity
+    README_FILEPATH:               $CI_PROJECT_DIR/Dockerfile.README.md
+    SHORT_DESCRIPTION:             "command-bot provides interfaces for executing arbitrary commands on GitLab CI"
+  rules:
+    - if: $CI_COMMIT_REF_NAME == "master"
+      changes:
+      - Dockerfile.README.md
+  script:
+    - cd / && sh entrypoint.sh
+
 #### App deployment
 
 .deploy-k8s:                       &deploy-k8s
