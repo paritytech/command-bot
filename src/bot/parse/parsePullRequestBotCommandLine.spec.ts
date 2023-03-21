@@ -148,7 +148,7 @@ const dataProvider: DataProvider[] = [
 describe("parsePullRequestBotCommandLine", () => {
   for (const { suitName, commandLine, expectedResponse } of dataProvider) {
     test(`test commandLine: ${commandLine} [${suitName}]`, async () => {
-      const res = await parsePullRequestBotCommandLine(commandLine, { logger });
+      const res = await parsePullRequestBotCommandLine(commandLine, { logger }, "polkadot");
       expect(res).toEqual(expectedResponse);
     });
   }

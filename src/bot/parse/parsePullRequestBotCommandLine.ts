@@ -1,6 +1,7 @@
 import assert from "assert";
 
 import { botPullRequestCommentMention, botPullRequestIgnoreCommands } from "src/bot";
+import { isOptionalArgsCommand } from "src/bot/parse/isOptionalArgsCommand";
 import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand";
 import { parseVariables } from "src/bot/parse/parseVariables";
 import { SkipEvent } from "src/bot/types";
@@ -16,6 +17,7 @@ import { validateSingleShellCommand } from "src/shell";
 export const parsePullRequestBotCommandLine = async (
   rawCommandLine: string,
   ctx: LoggerContext,
+  repo: string,
 ): Promise<SkipEvent | Error | ParsedCommand> => {
   let commandLine = rawCommandLine.trim();
 
@@ -86,9 +88,15 @@ export const parsePullRequestBotCommandLine = async (
         );
       }
 
-      // if presets has nothing - then it means that the command doesn't need any arguments and runs as is
-      if (Object.keys(commandConfigs[subcommand]?.command?.presets || [])?.length === 0) {
-        configuration.optionalCommandArgs = true;
+      try {
+        if (isOptionalArgsCommand(commandConfigs[subcommand], subcommand, repo)) {
+          configuration.optionalCommandArgs = true;
+        }
+      } catch (e) {
+        if (e instanceof Error) {
+          return new Error(`${e.message}. ${helpStr}`);
+        }
+        throw e;
       }
 
       if (!commandLinePart && configuration.optionalCommandArgs !== true) {
