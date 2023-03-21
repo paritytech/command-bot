@@ -47,6 +47,14 @@ const commandsDataProvider: CommandDataProviderItem[] = [
     },
   },
   {
+    suitName: "[not allowed] command",
+    commandLine: "bot bench-all", // command-bot-test repo is not in a list of repos: [...] array
+    expected: {
+      startMessage:
+        '@somedev123 The command: "bench-all" is not supported in **command-bot-test** repository. Refer to [help docs](http://localhost:3000/static/docs/',
+    },
+  },
+  {
     suitName: "[cancel] command for no jobs",
     commandLine: "bot cancel",
     expected: { startMessage: "@somedev123 No task is being executed for this pull request" },
