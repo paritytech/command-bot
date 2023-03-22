@@ -25,7 +25,7 @@
     "matrix-bot-sdk": "0.6.3",
     "node-fetch": "^2.6.7",
     "opstooling-js": "https://github.com/paritytech/opstooling-js#v0.0.18",
-    "opstooling-js-style": "https://github.com/paritytech/opstooling-js-style.git#c298d0f732d93712e4397fd53baa3317a3022c8c",
+    "opstooling-js-style": "https://github.com/paritytech/opstooling-js-style.git#5e7bd72b4082f264e3f1e2616fd6fc4560dda365",
     "probot": "^12.2.8",
     "pug": "^3.0.2",
     "stoppable": "1.1.0",
