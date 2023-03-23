@@ -13,7 +13,7 @@ import { DOCS_DIR, DOCS_URL_PATH, GENERATED_DIR } from "src/setup";
 import { CommandRunner } from "src/shell";
 
 export const PIPELINE_SCRIPTS_REF = "PIPELINE_SCRIPTS_REF";
-const LATEST = "latest";
+export const LATEST = "latest";
 
 export async function fetchCommandsConfiguration(
   ctx: LoggerContext,
@@ -66,6 +66,6 @@ function getDocsUrl(filename: string): string {
   return new URL(path.join(config.cmdBotUrl, DOCS_URL_PATH, getDocsFilename(filename))).toString();
 }
 
-function getDocsFilename(scriptsRevision: string): string {
+export function getDocsFilename(scriptsRevision: string): string {
   return `${scriptsRevision}.html`;
 }

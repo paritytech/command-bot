@@ -7,7 +7,7 @@ import { Probot, Server } from "probot";
 
 import { setupApi } from "src/api";
 import { setupBot } from "src/bot";
-import { fetchCommandsConfiguration } from "src/command-configs/fetchCommandsConfiguration";
+import { fetchCommandsConfiguration, getDocsFilename, LATEST } from "src/command-configs/fetchCommandsConfiguration";
 import { config } from "src/config";
 import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db";
 import { logger } from "src/logger";
@@ -37,7 +37,7 @@ export const setup = async (
   await ensureDir(DOCS_DIR);
   server.expressApp.use(DOCS_URL_PATH, express.static(DOCS_DIR));
   server.expressApp.get("/", (req, res) => {
-    res.redirect(path.join(DOCS_URL_PATH, "latest.html"), 301);
+    res.redirect(path.join(DOCS_URL_PATH, getDocsFilename(LATEST)), 301);
   });
 
   const taskDbPath = path.join(dataPath, "db");
