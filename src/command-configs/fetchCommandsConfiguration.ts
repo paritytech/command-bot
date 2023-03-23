@@ -13,6 +13,7 @@ import { DOCS_DIR, DOCS_URL_PATH, GENERATED_DIR } from "src/setup";
 import { CommandRunner } from "src/shell";
 
 export const PIPELINE_SCRIPTS_REF = "PIPELINE_SCRIPTS_REF";
+const LATEST = "latest";
 
 export async function fetchCommandsConfiguration(
   ctx: LoggerContext,
@@ -39,24 +40,30 @@ export async function fetchCommandsConfiguration(
     const scriptsRevPath = path.join(scriptsPath, scriptsRevision);
     const commandsOutputPath = path.join(scriptsRevPath, "commands.json");
     const commandsHelpPath = path.join(DOCS_DIR, getDocsFilename(scriptsRevision));
+    const commandsHelpPathSymlink = path.join(DOCS_DIR, getDocsFilename(LATEST));
 
     if (!fs.existsSync(scriptsRevPath) || !fs.existsSync(commandsOutputPath)) {
       await cloneCommandBotScripts(cmdRunner, scriptsRevPath, overriddenBranch);
       const commandConfigs = collectCommandConfigs(scriptsRevPath);
 
       fs.writeFileSync(commandsHelpPath, renderHelpPage({ config, commandConfigs, scriptsRevision, headBranch }));
+      if (!overriddenBranch) {
+        // overwrite symlink with latest
+        fs.linkSync(commandsHelpPath, commandsHelpPathSymlink);
+      }
+
       fs.writeFileSync(commandsOutputPath, JSON.stringify(commandConfigs));
     }
 
     return {
-      commitHash: scriptsRevision,
+      docsPath: getDocsUrl(overriddenBranch ? scriptsRevision : LATEST),
       commandConfigs: JSON.parse(fs.readFileSync(commandsOutputPath).toString()) as CommandConfigs,
     };
   });
 }
 
-export function getDocsUrl(commitHash: string): string {
-  return new URL(path.join(config.cmdBotUrl, DOCS_URL_PATH, getDocsFilename(commitHash))).toString();
+function getDocsUrl(filename: string): string {
+  return new URL(path.join(config.cmdBotUrl, DOCS_URL_PATH, getDocsFilename(filename))).toString();
 }
 
 function getDocsFilename(scriptsRevision: string): string {

@@ -5,11 +5,7 @@ import { isOptionalArgsCommand } from "src/bot/parse/isOptionalArgsCommand";
 import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand";
 import { parseVariables } from "src/bot/parse/parseVariables";
 import { SkipEvent } from "src/bot/types";
-import {
-  fetchCommandsConfiguration,
-  getDocsUrl,
-  PIPELINE_SCRIPTS_REF,
-} from "src/command-configs/fetchCommandsConfiguration";
+import { fetchCommandsConfiguration, PIPELINE_SCRIPTS_REF } from "src/command-configs/fetchCommandsConfiguration";
 import { config } from "src/config";
 import { LoggerContext } from "src/logger";
 import { validateSingleShellCommand } from "src/shell";
@@ -51,12 +47,9 @@ export const parsePullRequestBotCommandLine = async (
         return variables;
       }
 
-      const { commitHash: commandsConfigsCommitHash } = await fetchCommandsConfiguration(
-        ctx,
-        variables[PIPELINE_SCRIPTS_REF],
-      );
+      const { docsPath } = await fetchCommandsConfiguration(ctx, variables[PIPELINE_SCRIPTS_REF]);
 
-      return new HelpCommand(commandsConfigsCommitHash);
+      return new HelpCommand(docsPath);
     }
     case "cancel": {
       return new CancelCommand(commandLine.trim());
@@ -75,12 +68,10 @@ export const parsePullRequestBotCommandLine = async (
         return variables;
       }
 
-      const { commandConfigs, commitHash } = await fetchCommandsConfiguration(ctx, variables[PIPELINE_SCRIPTS_REF]);
+      const { commandConfigs, docsPath } = await fetchCommandsConfiguration(ctx, variables[PIPELINE_SCRIPTS_REF]);
       const configuration = commandConfigs[subcommand]?.command?.configuration;
 
-      const helpStr = `Refer to [help docs](${getDocsUrl(commitHash)}) and/or [source code](${
-        config.pipelineScripts.repository
-      }).`;
+      const helpStr = `Refer to [help docs](${docsPath}) and/or [source code](${config.pipelineScripts.repository}).`;
 
       if (typeof configuration === "undefined" || !Object.keys(configuration).length) {
         return new Error(

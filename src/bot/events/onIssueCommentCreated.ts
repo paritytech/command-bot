@@ -11,7 +11,6 @@ import {
   SkipEvent,
   WebhookHandler,
 } from "src/bot/types";
-import { getDocsUrl } from "src/command-configs/fetchCommandsConfiguration";
 import { isRequesterAllowed } from "src/core";
 import { getSortedTasks } from "src/db";
 import {
@@ -82,8 +81,10 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
       logger.debug({ parsedCommand }, "Processing parsed command");
 
       if (parsedCommand instanceof HelpCommand) {
-        const url = getDocsUrl(parsedCommand.commitHash);
-        await createComment(ctx, octokit, { ...commentParams, body: `Here's a [link to docs](${url})` });
+        await createComment(ctx, octokit, {
+          ...commentParams,
+          body: `Here's a [link to docs](${parsedCommand.docsPath})`,
+        });
       }
 
       if (parsedCommand instanceof CleanCommand) {
