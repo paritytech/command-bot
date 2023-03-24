@@ -11,7 +11,7 @@ import { createCiConfig } from "src/gitlab/createCiConfig";
 import { CommandRunner } from "src/shell";
 import { Task, taskExecutionTerminationEvent, TaskGitlabPipeline } from "src/task";
 import { Context } from "src/types";
-import { millisecondsDelay, validatedFetch } from "src/utils";
+import { millisecondsDelay, retriable, validatedFetch } from "src/utils";
 
 type GitlabTaskContext = TaskGitlabPipeline & {
   terminate: () => Promise<Error | undefined>;
@@ -122,9 +122,6 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
 
   const branchPresenceUrl = `${gitlabProjectApi}/repository/branches/${branchNameUrlEncoded}`;
 
-  // add small preventive delay, as checking right-away most probably would cause a retry
-  await millisecondsDelay(waitForBranchRetryDelayMs);
-
   for (let waitForBranchTryCount = 0; waitForBranchTryCount < waitForBranchMaxTries; waitForBranchTryCount++) {
     logger.debug({ branchPresenceUrl }, `Sending request to see if the branch for task ${task.id} is ready`);
     const response = await fetch(branchPresenceUrl, { headers: { "PRIVATE-TOKEN": gitlab.accessToken } });
@@ -152,16 +149,23 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
     );
   }
 
+  // add small preventive delay, as checking right-away most probably would cause a retry
+  await millisecondsDelay(waitForBranchRetryDelayMs);
+
   const pipelineCreationUrl = `${gitlabProjectApi}/pipeline?ref=${branchNameUrlEncoded}`;
   logger.debug({ pipelineCreationUrl, task }, `Sending request to create a pipeline for task ${task.id}`);
-  const pipeline = await validatedFetch<{
-    id: number;
-    project_id: number;
-  }>(
-    fetch(pipelineCreationUrl, { method: "POST", headers: { "PRIVATE-TOKEN": gitlab.accessToken } }),
-    Joi.object()
-      .keys({ id: Joi.number().required(), project_id: Joi.number().required() })
-      .options({ allowUnknown: true }),
+
+  const pipeline = await retriable(
+    async () =>
+      await validatedFetch<{
+        id: number;
+        project_id: number;
+      }>(
+        fetch(pipelineCreationUrl, { method: "POST", headers: { "PRIVATE-TOKEN": gitlab.accessToken } }),
+        Joi.object()
+          .keys({ id: Joi.number().required(), project_id: Joi.number().required() })
+          .options({ allowUnknown: true }),
+      ),
   );
 
   logger.info({ pipeline, task }, `Created pipeline for task ${task.id}`);
