@@ -86,14 +86,18 @@ const dataProvider: DataProvider[] = [
     suitName: "bench-bot, no args when not allowed, should return error",
     commandLine: "bot bench",
     expectedResponse: new Error(
-      `Missing arguments for command "bench". Refer to [help docs](http://cmd-bot.docs.com/) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
+      `Missing arguments for command "bench". Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
     ),
   },
 
   /*
     Help cases
    */
-  { suitName: "help", commandLine: "bot help", expectedResponse: new HelpCommand("123hash") },
+  {
+    suitName: "help",
+    commandLine: "bot help",
+    expectedResponse: new HelpCommand("http://cmd-bot.docs.com/static/docs/latest.html"),
+  },
   { suitName: "help", commandLine: "bot clean", expectedResponse: new CleanCommand() },
   { suitName: "help", commandLine: "bot clear", expectedResponse: new CleanCommand() },
 
@@ -126,21 +130,21 @@ const dataProvider: DataProvider[] = [
     suitName: "nonexistent command, should return proper error",
     commandLine: "bot nope 123123",
     expectedResponse: new Error(
-      'Unknown command "nope"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+      'Unknown command "nope"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     ),
   },
   {
     suitName: "not provided command, returns proper error",
     commandLine: "bot $",
     expectedResponse: new Error(
-      'Unknown command "$"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+      'Unknown command "$"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     ),
   },
   {
     suitName: "non existed config must return error with explanation",
     commandLine: "bot xz",
     expectedResponse: new Error(
-      `Unknown command "xz"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
+      `Unknown command "xz"; Available ones are bench, fmt, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
     ),
   },
 ];

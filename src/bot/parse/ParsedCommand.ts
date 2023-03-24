@@ -21,7 +21,7 @@ export class CleanCommand extends ParsedCommand {
 }
 
 export class HelpCommand extends ParsedCommand {
-  constructor(public commitHash: string) {
+  constructor(public docsPath: string) {
     super("help");
   }
 }

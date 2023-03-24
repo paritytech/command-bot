@@ -36,14 +36,22 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   {
     suitName: "[help] command",
     commandLine: "bot help",
-    expected: { startMessage: "Here's a [link to docs](http://localhost:3000/static/docs/" },
+    expected: { startMessage: "Here's a [link to docs](http://localhost:3000/static/docs/latest.html" },
+  },
+  {
+    suitName: "[help] command with branch override",
+    commandLine: "bot help -v PIPELINE_SCRIPTS_REF=tests",
+    expected: {
+      startMessage:
+        "Here's a [link to docs](http://localhost:3000/static/docs/1245345a4376f18f3ef98195055876ff293f8622.html",
+    },
   },
   {
     suitName: "[wrong] command",
     commandLine: "bot hrlp", // intentional typo
     expected: {
       startMessage:
-        '@somedev123 Unknown command "hrlp"; Available ones are bench-all, bench-vm, bench, fmt, merge, rebase, sample, try-runtime. Refer to [help docs](http://localhost:3000/static/docs/',
+        '@somedev123 Unknown command "hrlp"; Available ones are bench-all, bench-vm, bench, fmt, merge, rebase, sample, try-runtime. Refer to [help docs](http://localhost:3000/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     },
   },
   {
@@ -51,7 +59,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
     commandLine: "bot bench-all", // command-bot-test repo is not in a list of repos: [...] array
     expected: {
       startMessage:
-        '@somedev123 The command: "bench-all" is not supported in **command-bot-test** repository. Refer to [help docs](http://localhost:3000/static/docs/',
+        '@somedev123 The command: "bench-all" is not supported in **command-bot-test** repository. Refer to [help docs](http://localhost:3000/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     },
   },
   {

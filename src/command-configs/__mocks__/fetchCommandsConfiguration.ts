@@ -155,7 +155,5 @@ export const cmd: CommandConfigs = {
 
 // eslint-disable-next-line @typescript-eslint/require-await
 export const fetchCommandsConfiguration = jest.fn<() => Promise<FetchCommandConfigsResult>>(async () => {
-  return { commandConfigs: cmd, commitHash: "123hash" };
+  return { commandConfigs: cmd, docsPath: "http://cmd-bot.docs.com/static/docs/latest.html" };
 });
-// eslint-disable-next-line @typescript-eslint/require-await
-export const getDocsUrl = jest.fn<() => string>(() => "http://cmd-bot.docs.com/");
