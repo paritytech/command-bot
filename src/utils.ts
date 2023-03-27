@@ -110,3 +110,32 @@ export const arrayify = <T>(value: undefined | null | T | T[]): T[] => {
   }
   return [value];
 };
+
+export type RetriableConfig = {
+  attempts: number;
+  timeoutMs: number;
+};
+
+/** @throws Error */
+export const retriable = async <T>(
+  callback: () => Promise<T>,
+  options: RetriableConfig = { attempts: 3, timeoutMs: 2000 },
+): Promise<T> => {
+  let { attempts } = options;
+  const { timeoutMs } = options;
+
+  for (attempts; attempts > 0; attempts--) {
+    try {
+      return await callback();
+    } catch (e) {
+      await millisecondsDelay(timeoutMs);
+
+      // last failed attempt
+      if (attempts === 1) {
+        throw e;
+      }
+    }
+  }
+
+  throw Error(`Couldn't resolve a promise after ${options.attempts} attempts with ${options.timeoutMs}ms timeout`);
+};
