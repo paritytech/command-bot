@@ -79,5 +79,9 @@
     "build": "yarn clean && tsc && copyfiles -u 1 src/**/*.pug build/",
     "start": "TS_NODE_BASEURL=./build node ./build/main.js",
     "dev": "yarn schema && nodemon --no-update-notifier -- ./src/main.ts"
+  },
+  "//": "Override to solve JSON5 vulnerability. Cleanup once eslint-plugin-import releases the update of deps",
+  "resolutions": {
+    "opstooling-js-style/**/tsconfig-paths": "^4.0.0"
   }
 }
