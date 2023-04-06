@@ -62,38 +62,40 @@ export const setupApi = (ctx: Context, server: Server): void => {
     }) => void | Promise<void>,
     { checkMasterToken }: { checkMasterToken?: boolean } = {},
   ) => {
-    server.expressApp[method](getApiRoute(routePath), jsonBodyParserMiddleware, async (req, res, next) => {
-      try {
-        const token = req.headers["x-auth"];
-        if (typeof token !== "string" || !token) {
-          return errorResponse(res, next, 400, "Invalid auth token");
-        }
-
-        /*
-            Empty when the masterToken is supposed to be used because it doesn't
-            matter in that case
-          */
-        let matrixRoom: string = "";
-        if (checkMasterToken) {
-          if (token !== config.masterToken) {
-            return errorResponse(res, next, 422, `Invalid ${token} for master token`);
+    server.expressApp[method](getApiRoute(routePath), jsonBodyParserMiddleware, (req, res, next) => {
+      void (async () => {
+        try {
+          const token = req.headers["x-auth"];
+          if (typeof token !== "string" || !token) {
+            return errorResponse(res, next, 400, "Invalid auth token");
           }
-        } else {
-          try {
-            matrixRoom = await accessDb.db.get(token);
-          } catch (error) {
-            if (error instanceof LevelErrors.NotFoundError) {
-              return errorResponse(res, next, 404, "Token not found");
-            } else {
-              return apiError(res, next, error);
+
+          /*
+              Empty when the masterToken is supposed to be used because it doesn't
+              matter in that case
+            */
+          let matrixRoom: string = "";
+          if (checkMasterToken) {
+            if (token !== config.masterToken) {
+              return errorResponse(res, next, 422, `Invalid ${token} for master token`);
+            }
+          } else {
+            try {
+              matrixRoom = await accessDb.db.get(token);
+            } catch (error) {
+              if (error instanceof LevelErrors.NotFoundError) {
+                return errorResponse(res, next, 404, "Token not found");
+              } else {
+                return apiError(res, next, error);
+              }
             }
           }
-        }
 
-        await handler({ req, res, next, token, matrixRoom });
-      } catch (error) {
-        apiError(res, next, error);
-      }
+          await handler({ req, res, next, token, matrixRoom });
+        } catch (error) {
+          apiError(res, next, error);
+        }
+      })();
     });
   };
 
