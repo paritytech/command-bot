@@ -5,7 +5,6 @@ import { randomUUID } from "crypto";
 import { parseISO } from "date-fns";
 import EventEmitter from "events";
 import LevelErrors from "level-errors";
-import { extractRequestError, MatrixClient } from "matrix-bot-sdk";
 import { Probot } from "probot";
 
 import { getApiTaskEndpoint } from "src/api";
@@ -14,7 +13,6 @@ import { prepareBranch } from "src/core";
 import { getSortedTasks } from "src/db";
 import { getPostPullRequestResult, updateComment } from "src/github";
 import { cancelGitlabPipeline, restoreTaskGitlabContext, runCommandInGitlabPipeline } from "src/gitlab";
-import { logger as log } from "src/logger";
 import { CommandOutput, Context, GitRef } from "src/types";
 import { displayError, getNextUniqueIncrementalId, intoError } from "src/utils";
 
@@ -60,9 +58,7 @@ export type PullRequestTask = TaskBase<"PullRequestTask"> & {
   gitRef: GitRefPR;
 };
 
-export type ApiTask = TaskBase<"ApiTask"> & {
-  matrixRoom: string;
-};
+export type ApiTask = TaskBase<"ApiTask">;
 
 export type Task = PullRequestTask | ApiTask;
 
@@ -252,7 +248,7 @@ export const queueTask = async (
 };
 
 export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot): Promise<void> => {
-  const { taskDb, matrix, logger } = ctx;
+  const { taskDb, logger } = ctx;
   const { db } = taskDb;
 
   /*
@@ -314,24 +310,12 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot): Promi
             return { requeue, announceCancel };
           }
           case "ApiTask": {
-            if (matrix === null) {
-              return {
-                announceCancel: () => {
-                  logger.warn(task, "ApiTask cannot be requeued because Matrix client is missing");
-                },
-                requeue: () => {},
-              };
-            }
-
-            const { matrixRoom } = task;
-            const sendMatrixMessage = (msg: string) => matrix.sendText(matrixRoom, msg);
-
             const requeuedTask = prepareRequeuedTask(task);
             return {
-              announceCancel: sendMatrixMessage,
+              announceCancel: apiTaskResult(ctx),
               requeue: () =>
                 queueTask(ctx, requeuedTask, {
-                  onResult: getSendTaskMatrixResult(matrix, requeuedTask),
+                  onResult: apiTaskResult(ctx),
                   /*
                     Assumes the relevant progress update was already sent when
                     the task was queued for the first time, thus there's no need
@@ -388,19 +372,13 @@ export const requeueUnterminatedTasks = async (ctx: Context, bot: Probot): Promi
   }
 };
 
-export const getSendTaskMatrixResult =
-  (matrix: MatrixClient, task: ApiTask) =>
-  async (message: CommandOutput): Promise<void> => {
-    try {
-      await matrix.sendText(
-        task.matrixRoom,
-        `Task ID ${task.id} has finished with message "${message instanceof Error ? displayError(message) : message}"`,
-      );
-    } catch (rawError) {
-      const error = intoError(rawError);
-      log.error(extractRequestError(error), "Caught error when sending Matrix message");
-    }
-  };
+export const apiTaskResult =
+  (ctx: Context) =>
+  async (message: CommandOutput): Promise<void> =>
+    await new Promise((resolve) => {
+      ctx.logger.info({}, message);
+      resolve();
+    });
 
 export const cancelTask = async (ctx: Context, taskId: Task | string): Promise<Error | undefined> => {
   const {

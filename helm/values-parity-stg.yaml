@@ -32,8 +32,6 @@ common:
     GITLAB_ACCESS_TOKEN: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#GITLAB_ACCESS_TOKEN
     GITLAB_ACCESS_TOKEN_USERNAME: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#GITLAB_ACCESS_TOKEN_USERNAME
     MASTER_TOKEN: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#MASTER_TOKEN
-    MATRIX_ACCESS_TOKEN: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#MATRIX_ACCESS_TOKEN
-    MATRIX_HOMESERVER: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#MATRIX_HOMESERVER
     PRIVATE_KEY_BASE64: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#PRIVATE_KEY_BASE64
     WEBHOOK_SECRET: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#WEBHOOK_SECRET
     DB_USER: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#DB_USER

@@ -1,7 +1,6 @@
-import { MatrixClient } from "matrix-bot-sdk";
 import { Logger } from "opstooling-js";
 
-import type { AccessDB, TaskDB } from "src/db";
+import type { TaskDB } from "src/db";
 
 export type GitRef = {
   contributor: {
@@ -23,12 +22,10 @@ export type PipelineScripts = {
 
 export type Context = {
   taskDb: TaskDB;
-  accessDb: AccessDB;
   getFetchEndpoint: (installationId: number | null) => Promise<{ token: string | null; url: string }>;
   log: (str: string) => void;
   allowedOrganizations: number[];
   logger: Logger;
-  matrix: MatrixClient | null;
   disablePRComment: boolean;
   repositoryCloneDirectory: string;
   gitlab: {

@@ -20,18 +20,6 @@ ensureDirSync(dataPath);
 export const appDbVersionPath = path.join(dataPath, "task-db-version");
 const taskDbVersion = process.env.TASK_DB_VERSION?.trim() || "";
 
-export type MatrixConfig = {
-  homeServer: string;
-  accessToken: string;
-};
-const matrix: MatrixConfig | undefined = (() => {
-  if (process.env.MATRIX_HOMESERVER) {
-    return { homeServer: process.env.MATRIX_HOMESERVER, accessToken: envVar("MATRIX_ACCESS_TOKEN") };
-  } else {
-    return undefined;
-  }
-})();
-
 const allowedOrganizations = envVar("ALLOWED_ORGANIZATIONS")
   .split(",")
   .filter((value) => value.length !== 0)
@@ -42,7 +30,6 @@ const allowedOrganizations = envVar("ALLOWED_ORGANIZATIONS")
   });
 
 export type Config = {
-  matrix: MatrixConfig | undefined;
   dataPath: string;
   pipelineScripts: PipelineScripts;
   appDbVersionPath: string;
@@ -71,7 +58,6 @@ export type Config = {
 };
 
 export const config: Config = {
-  matrix,
   dataPath,
   pipelineScripts,
   appDbVersionPath,
