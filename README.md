@@ -16,7 +16,6 @@ Before starting to work on this project, we recommend reading the
   - [Generic](#pull-request-command-generic)
   - [Testing generic command in dev](#pull-request-command-generic-dev)
 - [API](#api)
-  - [Create a Personal Token](#api-create-token)
   - [Queue](#api-command-queue)
   - [Cancel](#api-command-cancel)
 - [GitHub App](#github-app)
@@ -82,7 +81,7 @@ without having to go through pull request comments.
 
 ## Queue <a name="api-command-queue"></a>
 
-Use a [Personal Token](#api-create-token) for queueing a command through `POST /api/queue`.
+Use a Master Token for queueing a command through `POST /api/queue`.
 
 ```sh
 curl \
