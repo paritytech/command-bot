@@ -16,7 +16,6 @@ Before starting to work on this project, we recommend reading the
   - [Generic](#pull-request-command-generic)
   - [Testing generic command in dev](#pull-request-command-generic-dev)
 - [API](#api)
-  - [Create a Personal Token](#api-create-token)
   - [Queue](#api-command-queue)
   - [Cancel](#api-command-cancel)
 - [GitHub App](#github-app)
@@ -80,29 +79,9 @@ In the pull request where you previously ran `bot queue`, comment:
 The API provides an alternative interface for executing commands directly
 without having to go through pull request comments.
 
-## Create a Personal Token <a name="api-create-token"></a>
-
-For interacting with the commands, first a Personal Token needs to be generated
-through `POST /api/access` by the
-[`$MASTER_TOKEN`](#setup-environment-variables) (it is currently owned
-by the OpsTooling team of Parity for Parity's deployments).
-
-Each Personal Token is tied to a Matrix Room ID where the command's outcome will
-be posted to after it finishes.
-
-```sh
-curl \
-  -H "X-Auth: $MASTER_TOKEN" \
-  -H "Content-Type: application/json" \
-  -X POST http://command-bot/access \
-  -d '{
-    "matrixRoom": "!tZrvvMzoIkIYbCkLuk:matrix.foo.io",
-  }'
-```
-
 ## Queue <a name="api-command-queue"></a>
 
-Use a [Personal Token](#api-create-token) for queueing a command through `POST /api/queue`.
+Use a Master Token for queueing a command through `POST /api/queue`.
 
 ```sh
 curl \
@@ -295,5 +274,4 @@ TODO: Update this to reflect command-bot refactor.
 from the
 [command's execution](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/executor.ts#L94) and
 [post it as a pull request comment](https://github.com/paritytech/try-runtime-bot/blob/68bffe556bc0fe91425dda31a542ba8fee71711d/src/github.ts#L151)
-if it originated from a pull request comment or
-[send it to a Matrix room](https://github.com/paritytech/try-runtime-bot/blob/412e82d728798db0505f6f9dd622805a4ca43829/src/utils.ts#L187) if it originated from an API request.
+if it originated from a pull request comment or send it to server logs if it originated from an API request.

@@ -22,10 +22,6 @@ export class TaskDB {
   constructor(public db: DB) {}
 }
 
-export class AccessDB {
-  constructor(public db: DB) {}
-}
-
 type Item = {
   id: DbKey;
   queuedDate: Date;
