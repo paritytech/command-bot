@@ -23,7 +23,6 @@
     "joi": "^17.6.0",
     "level-rocksdb": "5.0.0",
     "lodash": "4.17.21",
-    "matrix-bot-sdk": "0.6.3",
     "node-fetch": "^2.6.7",
     "opstooling-js": "https://github.com/paritytech/opstooling-js#v0.0.18",
     "opstooling-js-style": "https://github.com/paritytech/opstooling-js-style.git#c298d0f732d93712e4397fd53baa3317a3022c8c",
@@ -81,5 +80,9 @@
     "build": "yarn clean && tsc && copyfiles -u 1 src/**/*.pug build/",
     "start": "TS_NODE_BASEURL=./build node ./build/main.js",
     "dev": "yarn schema && nodemon --no-update-notifier -- ./src/main.ts"
+  },
+  "//": "Override to solve JSON5 vulnerability. Cleanup once eslint-plugin-import releases the update of deps",
+  "resolutions": {
+    "opstooling-js-style/**/tsconfig-paths": "^4.0.0"
   }
 }

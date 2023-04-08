@@ -94,15 +94,6 @@ process.env.MASTER_TOKEN ??= "placeholder"
 
 /*
   NOT REQUIRED
-  The API interactions needs a Matrix-related variables to be configured for
-  notifying when a command finishes. Additionally, MASTER_TOKEN is used for
-  allowing tokens to the API. If those are missing, then the API will not work.
-*/
-// process.env.MATRIX_HOMESERVER ??= "https://matrix.parity.io"
-// process.env.MATRIX_ACCESS_TOKEN ??= "placeholder"
-
-/*
-  NOT REQUIRED
   - For production it's recommended to set LOG_FORMAT to "json" so that log
   entries it can be queried easily.
   - For development it's recommended to leave this variable empty because the

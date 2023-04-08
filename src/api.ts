@@ -1,5 +1,4 @@
 import bodyParser from "body-parser";
-import { randomUUID } from "crypto";
 import { NextFunction, RequestHandler, Response } from "express";
 import Joi from "joi";
 import LevelErrors from "level-errors";
@@ -9,14 +8,7 @@ import { Server } from "probot";
 import { config } from "src/config";
 import { commandsConfiguration } from "src/core";
 import { validateSingleShellCommand } from "src/shell";
-import {
-  ApiTask,
-  cancelTask,
-  getNextTaskId,
-  getSendTaskMatrixResult,
-  queueTask,
-  serializeTaskQueuedDate,
-} from "src/task";
+import { ApiTask, apiTaskResult, cancelTask, getNextTaskId, queueTask, serializeTaskQueuedDate } from "src/task";
 import { Context } from "src/types";
 
 const getApiRoute = (route: string): string => `/api${route}`;
@@ -41,7 +33,7 @@ const errorResponse = <T>(res: Response, next: NextFunction, code: number, body?
 const jsonBodyParserMiddleware = bodyParser.json();
 
 export const setupApi = (ctx: Context, server: Server): void => {
-  const { accessDb, matrix, repositoryCloneDirectory, logger, gitlab } = ctx;
+  const { repositoryCloneDirectory, logger, gitlab } = ctx;
 
   const apiError = (res: Response, next: NextFunction, error: unknown) => {
     const msg = "Failed to handle errors in API endpoint";
@@ -58,50 +50,29 @@ export const setupApi = (ctx: Context, server: Server): void => {
       res: JsonRequestHandlerParams[1];
       next: JsonRequestHandlerParams[2];
       token: string;
-      matrixRoom: string;
     }) => void | Promise<void>,
-    { checkMasterToken }: { checkMasterToken?: boolean } = {},
   ) => {
-    server.expressApp[method](getApiRoute(routePath), jsonBodyParserMiddleware, async (req, res, next) => {
-      try {
-        const token = req.headers["x-auth"];
-        if (typeof token !== "string" || !token) {
-          return errorResponse(res, next, 400, "Invalid auth token");
-        }
+    server.expressApp[method](getApiRoute(routePath), jsonBodyParserMiddleware, (req, res, next) => {
+      void (async () => {
+        try {
+          const token = req.headers["x-auth"];
+          if (typeof token !== "string" || !token) {
+            return errorResponse(res, next, 400, "Invalid auth token");
+          }
 
-        /*
-            Empty when the masterToken is supposed to be used because it doesn't
-            matter in that case
-          */
-        let matrixRoom: string = "";
-        if (checkMasterToken) {
           if (token !== config.masterToken) {
             return errorResponse(res, next, 422, `Invalid ${token} for master token`);
           }
-        } else {
-          try {
-            matrixRoom = await accessDb.db.get(token);
-          } catch (error) {
-            if (error instanceof LevelErrors.NotFoundError) {
-              return errorResponse(res, next, 404, "Token not found");
-            } else {
-              return apiError(res, next, error);
-            }
-          }
-        }
 
-        await handler({ req, res, next, token, matrixRoom });
-      } catch (error) {
-        apiError(res, next, error);
-      }
+          await handler({ req, res, next, token });
+        } catch (error) {
+          apiError(res, next, error);
+        }
+      })();
     });
   };
 
-  setupRoute("post", "/queue", async ({ req, res, next, matrixRoom }) => {
-    if (matrix === null) {
-      return errorResponse(res, next, 400, "Matrix is not configured for this server");
-    }
-
+  setupRoute("post", "/queue", async ({ req, res, next }) => {
     const validation = Joi.object()
       .keys({
         configuration: Joi.string().required(),
@@ -121,6 +92,7 @@ export const setupApi = (ctx: Context, server: Server): void => {
         }),
       })
       .validate(req.body);
+
     if (validation.error) {
       return errorResponse(res, next, 422, validation.error);
     }
@@ -166,10 +138,9 @@ export const setupApi = (ctx: Context, server: Server): void => {
       timesRequeuedSnapshotBeforeExecution: 0,
       timesExecuted: 0,
       gitRef,
-      matrixRoom,
       repoPath: path.join(repositoryCloneDirectory, gitRef.upstream.repo),
       queuedDate: serializeTaskQueuedDate(queuedDate),
-      requester: matrixRoom,
+      requester: "api",
       command,
       gitlab: {
         job: {
@@ -181,7 +152,7 @@ export const setupApi = (ctx: Context, server: Server): void => {
       },
     };
 
-    const updateProgress = getSendTaskMatrixResult(matrix, task);
+    const updateProgress = apiTaskResult(ctx);
     const queueMessage = await queueTask(ctx, task, { onResult: updateProgress, updateProgress });
 
     response(res, next, 201, { task, queueMessage });
@@ -198,73 +169,6 @@ export const setupApi = (ctx: Context, server: Server): void => {
       return errorResponse(res, next, 404, "Task not found");
     }
 
-    response(res, next, 204);
-  });
-
-  setupRoute(
-    "post",
-    "/access",
-    async ({ req, res, next }) => {
-      const { matrixRoom } = req.body;
-      if (typeof matrixRoom !== "string" || !matrixRoom) {
-        return errorResponse(res, next, 400, "Invalid matrixRoom");
-      }
-
-      const requesterToken = randomUUID();
-      try {
-        if (await accessDb.db.get(requesterToken)) {
-          return errorResponse(res, next, 422, "requesterToken already exists");
-        }
-      } catch (error) {
-        if (!(error instanceof LevelErrors.NotFoundError)) {
-          return apiError(res, next, error);
-        }
-      }
-
-      await accessDb.db.put(requesterToken, matrixRoom);
-      response(res, next, 201, { token: requesterToken });
-    },
-    { checkMasterToken: true },
-  );
-
-  setupRoute("patch", "/access", async ({ req, res, next, token }) => {
-    const { matrixRoom } = req.body;
-    if (typeof matrixRoom !== "string" || !matrixRoom) {
-      return errorResponse(res, next, 400, "Invalid matrixRoom");
-    }
-
-    try {
-      const value = await accessDb.db.get(token);
-      if (!value) {
-        return errorResponse(res, next, 404);
-      }
-    } catch (error) {
-      if (error instanceof LevelErrors.NotFoundError) {
-        return errorResponse(res, next, 404);
-      } else {
-        return apiError(res, next, error);
-      }
-    }
-
-    await accessDb.db.put(token, matrixRoom);
-    response(res, next, 204);
-  });
-
-  setupRoute("delete", "/access", async ({ res, next, token }) => {
-    try {
-      const value = await accessDb.db.get(token);
-      if (!value) {
-        return errorResponse(res, next, 404);
-      }
-    } catch (error) {
-      if (error instanceof LevelErrors.NotFoundError) {
-        return errorResponse(res, next, 404);
-      } else {
-        return apiError(res, next, error);
-      }
-    }
-
-    await accessDb.db.put(token, "");
     response(res, next, 204);
   });
 };

@@ -2,7 +2,6 @@ import { createAppAuth } from "@octokit/auth-app";
 import { request } from "@octokit/request";
 import express from "express";
 import promBundle from "express-prom-bundle";
-import { MatrixClient, SimpleFsStorageProvider } from "matrix-bot-sdk";
 import path from "path";
 import { Probot, Server } from "probot";
 
@@ -10,12 +9,11 @@ import { setupApi } from "src/api";
 import { setupBot } from "src/bot";
 import { fetchCommandsConfiguration, getDocsFilename, LATEST } from "src/command-configs/fetchCommandsConfiguration";
 import { config } from "src/config";
-import { AccessDB, getDb, getSortedTasks, TaskDB } from "src/db";
+import { getDb, getSortedTasks, TaskDB } from "src/db";
 import { logger } from "src/logger";
 import { ensureDir, initDatabaseDir } from "src/shell";
 import { requeueUnterminatedTasks } from "src/task";
 import { Context } from "src/types";
-import { Err, Ok } from "src/utils";
 
 export const DOCS_URL_PATH = "/static/docs/";
 export const GENERATED_DIR = path.join(process.cwd(), "generated");
@@ -71,10 +69,6 @@ export const setup = async (
     }
   }
 
-  const accessDbPath = path.join(dataPath, "access_db");
-  await initDatabaseDir(accessDbPath);
-  const accessDb = new AccessDB(getDb(accessDbPath));
-
   const authInstallation = createAppAuth({
     appId: config.appId,
     privateKey: config.privateKey,
@@ -101,45 +95,7 @@ export const setup = async (
     return { url, token };
   };
 
-  const matrixConfiguration = config.matrix;
-  const matrixClientSetup: Ok<MatrixClient | null> | Err<unknown> = await (matrixConfiguration === undefined
-    ? Promise.resolve(new Ok(null))
-    : new Promise((resolve) => {
-        const matrixClient = new MatrixClient(
-          matrixConfiguration.homeServer,
-          matrixConfiguration.accessToken,
-          new SimpleFsStorageProvider(path.join(dataPath, "matrix.json")),
-        );
-        matrixClient
-          .start()
-          .then(() => {
-            logger.info({}, `Connected to Matrix homeserver ${matrixConfiguration.homeServer}`);
-            resolve(new Ok(matrixClient));
-          })
-          .catch((error) => {
-            resolve(new Err(error));
-          });
-      }));
-  if (matrixClientSetup instanceof Err) {
-    throw matrixClientSetup.value;
-  }
-
-  const { value: matrix } = matrixClientSetup;
-
-  if (config.isDeployment && matrix === null) {
-    throw new Error("Matrix configuration is expected for deployments");
-  }
-
-  const ctx: Context = {
-    ...partialContext,
-    taskDb,
-    accessDb,
-    getFetchEndpoint,
-    log: bot.log,
-    logger,
-    matrix,
-    repositoryCloneDirectory,
-  };
+  const ctx: Context = { ...partialContext, taskDb, getFetchEndpoint, log: bot.log, logger, repositoryCloneDirectory };
 
   void requeueUnterminatedTasks(ctx, bot);
 
