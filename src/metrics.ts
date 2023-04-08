@@ -12,12 +12,12 @@ export const counters: {
   commandsSkip: client.Counter;
 } = {
   commandsHandledTotal: new client.Counter({
-    name: "command_bot_commands_run_total",
+    name: "command_bot_commands_handled_total",
     help: "Amount of all commands run.",
     labelNames: ["eventName"] as const,
   }),
   commandsFinished: new client.Counter({
-    name: "command_bot_commands_run_total",
+    name: "command_bot_commands_recognized_finished_total",
     help: "Amount of recognized commands run. ",
     labelNames: ["owner", "repo", "pr", "command"] as const,
   }),
@@ -27,7 +27,7 @@ export const counters: {
     labelNames: ["owner", "repo", "pr", "command"] as const,
   }),
   commandsError: new client.Counter({
-    name: "command_bot_commands_fatal_total",
+    name: "command_bot_commands_error_total",
     help: "Amount of commands error responses.",
     labelNames: ["message"] as const,
   }),
