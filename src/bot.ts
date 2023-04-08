@@ -13,4 +13,12 @@ export const botPullRequestCommentSubcommands: {
 
 export const setupBot = (ctx: Context, bot: Probot): void => {
   setupEvent(ctx, bot, "issue_comment.created", onIssueCommentCreated);
+
+  bot.onError((event) => {
+    ctx.logger.error(event, "----> Error");
+  });
+
+  bot.webhooks.onError((event) => {
+    ctx.logger.error(event, "----> Error");
+  });
 };

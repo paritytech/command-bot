@@ -48,14 +48,13 @@ common:
   # sanely tracked across multiple MRs.
   autoscaling:
     enabled: false
-  # Enable after endpoint is created
-  # livenessProbe:
-  #   httpGet:
-  #     path: /health
-  #     port: 8000
-  #     scheme: HTTP
-  # readinessProbe:
-  #   httpGet:
-  #     path: /health
-  #     port: 8000
-  #     scheme: HTTP
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 80
+      scheme: HTTP
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 80
+      scheme: HTTP
