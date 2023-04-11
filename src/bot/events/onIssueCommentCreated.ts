@@ -1,16 +1,10 @@
 import { displayError, intoError } from "opstooling-js";
 import path from "path";
 
+import { extractPullRequestData } from "src/bot/parse/extractPullRequestData";
 import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand";
 import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine";
-import {
-  CommentData,
-  FinishedEvent,
-  PullRequestData,
-  PullRequestError,
-  SkipEvent,
-  WebhookHandler,
-} from "src/bot/types";
+import { CommentData, FinishedEvent, PullRequestError, SkipEvent, WebhookHandler } from "src/bot/types";
 import { isRequesterAllowed } from "src/core";
 import { getSortedTasks } from "src/db";
 import {
@@ -28,7 +22,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
   const { repositoryCloneDirectory, gitlab, logger } = ctx;
   const { issue, comment, repository, installation } = payload;
 
-  const pr: PullRequestData = { owner: repository.owner.login, repo: repository.name, number: issue.number };
+  const { pr } = extractPullRequestData(payload);
   const commentParams: CommentData = { owner: pr.owner, repo: pr.repo, issue_number: pr.number };
 
   logger.options.context = { ...logger.options.context, repo: repository.name, comment: commentParams, pr };

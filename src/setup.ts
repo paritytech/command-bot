@@ -1,6 +1,7 @@
 import { createAppAuth } from "@octokit/auth-app";
 import { request } from "@octokit/request";
 import express from "express";
+import promBundle from "express-prom-bundle";
 import path from "path";
 import { Probot, Server } from "probot";
 
@@ -31,11 +32,27 @@ export const setup = async (
   const { dataPath } = config;
   const repositoryCloneDirectory = path.join(dataPath, "repositories");
   await ensureDir(repositoryCloneDirectory);
-
   await ensureDir(DOCS_DIR);
+
+  // add the prometheus middleware to all routes
+  server.expressApp.use(
+    promBundle({
+      includeMethod: true,
+      includePath: true,
+      includeStatusCode: true,
+      includeUp: true,
+      customLabels: { project_name: "command_bot", project_type: "metrics" },
+      promClient: { collectDefaultMetrics: {} },
+    }),
+  );
+
   server.expressApp.use(DOCS_URL_PATH, express.static(DOCS_DIR));
   server.expressApp.get("/", (req, res) => {
     res.redirect(path.join(DOCS_URL_PATH, getDocsFilename(LATEST)), 301);
+  });
+
+  server.expressApp.get("/health", (req, res) => {
+    res.send("OK");
   });
 
   const taskDbPath = path.join(dataPath, "db");
