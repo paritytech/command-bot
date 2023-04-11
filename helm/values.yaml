@@ -51,14 +51,14 @@ common:
 
   livenessProbe:
     httpGet:
-      path: /ping
+      path: /health
       port: http
     initialDelaySeconds: 60
     periodSeconds: 5
 
   readinessProbe:
     httpGet:
-      path: /ping
+      path: /health
       port: http
     initialDelaySeconds: 60
     periodSeconds: 5
