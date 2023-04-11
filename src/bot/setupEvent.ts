@@ -31,13 +31,9 @@ export const setupEvent = <E extends WebhookEvents>(
     const installationId: number | undefined =
       "installation" in event.payload ? event.payload.installation?.id : undefined;
     const octokit = getOctokit(await bot.auth(installationId), ctx);
+    const metricsPrData = { owner: prData.owner, repo: prData.repo, pr: prData.number };
 
-    const commandHandlingDurationTimer = summaries.commandHandlingDuration.startTimer({
-      eventName,
-      owner: prData.owner,
-      repo: prData.repo,
-      pr: prData.number,
-    });
+    const commandHandlingDurationTimer = summaries.commandHandlingDuration.startTimer({ eventName, ...metricsPrData });
 
     void handler(ctx, octokit, event.payload as WebhookEventPayload<E>)
       .then(async (result) => {
@@ -66,7 +62,7 @@ export const setupEvent = <E extends WebhookEvents>(
         } else if (result instanceof SkipEvent && !!result.reason.trim()) {
           counters.commandsSkip.inc({ reason: result.reason });
           eventLogger.debug(
-            { command: event.payload.comment.body, payload: event.payload },
+            { command: event.payload.comment.body, payload: event.payload, ...metricsPrData },
             `Skip command with reason: "${result.reason}"`,
           );
         } else if (result instanceof FinishedEvent) {
@@ -79,18 +75,18 @@ export const setupEvent = <E extends WebhookEvents>(
           eventLogger.info({ result }, "Finished command");
         } else {
           const message = "Unknown result type";
-          counters.commandsError.inc({ message });
-          eventLogger.error({ event: event.payload, result }, message);
+          counters.commandsError.inc({ message, ...metricsPrData });
+          eventLogger.error({ event: event.payload, result, ...metricsPrData }, message);
         }
       })
       .catch((error: Error) => {
         const msg = "Exception caught in webhook handler";
-        counters.commandsFatal.inc({ message: `${msg}: ${error.message}` });
-        eventLogger.fatal(error, msg);
+        counters.commandsFatal.inc({ message: `${msg}: ${error.message}`, ...metricsPrData });
+        eventLogger.fatal({ error, ...metricsPrData }, msg);
       })
       .finally(() => {
-        counters.commandsHandledTotal.inc({ eventName });
-        eventLogger.debug(null, `"${eventName}" handler finished`);
+        counters.commandsHandledTotal.inc({ eventName, ...metricsPrData });
+        eventLogger.debug({ ...metricsPrData }, `"${eventName}" handler finished`);
         commandHandlingDurationTimer();
       });
   });
