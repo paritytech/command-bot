@@ -141,7 +141,7 @@ push-docker-image-description:
     - helm secrets upgrade
       --install
       --atomic
-      --timeout 300s
+      --timeout 600s
       --namespace ${CI_PROJECT_NAME}
       --values helm/values.yaml
       --values helm/values-$ENVIRONMENT.yaml
