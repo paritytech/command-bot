@@ -1,5 +1,6 @@
 import { Probot } from "probot";
 
+import { extractPullRequestData } from "src/bot/parse/extractPullRequestData";
 import {
   FinishedEvent,
   PullRequestError,
@@ -23,13 +24,20 @@ export const setupEvent = <E extends WebhookEvents>(
     const eventLogger = parentLogger.child({ eventId: event.id, eventName });
     const ctx: Context = { ...parentCtx, logger: eventLogger };
 
-    eventLogger.debug({ event, eventName }, `Received bot event ${eventName}`);
+    const { pr: prData } = extractPullRequestData(event.payload);
+
+    eventLogger.debug({ event, eventName, pr: prData }, `Received bot event ${eventName}`);
 
     const installationId: number | undefined =
       "installation" in event.payload ? event.payload.installation?.id : undefined;
     const octokit = getOctokit(await bot.auth(installationId), ctx);
 
-    const commandHandlingDurationTimer = summaries.commandHandlingDuration.startTimer({ eventName });
+    const commandHandlingDurationTimer = summaries.commandHandlingDuration.startTimer({
+      eventName,
+      owner: prData.owner,
+      repo: prData.repo,
+      pr: prData.number,
+    });
 
     void handler(ctx, octokit, event.payload as WebhookEventPayload<E>)
       .then(async (result) => {

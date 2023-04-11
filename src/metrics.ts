@@ -48,7 +48,7 @@ export const summaries: { commandHandlingDuration: client.Summary } = {
     name: "command_bot_command_handling_seconds",
     help: "Timings of handling commands",
     percentiles: [0.25, 0.5, 0.75, 0.85, 0.9],
-    labelNames: ["eventName"] as const,
+    labelNames: ["eventName", "owner", "repo", "pr"] as const,
   }),
 };
 
