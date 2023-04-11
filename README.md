@@ -56,9 +56,9 @@ In `[bot-args]` are optional, you can provide the following options
 
 ## Help <a name="pull-request-command-help"></a>
 
-`bot cancel`
+`bot help`
 
-Bot responds with an actual list of commands generated from pipelin
+Bot responds with an actual list of commands generated from pipeline.
 
 ## Example of one generic command Bench <a name="pull-request-command-generic"></a>
 
