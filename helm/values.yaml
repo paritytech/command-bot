@@ -48,13 +48,29 @@ common:
   # sanely tracked across multiple MRs.
   autoscaling:
     enabled: false
+
   livenessProbe:
     httpGet:
       path: /health
-      port: 3000
-      scheme: HTTP
+      port: http
+    initialDelaySeconds: 60
+    periodSeconds: 5
+
   readinessProbe:
     httpGet:
       path: /health
-      port: 3000
-      scheme: HTTP
+      port: http
+    initialDelaySeconds: 60
+    periodSeconds: 5
+
+  serviceMonitor:
+    enabled: true
+    endpoints:
+      - port: http
+        path: /metrics
+        interval: 1m
+        scheme: http
+        scrapeTimeout: 30s
+        honorLabels: true
+    targetLabels:
+      - team
