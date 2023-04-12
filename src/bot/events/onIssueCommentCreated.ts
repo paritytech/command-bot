@@ -1,4 +1,4 @@
-import { displayError, intoError } from "opstooling-js";
+import { displayError, intoError } from "@eng-automation/js";
 import path from "path";
 
 import { extractPullRequestData } from "src/bot/parse/extractPullRequestData";

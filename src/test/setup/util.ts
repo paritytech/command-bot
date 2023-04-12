@@ -1,6 +1,6 @@
+import { until } from "@eng-automation/js";
 import { ChildProcess } from "child_process";
 import net from "net";
-import { until } from "opstooling-js";
 
 /**
  * As we need to find unused ports for our bot, we also need to know them in the test environment,

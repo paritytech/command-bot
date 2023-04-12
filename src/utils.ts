@@ -1,7 +1,7 @@
+import { normalizeValue } from "@eng-automation/js";
 import assert from "assert";
 import Joi from "joi";
 import fetch from "node-fetch";
-import { normalizeValue } from "opstooling-js";
 
 export const envVar = (name: string): string => {
   const val = process.env[name];

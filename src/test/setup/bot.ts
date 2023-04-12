@@ -1,7 +1,7 @@
+import { ensureDefined, until } from "@eng-automation/js";
 import { ChildProcess, spawn } from "child_process";
 import { readFileSync, rmSync } from "fs";
 import fetch from "node-fetch";
-import { ensureDefined, until } from "opstooling-js";
 import path from "path";
 
 import { GitDaemons } from "./gitDaemons";

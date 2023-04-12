@@ -1,8 +1,8 @@
+import { envNumberVar } from "@eng-automation/js";
 import EventEmitter from "events";
 import { writeFile } from "fs/promises";
 import Joi from "joi";
 import fetch from "node-fetch";
-import { envNumberVar } from "opstooling-js";
 import path from "path";
 import yaml from "yaml";
 

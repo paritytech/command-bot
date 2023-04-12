@@ -1,8 +1,8 @@
+import { Logger } from "@eng-automation/js";
 import { ChildProcess, spawn } from "child_process";
 import { randomUUID } from "crypto";
 import { mkdirSync } from "fs";
 import { mkdir, rm } from "fs/promises";
-import { Logger } from "opstooling-js";
 import path from "path";
 import { Readable as ReadableStream } from "stream";
 

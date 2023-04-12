@@ -1,4 +1,4 @@
-import { Logger } from "opstooling-js";
+import { Logger } from "@eng-automation/js";
 
 import type { TaskDB } from "src/db";
 

@@ -1,8 +1,8 @@
+import { Logger } from "@eng-automation/js";
 import { OctokitResponse } from "@octokit/plugin-paginate-rest/dist-types/types";
 import { RequestError } from "@octokit/request-error";
 import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types";
 import { Mutex } from "async-mutex";
-import { Logger } from "opstooling-js";
 import { Probot } from "probot";
 
 import { PullRequestTask } from "src/task";

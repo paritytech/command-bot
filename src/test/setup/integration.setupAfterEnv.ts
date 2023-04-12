@@ -1,5 +1,5 @@
+import { delay } from "@eng-automation/js";
 import { afterAll, beforeAll } from "@jest/globals";
-import { delay } from "opstooling-js";
 
 import { getBotInstance, launchBot } from "./bot";
 import { startGitDaemons, stopGitDaemons } from "./gitDaemons";
