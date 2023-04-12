@@ -11,6 +11,8 @@
     }
   ],
   "dependencies": {
+    "@eng-automation/js": "^0.0.21",
+    "@eng-automation/js-style": "^2.0.0",
     "@octokit/auth-token": "3.0.0",
     "@octokit/rest": "19.0.3",
     "@octokit/webhooks": "10.0.0",
@@ -24,8 +26,6 @@
     "level-rocksdb": "5.0.0",
     "lodash": "4.17.21",
     "node-fetch": "^2.6.7",
-    "opstooling-js": "https://github.com/paritytech/opstooling-js#v0.0.18",
-    "opstooling-js-style": "https://github.com/paritytech/opstooling-js-style.git#c298d0f732d93712e4397fd53baa3317a3022c8c",
     "probot": "^12.2.8",
     "prom-client": "^14.2.0",
     "pug": "^3.0.2",
@@ -83,6 +83,6 @@
   },
   "//": "Override to solve JSON5 vulnerability. Cleanup once eslint-plugin-import releases the update of deps",
   "resolutions": {
-    "opstooling-js-style/**/tsconfig-paths": "^4.0.0"
+    "@eng-automation/js-style/**/tsconfig-paths": "^4.0.0"
   }
 }

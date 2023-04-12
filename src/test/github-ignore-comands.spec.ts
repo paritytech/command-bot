@@ -1,5 +1,5 @@
+import { ensureDefined } from "@eng-automation/js";
 import { beforeAll, describe, expect, test } from "@jest/globals";
-import { ensureDefined } from "opstooling-js";
 
 import { triggerWebhook } from "./helpers";
 import { getBotInstance } from "./setup/bot";

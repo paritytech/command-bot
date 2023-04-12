@@ -1,6 +1,6 @@
+import { ensureDefined } from "@eng-automation/js";
 import { beforeAll, describe, expect, test } from "@jest/globals";
 import { CompletedRequest, MockedEndpoint, requestHandlerDefinitions } from "mockttp";
-import { ensureDefined } from "opstooling-js";
 
 import { getRestFixtures } from "./fixtures";
 import { getIssueCommentPayload } from "./fixtures/github/issueComments";

@@ -1,4 +1,4 @@
-import { Logger, LoggerOptions } from "opstooling-js";
+import { Logger, LoggerOptions } from "@eng-automation/js";
 import { Logger as ProbotLogger } from "pino";
 import { getLog } from "probot/lib/helpers/get-log";
 

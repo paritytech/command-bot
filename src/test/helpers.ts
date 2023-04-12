@@ -1,6 +1,6 @@
+import { ensureDefined } from "@eng-automation/js";
 import { createHmac } from "crypto";
 import fetch from "node-fetch";
-import { ensureDefined } from "opstooling-js";
 
 import { webhookFixtures } from "./fixtures";
 import { CommentWebhookParams } from "./fixtures/github/commentWebhook";
