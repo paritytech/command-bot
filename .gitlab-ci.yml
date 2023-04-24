@@ -7,7 +7,8 @@ stages:
 variables:
   IMAGE_NAME:                      "docker.io/paritytech/command-bot"
   CI_IMAGE:                        "docker.io/paritytech/command-bot:ci"
-  BUILDAH_IMAGE:                   "quay.io/buildah/stable:v1.27"
+  BUILDAH_IMAGE:                   "quay.io/buildah/stable:v1.29"
+  BUILDAH_COMMAND:                 "buildah --storage-driver overlay2"
   DOCKER_TAG:                      ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
   DATA_PATH:                       /data
   PING_PORT:                       3001
@@ -85,7 +86,7 @@ build-docker:
   <<:                              *test-refs
   image:                           $BUILDAH_IMAGE
   script:
-    - buildah bud
+    - $BUILDAH_COMMAND build
       --format=docker
       --tag "$IMAGE_NAME:$DOCKER_TAG"
       --file Dockerfile .
@@ -97,11 +98,12 @@ build-push-docker-app:
   script:
     - echo "$Docker_Hub_Pass_Parity" |
       buildah login --username "$Docker_Hub_User_Parity" --password-stdin docker.io
-    - buildah bud
+    - $BUILDAH_COMMAND build
       --format=docker
       --tag "$IMAGE_NAME:$DOCKER_TAG"
       --file Dockerfile .
-    - buildah push --format=v2s2 "$IMAGE_NAME:$DOCKER_TAG"
+    - $BUILDAH_COMMAND info
+    - $BUILDAH_COMMAND push --format=v2s2 "$IMAGE_NAME:$DOCKER_TAG"
   after_script:
     - buildah logout --all
 
