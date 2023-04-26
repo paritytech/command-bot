@@ -31,7 +31,7 @@
     "pug": "^3.0.2",
     "stoppable": "1.1.0",
     "ts-node": "^10.7.0",
-    "yaml": "^2.0.1",
+    "yaml": "^2.2.2",
     "yargs": "^17.5.0"
   },
   "devDependencies": {
