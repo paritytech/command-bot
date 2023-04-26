@@ -48,8 +48,16 @@ export async function fetchCommandsConfiguration(
 
       fs.writeFileSync(commandsHelpPath, renderHelpPage({ config, commandConfigs, scriptsRevision, headBranch }));
       if (!overriddenBranch) {
-        // overwrite symlink with latest
-        fs.linkSync(commandsHelpPath, commandsHelpPathSymlink);
+        // should be ok to proceed with command, even it this step fails
+        try {
+          ctx.logger.debug({ commandsHelpPathSymlink }, "Removing old symlink");
+          // to avoid "EEXIST: file already exists, link"
+          fs.rmSync(commandsHelpPathSymlink, { force: true });
+          // overwrite symlink with latest
+          fs.linkSync(commandsHelpPath, commandsHelpPathSymlink);
+        } catch (e) {
+          ctx.logger.fatal({ error: e }, `Failed to re-generate symlink to ${commandsHelpPathSymlink}`);
+        }
       }
 
       fs.writeFileSync(commandsOutputPath, JSON.stringify(commandConfigs));
