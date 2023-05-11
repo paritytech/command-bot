@@ -29,11 +29,11 @@ export const commandsConfiguration: {
   [k: string]: CommandConfiguration;
 } = {
   "try-runtime": {
-    gitlab: { job: { tags: ["linux-docker"], variables: {} } },
+    gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
     commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh"'],
   },
   fmt: {
-    gitlab: { job: { tags: ["linux-docker"], variables: {} } },
+    gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
     commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"'],
     optionalCommandArgs: true,
   },

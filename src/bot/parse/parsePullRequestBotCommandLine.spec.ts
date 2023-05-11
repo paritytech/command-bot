@@ -48,7 +48,7 @@ const dataProvider: DataProvider[] = [
       "try-runtime",
       {
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh"'],
-        gitlab: { job: { tags: ["linux-docker"], variables: {} } },
+        gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
       },
       { RUST_LOG: "remote-ext=debug,runtime=trace", SECOND: "val" },
       '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443',
@@ -61,7 +61,7 @@ const dataProvider: DataProvider[] = [
       "fmt",
       {
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"'],
-        gitlab: { job: { tags: ["linux-docker"], variables: {} } },
+        gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
         optionalCommandArgs: true,
       },
       {},
@@ -75,7 +75,7 @@ const dataProvider: DataProvider[] = [
       "fmt",
       {
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"'],
-        gitlab: { job: { tags: ["linux-docker"], variables: {} } },
+        gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
         optionalCommandArgs: true,
       },
       {},
