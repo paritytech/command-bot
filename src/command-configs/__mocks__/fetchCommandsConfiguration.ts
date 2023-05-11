@@ -113,7 +113,7 @@ export const cmd: CommandConfigs = {
     command: {
       description: "RustFMT. Formatting Rust code according to style guidelines and commits to your PR.",
       configuration: {
-        gitlab: { job: { tags: ["linux-docker"], variables: {} } },
+        gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"'],
       },
     },
@@ -140,7 +140,7 @@ export const cmd: CommandConfigs = {
       description:
         "Runs `cargo run --release --quiet --features=try-runtime try-runtime --chain=<CHAIN> --execution=Wasm --no-spec-check-panic on-runtime-upgrade live --uri=<URI>`",
       configuration: {
-        gitlab: { job: { tags: ["linux-docker"], variables: {} } },
+        gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh"'],
       },
       presets: {
