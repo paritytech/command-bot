@@ -25,19 +25,19 @@ common:
     DB_PORT: 5432
     CMD_BOT_URL: https://command-bot.parity-stg.parity.io/
   secrets:
-    ALLOWED_ORGANIZATIONS: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#ALLOWED_ORGANIZATIONS
-    APP_ID: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#APP_ID
-    CLIENT_ID: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#CLIENT_ID
-    CLIENT_SECRET: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#CLIENT_SECRET
-    GITLAB_ACCESS_TOKEN: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#GITLAB_ACCESS_TOKEN
-    GITLAB_ACCESS_TOKEN_USERNAME: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#GITLAB_ACCESS_TOKEN_USERNAME
-    MASTER_TOKEN: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#MASTER_TOKEN
-    PRIVATE_KEY_BASE64: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#PRIVATE_KEY_BASE64
-    WEBHOOK_SECRET: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#WEBHOOK_SECRET
-    DB_USER: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#DB_USER
-    DB_PASSWORD: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#DB_PASSWORD
-    DB_HOST: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#DB_HOST
-    DB_NAME: ref+vault://kv/cicd/gitlab/parity/mirrors/command-bot/parity-stg#DB_NAME
+    ALLOWED_ORGANIZATIONS: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#ALLOWED_ORGANIZATIONS
+    APP_ID: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#APP_ID
+    CLIENT_ID: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#CLIENT_ID
+    CLIENT_SECRET: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#CLIENT_SECRET
+    GITLAB_ACCESS_TOKEN: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#GITLAB_ACCESS_TOKEN
+    GITLAB_ACCESS_TOKEN_USERNAME: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#GITLAB_ACCESS_TOKEN_USERNAME
+    MASTER_TOKEN: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#MASTER_TOKEN
+    PRIVATE_KEY_BASE64: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#PRIVATE_KEY_BASE64
+    WEBHOOK_SECRET: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#WEBHOOK_SECRET
+    DB_USER: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#DB_USER
+    DB_PASSWORD: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#DB_PASSWORD
+    DB_HOST: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#DB_HOST
+    DB_NAME: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#DB_NAME
   ingress:
     annotations:
       external-dns.alpha.kubernetes.io/target: traefik-external.parity-stg.parity.io.
