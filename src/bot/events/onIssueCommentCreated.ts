@@ -53,7 +53,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
       const parsedCommand = await parsePullRequestBotCommandLine(line, ctx, pr.repo);
 
       if (parsedCommand instanceof SkipEvent) {
-        return parsedCommand;
+        continue;
       }
 
       if (parsedCommand instanceof Error) {
