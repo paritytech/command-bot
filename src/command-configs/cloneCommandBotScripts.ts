@@ -6,7 +6,6 @@ export async function cloneCommandBotScripts(
   scriptsRevPath: string,
   devBranch?: string,
 ): Promise<void> {
-  const scriptsBranchForClone = devBranch ? ["--branch", devBranch] : [];
   await cmdRunner.run(
     "git",
     [
@@ -14,7 +13,7 @@ export async function cloneCommandBotScripts(
       "--quiet",
       "--depth",
       "1",
-      ...scriptsBranchForClone,
+      ...["--branch", devBranch || config.pipelineScripts.ref],
       `${config.pipelineScripts.repository}`,
       scriptsRevPath,
     ],

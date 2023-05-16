@@ -8,7 +8,7 @@ export async function getScriptsRepoRevision(
   cmdRunner: CommandRunner,
   devBranch?: string,
 ): Promise<{ headBranch: string; rev: string }> {
-  const branch = devBranch || "HEAD";
+  const branch = devBranch || config.pipelineScripts.ref || "HEAD";
   let scriptsRevision = await cmdRunner.run("git", ["ls-remote", `${config.pipelineScripts.repository}`, branch]);
   if (scriptsRevision instanceof Error) {
     throw scriptsRevision;

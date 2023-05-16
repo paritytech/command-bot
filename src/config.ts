@@ -7,8 +7,10 @@ import { PipelineScripts } from "src/types";
 import { envNumberVar, envVar } from "src/utils";
 
 const repository = envVar("PIPELINE_SCRIPTS_REPOSITORY");
+assert(repository, "PIPELINE_SCRIPTS_REPOSITORY should be defined");
 assert(!repository.endsWith(".git"), "PIPELINE_SCRIPTS_REPOSITORY shouldn't end with .git");
 const ref = process.env.PIPELINE_SCRIPTS_REF;
+assert(ref, "PIPELINE_SCRIPTS_REF should be defined");
 
 const pipelineScripts: PipelineScripts = { repository, ref };
 
