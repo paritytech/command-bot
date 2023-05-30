@@ -47,7 +47,7 @@ export const parsePullRequestBotCommandLine = async (
         return variables;
       }
 
-      const { docsPath } = await fetchCommandsConfiguration(ctx, variables[PIPELINE_SCRIPTS_REF]);
+      const { docsPath } = await fetchCommandsConfiguration(ctx, variables[PIPELINE_SCRIPTS_REF], repo);
 
       return new HelpCommand(docsPath);
     }
@@ -68,7 +68,7 @@ export const parsePullRequestBotCommandLine = async (
         return variables;
       }
 
-      const { commandConfigs, docsPath } = await fetchCommandsConfiguration(ctx, variables[PIPELINE_SCRIPTS_REF]);
+      const { commandConfigs, docsPath } = await fetchCommandsConfiguration(ctx, variables[PIPELINE_SCRIPTS_REF], repo);
       const configuration = commandConfigs[subcommand]?.command?.configuration;
 
       const helpStr = `Refer to [help docs](${docsPath}) and/or [source code](${config.pipelineScripts.repository}).`;

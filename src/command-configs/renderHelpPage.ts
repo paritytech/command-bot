@@ -20,6 +20,19 @@ export function renderHelpPage(params: {
 
   const preparedConfigs = prepareConfigs(commandConfigs);
 
+  // getting list of possible repos, to be able to filter out relevant commands
+  let repos: string[] = Object.values(preparedConfigs).reduce((acc: string[], cmdConfig: CmdJson) => {
+    const currentRepos: string[] = cmdConfig.command.presets
+      ? Object.values(cmdConfig.command.presets)
+          .map((p) => p.repos?.filter((r) => !!r) || [])
+          .flat()
+      : [];
+    return [...acc, ...currentRepos];
+  }, []);
+
+  // deduplicate repos
+  repos = [...new Set(repos)];
+
   // TODO: depends on headBranch, if overridden: add `-v PIPELINE_SCRIPTS_REF=branch` to all command examples same for PATCH_repo=xxx
   // TODO: Simplify the PIPELINE_SCRIPTS_REF to something more rememberable */
   return pug.renderFile(tmplPath, {
@@ -29,6 +42,7 @@ export function renderHelpPage(params: {
     scriptsRevision,
     headBranch,
     commandStart,
+    repos,
   });
 }
 

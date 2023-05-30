@@ -9,7 +9,7 @@ html
     article.container
       div.ms-hero.mb-lg
         div.ms-hero-body
-          h1.ms-hero-title Command Bot - Help
+          h1.ms-hero-title Command Bot - Help Docs
           div.ms-hero-content
             p
               | Based on
@@ -17,24 +17,34 @@ html
             p rev: #{scriptsRevision}
             p running custom commands, like:
               br
-              code bot command-name -v VAR=value $ argument1 argument2
-            p to add new command, go to #{config.pipelineScripts.repository} and follow readme
-              | to test a newly added command,
-              a(href="\#link-new-command")  follow this section
+              code bot command-name -v VAR=value id --argument=1 --argument=2
+            p to add new command:
+              ul
+                li go to
+                  a(href=config.pipelineScripts.repository) #{config.pipelineScripts.repository}
+                li add new command and open PR
+                li read
+                  a(href="\#link-new-command") how to test new command before merging
+                li merge. Then after merge PR, it accessible without branch override
 
       div.row
         div.col-3
-          div.sticky
+          div.sticky-nav
+            label(for="repos") Select repo:
+              select.mt-sm(id="repos")
+                option(value="") All Repos
+                each repo in repos
+                  option(value=repo) #{repo}
             | Commands Navigation:
             each cfg, commandName in commandConfigs
               ul
                 li
                   a(href="\#link-" + commandName) #{ commandName }
                   if cfg.command.presets
-                    each preset, presetName in cfg.command.presets
+                    each preset, presetId in cfg.command.presets
                       ul
-                        li
-                          a(href="\#link-" + presetName) #{ presetName }
+                        li(class="preset-link " + preset.repos.join(' '))
+                          a(href="\#link-" + presetId) #{ presetId }
             | Env Variables
             ul
               li
@@ -44,7 +54,6 @@ html
               li
                 a(href="\#link-rust") Rust Log, etc
 
-
         div.col-8
           each cfg, commandName in commandConfigs
             div.command
@@ -52,10 +61,10 @@ html
               p #{ cfg.command.description }
 
               if cfg.command.presets
-                each preset, presetName in cfg.command.presets
-                  div.preset
-                    h5.mb-sm(id="link-"+presetName) #{presetName}
-                    p #{ preset.description }
+                each preset, presetId in cfg.command.presets
+                  div(class="preset " + preset.repos.join(' '))
+                    h5.mb-sm(id="link-"+presetId) #{presetId}
+
                     if preset.args
                       table.ms-table
                         thead
@@ -63,36 +72,38 @@ html
                             th
                               | Command
                             th
-                              | $
+                              | ID
                             each arg, argKey in preset.args
-                              th.center
-                                | [#{arg.label}]
+                              th.center.lowercase
+                                | --#{arg.label}
                         tr
                           td #{commandName}
                           td
-                            | &nbsp;$&nbsp;
+                            | #{presetId}
                           each arg, argKey in preset.args
                             td.center
                               if arg.type_one_of
-                                each one in arg.type_one_of
+                                each one, i in arg.type_one_of
                                   div.mb-sm #{one}
+                                    if i === 0
+                                      | &nbsp;(default)
                               if arg.type_rule
                                 div #{arg.type_rule}
+                              if arg.type_string
+                                div #{arg.type_string} (default)
 
                     p Example:&nbsp;
                       code
                         | #{commandStart} #{commandName}
+                        | #{presetId}&nbsp;
                         if preset.args
-                          | &nbsp;$&nbsp;
                           each arg, argKey in preset.args
-                            if arg.type_one_of
-                              | #{arg.type_one_of[0]}
                             if arg.type_rule
                               if arg.example
-                                i #{arg.example}
+                                i --#{argKey}=#{arg.example}
                               else
-                                i #{arg.type_rule}
-                            | &nbsp;
+                                i --#{argKey}=#{arg.type_rule}
+
               else
                 p Example:&nbsp;
                   code
@@ -108,9 +119,9 @@ html
 
             p Examples:
             p
-              code #{commandStart} bench -v PATCH_substrate=11341 $ overhead westend
+              code #{commandStart} bench -v PATCH_substrate=11341 polkadot-overhead --network=westend-dev
             p
-              code #{commandStart} try-runtime -v PATCH_polkadot=3341 $ westend
+              code #{commandStart} try-runtime -v PATCH_polkadot=3341 polkadot --network=westend
 
           div(id="link-new-command").command
             h5 Test new command.
@@ -122,7 +133,7 @@ html
 
             p Examples:
             p
-              code #{commandStart} new-command -v PIPELINE_SCRIPTS_REF=mak/new-command $ new-arg
+              code #{commandStart} new-command -v PIPELINE_SCRIPTS_REF=mak/new-command new-id --new-arg=value
 
           div(id="link-rust").command
             h5 Rust Log, etc
@@ -133,22 +144,27 @@ html
 
             p Examples:
             p
-              code #{commandStart} try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace $ westend
+              code #{commandStart} try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace polkadot --network=westend
+
 
     style.
-
       .command {
           margin-bottom: 100px;
       }
 
       .preset {
-          margin-bottom: 50px
+          margin-bottom: 50px;
+          padding-left: 30px;
       }
 
-      .sticky {
+      .preset h5 {
+          margin-left: -30px;
+      }
+
+      .sticky-nav {
           position: -webkit-sticky; /* Safari */
           position: sticky;
-          top: 0;
+          top: 10px;
           max-height: 100vh;
           max-height: 100 dvh; /* iOS dynamic viewport height */
           overflow-y: auto;
@@ -157,6 +173,9 @@ html
       .mb-sm {
           margin-bottom: 5px;
       }
+      .mt-sm {
+          margin-top: 5px;
+      }
 
       .mb-lg {
           margin-bottom: 30px;
@@ -164,4 +183,42 @@ html
 
       .center {
           text-align: center;
+      }
+
+      .lowercase {
+          text-transform: lowercase;
+      }
+
+    script.
+      document.getElementById('repos').addEventListener('change', function(e) {
+        const selected = e.target.value;
+        // update a query string
+        const urlParams = new URLSearchParams(window.location.search);
+
+        if (selected) {
+            urlParams.set('repo', selected);
+        } else {
+            urlParams.delete('repo');
+        }
+        window.history.replaceState({}, '', `${location.pathname}${urlParams ? "?" + urlParams.toString() : ''}`);
+
+        updatePresetLinks(selected);
+      });
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const repo = urlParams.get('repo');
+      if (repo) {
+        document.getElementById('repos').value = repo;
+        updatePresetLinks(repo);
+      }
+
+      function updatePresetLinks(repo) {
+        const presets = document.querySelectorAll('.preset, .preset-link');
+        presets.forEach(function(preset) {
+          if (!repo || preset.classList.contains(repo)) {
+            preset.style.display = 'block';
+          } else {
+            preset.style.display = 'none';
+          }
+        });
       }

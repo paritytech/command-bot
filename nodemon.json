@@ -1,6 +1,6 @@
 {
   "verbose": false,
-  "watch": ["src/", ".env.cjs"],
+  "watch": ["src/", ".env.cjs", "src/command-configs/renderHelpPage.pug"],
   "ignore": ["src/test/", "node_modules/", ".git", "src/schema/*.ts"],
   "ext": ".ts",
   "exec": "node -r ts-node/register -r ./.env.cjs"
