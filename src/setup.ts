@@ -7,7 +7,7 @@ import { Probot, Server } from "probot";
 
 import { setupApi } from "src/api";
 import { setupBot } from "src/bot";
-import { fetchCommandsConfiguration, getDocsFilename, LATEST } from "src/command-configs/fetchCommandsConfiguration";
+import { fetchCommandsConfiguration, getDocsFilename } from "src/command-configs/fetchCommandsConfiguration";
 import { config } from "src/config";
 import { getDb, getSortedTasks, TaskDB } from "src/db";
 import { logger } from "src/logger";
@@ -18,6 +18,9 @@ import { Context } from "src/types";
 export const DOCS_URL_PATH = "/static/docs/";
 export const GENERATED_DIR = path.join(process.cwd(), "generated");
 export const DOCS_DIR = path.join(GENERATED_DIR, "docs");
+
+export const PIPELINE_SCRIPTS_REF = "PIPELINE_SCRIPTS_REF";
+export const LATEST = "latest";
 
 export const setup = async (
   bot: Probot,

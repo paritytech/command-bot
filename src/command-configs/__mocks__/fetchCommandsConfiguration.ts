@@ -255,7 +255,7 @@ export const cmd: CommandConfigs = {
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh"'],
       },
       presets: {
-        polkadot: {
+        default: {
           description: "Run try-runtime with specified network",
           repos: ["polkadot", "command-bot-test"],
           args: { network: { label: "Network", type_one_of: ["polkadot", "kusama", "westend", "rococo"] } },

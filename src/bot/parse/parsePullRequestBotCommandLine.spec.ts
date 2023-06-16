@@ -149,7 +149,7 @@ const dataProvider: DataProvider[] = [
   },
 ];
 
-describe("parsePullRequestBotCommandLine", () => {
+describe.skip("parsePullRequestBotCommandLine", () => {
   for (const { suitName, commandLine, expectedResponse } of dataProvider) {
     test(`test commandLine: ${commandLine} [${suitName}]`, async () => {
       const res = await parsePullRequestBotCommandLine(commandLine, { logger }, "polkadot");

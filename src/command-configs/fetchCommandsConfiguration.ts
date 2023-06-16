@@ -9,11 +9,8 @@ import { renderHelpPage } from "src/command-configs/renderHelpPage";
 import { CommandConfigs, FetchCommandConfigsResult } from "src/command-configs/types";
 import { config } from "src/config";
 import { LoggerContext } from "src/logger";
-import { DOCS_DIR, DOCS_URL_PATH, GENERATED_DIR } from "src/setup";
+import { DOCS_DIR, DOCS_URL_PATH, GENERATED_DIR, LATEST } from "src/setup";
 import { CommandRunner } from "src/shell";
-
-export const PIPELINE_SCRIPTS_REF = "PIPELINE_SCRIPTS_REF";
-export const LATEST = "latest";
 
 export async function fetchCommandsConfiguration(
   ctx: LoggerContext,
