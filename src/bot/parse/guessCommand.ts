@@ -45,30 +45,7 @@ function getWinnerPreset(
   let winnerPreset: { name: string; argsValues: { [key: string]: string } } | undefined = undefined;
   if (presets?.length > 0) {
     if (presets?.length === 1) {
-      const winnerGuess = Object.entries(presets[0][1]?.args || {}).reduce((acc, argEntry) => {
-        const [argName, arg] = argEntry;
-        if (arg.type_rule === "string") {
-          // assume that this arg is provided anyway
-          acc[argName] = "custom_string";
-        }
-        if (Array.isArray(arg.type_one_of)) {
-          const match = arg.type_one_of.find((type: string) => args.includes(type)) as string | undefined;
-          if (match) {
-            acc[argName] = match as string;
-          }
-        }
-
-        if (typeof arg.type_string === "string") {
-          acc[argName] = arg.type_string as string;
-        }
-
-        if (typeof arg.type_rule === "string") {
-          acc[argName] = (arg.example as string) || "custom_string";
-        }
-
-        return acc;
-      }, {} as { [key: string]: string });
-      winnerPreset = { name: presets[0][0], argsValues: winnerGuess };
+      winnerPreset = { name: presets[0][0], argsValues: buildGuessedCommandArgs(presets[0][1], args) };
     } else {
       const bestMatch = presets.reduce((acc, presetEntry) => {
         const [presetName, preset] = presetEntry;
@@ -90,16 +67,16 @@ function getWinnerPreset(
             return a;
           }, 0);
 
-          acc[presetName] = { rank: matchedCount, guessedCommand: buildGuessedCommandArgs(preset, args) };
+          acc[presetName] = { rank: matchedCount, preset };
         }
 
         return acc;
-      }, {} as { [key: string]: { rank: number; guessedCommand: { [key: string]: string } } });
+      }, {} as { [key: string]: { rank: number; preset: typeof presets[0][1] } });
 
       const [winnerPresetId, winnerGuess] = Object.entries(bestMatch).sort((a, b) => b[1].rank - a[1].rank)[0];
 
       if (Object.values(winnerGuess).length > 0) {
-        winnerPreset = { argsValues: winnerGuess.guessedCommand, name: winnerPresetId };
+        winnerPreset = { argsValues: buildGuessedCommandArgs(winnerGuess.preset, args), name: winnerPresetId };
       }
     }
 
@@ -111,25 +88,40 @@ function buildGuessedCommandArgs(
   preset: NonNullable<CmdJson["command"]["presets"]>[keyof NonNullable<CmdJson["command"]["presets"]>],
   args: string,
 ): { [key: string]: string } {
-  return Object.entries(preset.args || {}).reduce((a, argEntry) => {
-    const [argName, arg] = argEntry;
-    if (Array.isArray(arg.type_one_of)) {
-      const match = args
-        .split(" ")
-        .find((argToMatch) => (arg.type_one_of as string[])?.find((type) => argToMatch.includes(type)));
-      if (match) {
-        a[argName] = match;
+  // sort preset.args so that type_rule is the last one
+
+  return Object.entries(preset.args || {})
+    .sort(([, a], [, b]) => {
+      if (typeof a.type_rule === "string") {
+        return 1;
       }
-    }
+      if (typeof b.type_rule === "string") {
+        return -1;
+      }
+      return 0;
+    })
+    .reduce((a, argEntry) => {
+      const [argName, arg] = argEntry;
+      if (Array.isArray(arg.type_one_of)) {
+        const match = args
+          .split(" ")
+          .find((argToMatch) => (arg.type_one_of as string[])?.find((type) => argToMatch.includes(type)));
 
-    if (typeof arg.type_rule === "string") {
-      // assume that this arg is provided anyway
-      a[argName] = (arg.example as string) || "custom_string";
-    }
+        if (match) {
+          a[argName] = match;
+          args = args.replace(match, "").trim();
+        }
+      } else if (typeof arg.type_string === "string") {
+        a[argName] = arg.type_string;
 
-    if (typeof arg.type_string === "string" && args.includes(arg.type_string)) {
-      a[argName] = arg.type_string;
-    }
-    return a;
-  }, {} as { [key: string]: string });
+        args = args.replace(a[argName], "").trim();
+      } else if (typeof arg.type_rule === "string") {
+        // assume that this arg is provided anyway
+        const isTheLastOne = args.split(" ").length === 1;
+        a[argName] = isTheLastOne ? args : (arg.example as string) || "custom_string";
+      } else {
+        console.log("unknown arg type", arg);
+      }
+      return a;
+    }, {} as { [key: string]: string });
 }
