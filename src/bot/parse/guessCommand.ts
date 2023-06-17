@@ -7,6 +7,9 @@ import { CmdJson } from "src/schema/schema.cmd";
  * DISCLAIMER: don't even try to understand this code :D it's a mess
  * This is throw-away shitcode💩, to simplify the migration messaging
  * to be deleted soon after migration 🙏
+ *
+ * This wunderwaffe is heuristically guessing the command to be run
+ * helping the user to migrate to the new syntax
  */
 
 export async function guessCommand(ctx: LoggerContext, command: string, repo: string): Promise<string> {
