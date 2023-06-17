@@ -214,7 +214,7 @@ const dataProvider: DataProvider[] = [
     suitName: "non existed config must return error with explanation",
     commandLine: "bot bench $ overhead kusama-dev",
     expectedResponse: new Error(
-      `Positioned arguments are not supported anymore. \nUse \`bot help\` to find out how to run your command. \nI guess you meant \`bench polkadot-overhead --subcommand=overhead --runtime=kusama-dev\``,
+      `Positioned arguments are not supported anymore. \nUse \`bot help\` to find out how to run your command. \nI guess you meant \`bench polkadot-overhead\``,
     ),
   },
 ];
