@@ -31,6 +31,20 @@ const dataProvider: DataProvider[] = [
     ),
   },
   {
+    suitName: "bench-bot cumulus",
+    commandLine:
+      "bot bench cumulus-bridge-hubs -v PIPELINE_SCRIPTS_REF=branch --subcommand=xcm --runtime=bridge-hub-kusama --pallet=pallet_name",
+    expectedResponse: new GenericCommand(
+      "bench",
+      {
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh"'],
+        gitlab: { job: { tags: ["bench-bot"], variables: {} } },
+      },
+      { PIPELINE_SCRIPTS_REF: "branch" },
+      '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=xcm --runtime=bridge-hub-kusama --kind=bridge-hubs --dir=cumulus --pallet=pallet_name',
+    ),
+  },
+  {
     suitName: "unrelated to bot comment returns nothing (ignores)",
     commandLine: "something from comments",
     expectedResponse: new SkipEvent("Not a command"),
@@ -169,6 +183,11 @@ const dataProvider: DataProvider[] = [
     expectedResponse: new Error(
       `Missing arguments for command "bench". Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
     ),
+  },
+  {
+    suitName: "bench-bot, no required args, should return error",
+    commandLine: "bot bench cumulus-bridge-hubs",
+    expectedResponse: new Error(`required option '--pallet <value>' not specified`),
   },
   {
     suitName: "sample without required arg should return error",
