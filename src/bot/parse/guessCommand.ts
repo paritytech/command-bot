@@ -29,7 +29,7 @@ export async function guessCommand(ctx: LoggerContext, command: string, repo: st
     const guessPreset = getWinnerPreset(args, relatedPresets) || getWinnerPreset(args, commonPresets);
 
     if (guessPreset) {
-      return `${commandName} ${guessPreset.name} ${optionValuesToFlags(guessPreset.argsValues)}`;
+      return `${commandName} ${guessPreset.name} ${optionValuesToFlags(guessPreset.argsValues)}`.trim();
     }
   }
 
@@ -111,12 +111,14 @@ function buildGuessedCommandArgs(
           .find((argToMatch) => (arg.type_one_of as string[])?.find((type) => argToMatch.includes(type)));
 
         if (match) {
-          a[argName] = match;
+          // add to recommendation only if it's not 1st, because it'd be default anyway
+          if (arg.type_one_of.indexOf(match) > 0) {
+            a[argName] = match;
+          }
           args = args.replace(match, "").trim();
         }
       } else if (typeof arg.type_string === "string") {
-        a[argName] = arg.type_string;
-
+        // we won't add to recommendation, because it's default anyway
         args = args.replace(a[argName], "").trim();
       } else if (typeof arg.type_rule === "string") {
         // assume that this arg is provided anyway
