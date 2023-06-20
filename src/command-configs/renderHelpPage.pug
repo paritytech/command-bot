@@ -57,29 +57,22 @@ html
         div.col-8
           each cfg, commandName in commandConfigs
             div.command
-              h3(id="link-" + commandName) #{ commandName }
+              h4(id="link-" + commandName) #{ commandName }
               p #{ cfg.command.description }
 
               if cfg.command.presets
                 each preset, presetId in cfg.command.presets
                   div(class="preset " + preset.repos.join(' '))
-                    h5.mb-sm(id="link-"+presetId) #{presetId}
+                    h6.mb-sm(id="link-"+presetId) #{commandStart} #{ commandName } #{presetId}
 
                     if preset.args
                       table.ms-table
                         thead
                           tr
-                            th
-                              | Command
-                            th
-                              | ID
                             each arg, argKey in preset.args
                               th.center.lowercase
                                 | --#{arg.label}
                         tr
-                          td #{commandName}
-                          td
-                            | #{presetId}
                           each arg, argKey in preset.args
                             td.center
                               if arg.type_one_of
@@ -153,7 +146,7 @@ html
       }
 
       .preset {
-          margin-bottom: 50px;
+          margin-bottom: 120px;
           padding-left: 30px;
       }
 

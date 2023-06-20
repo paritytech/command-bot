@@ -1,3 +1,4 @@
+import { botPullRequestCommentMention } from "src/bot";
 import { fetchCommandsConfiguration } from "src/command-configs/fetchCommandsConfiguration";
 import { optionValuesToFlags } from "src/commander/commander";
 import { LoggerContext } from "src/logger";
@@ -24,12 +25,19 @@ export async function guessCommand(ctx: LoggerContext, command: string, repo: st
 
   if (Object.keys(presets)?.length > 0) {
     const relatedPresets = Object.entries(presets).filter((preset) => preset[1].repos?.includes(repo));
-    const commonPresets = Object.entries(presets).filter((preset) => !preset[1].repos);
+    const commonPresets = Object.entries(presets).filter((preset) => !preset[1].repos?.includes(repo));
 
-    const guessPreset = getWinnerPreset(args, relatedPresets) || getWinnerPreset(args, commonPresets);
+    if (relatedPresets.length > 0 || commonPresets.length > 0) {
+      const guessPreset = getWinnerPreset(args, relatedPresets) || getWinnerPreset(args, commonPresets);
 
-    if (guessPreset) {
-      return `${commandName} ${guessPreset.name} ${optionValuesToFlags(guessPreset.argsValues)}`.trim();
+      if (guessPreset) {
+        const presetName = guessPreset.name === "default" ? "" : `${guessPreset.name} `;
+        return `${botPullRequestCommentMention} ${commandName} ${presetName}${optionValuesToFlags(
+          guessPreset.argsValues,
+        )}`.trim();
+      }
+    } else {
+      return `This command doesn't exist in "${repo}" repository.`;
     }
   }
 

@@ -23,9 +23,9 @@ export const parsePullRequestBotCommandLine = async (
   const positionedCommandStartSymbol = "$ ";
   if (commandLine.includes(positionedCommandStartSymbol)) {
     const guesswork = await guessCommand(ctx, commandLine, repo);
-    const suggestMessage = guesswork ? `I guess you meant \`${guesswork}\`` : "";
+    const suggestMessage = guesswork ? `I guess you meant \`${guesswork}\`, but I could be wrong.` : "";
     return new Error(
-      `Positioned arguments are not supported anymore. \nUse \`bot help\` to find out how to run your command. \n${suggestMessage}`,
+      `Positioned arguments are not supported anymore. ${suggestMessage}\nUse \`bot help\` to find out how to run your command.`,
     );
   }
 

@@ -115,7 +115,7 @@ const dataProvider: DataProvider[] = [
     ),
   },
   {
-    suitName: "command, with dev branch should add properly",
+    suitName: "command, with dev branch and one variable should add properly",
     commandLine: "bot sample -v PIPELINE_SCRIPTS_REF=dev-branch -v SECOND=val --input=bla",
     expectedResponse: new GenericCommand(
       "sample",
@@ -128,7 +128,7 @@ const dataProvider: DataProvider[] = [
     ),
   },
   {
-    suitName: "command, with dev branch should add properly",
+    suitName: "command, with one variable should add properly",
     commandLine: "bot sample -v SECOND=val --input=bla",
     expectedResponse: new GenericCommand(
       "sample",
@@ -137,6 +137,32 @@ const dataProvider: DataProvider[] = [
         gitlab: { job: { tags: ["kubernetes-parity-build"], variables: {} } },
       },
       { SECOND: "val" },
+      '"$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh" --input=bla',
+    ),
+  },
+  {
+    suitName: "command, with 'default' preset should add properly",
+    commandLine: "bot sample default --input=bla",
+    expectedResponse: new GenericCommand(
+      "sample",
+      {
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh"'],
+        gitlab: { job: { tags: ["kubernetes-parity-build"], variables: {} } },
+      },
+      {},
+      '"$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh" --input=bla',
+    ),
+  },
+  {
+    suitName: "command, without 'default' preset should add properly",
+    commandLine: "bot sample --input=bla",
+    expectedResponse: new GenericCommand(
+      "sample",
+      {
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh"'],
+        gitlab: { job: { tags: ["kubernetes-parity-build"], variables: {} } },
+      },
+      {},
       '"$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh" --input=bla',
     ),
   },
@@ -177,6 +203,13 @@ const dataProvider: DataProvider[] = [
   /*
     Expected Error cases
    */
+  {
+    suitName: "bench-bot --pallet should validate the matching rule",
+    commandLine: "bot bench polkadot-pallet --pallet=00034",
+    expectedResponse: new Error(
+      "option '--pallet <value>' argument '00034' is invalid. argument pallet is not matching rule /^([a-z_]+)([:]{2}[a-z_]+)?$/",
+    ),
+  },
   {
     suitName: "bench-bot, no args when not allowed, should return error",
     commandLine: "bot bench",
@@ -226,14 +259,14 @@ const dataProvider: DataProvider[] = [
     suitName: "non existed config must return error with explanation",
     commandLine: "bot bench $ pallet dev some_pallet",
     expectedResponse: new Error(
-      `Positioned arguments are not supported anymore. \nUse \`bot help\` to find out how to run your command. \nI guess you meant \`bench polkadot-pallet --pallet=pallet_name\``,
+      `Positioned arguments are not supported anymore. I guess you meant \`bot bench polkadot-pallet --pallet=pallet_name\`, but I could be wrong.\nUse \`bot help\` to find out how to run your command.`,
     ),
   },
   {
     suitName: "non existed config must return error with explanation",
     commandLine: "bot bench $ overhead kusama-dev",
     expectedResponse: new Error(
-      `Positioned arguments are not supported anymore. \nUse \`bot help\` to find out how to run your command. \nI guess you meant \`bench polkadot-overhead\``,
+      `Positioned arguments are not supported anymore. I guess you meant \`bot bench polkadot-overhead\`, but I could be wrong.\nUse \`bot help\` to find out how to run your command.`,
     ),
   },
 ];

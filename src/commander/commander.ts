@@ -101,20 +101,20 @@ export function getCommanderFromConfiguration(
               parsedCommand = genericCommand;
             },
           });
+        } else {
+          // keep adding presets as subcommands, including the default one
+          command.addCommand(
+            addPresetOptions({
+              presetConfig,
+              presetCommand,
+              commandKey,
+              commandConfig,
+              actionCallBack: (genericCommand) => {
+                parsedCommand = genericCommand;
+              },
+            }),
+          );
         }
-
-        // keep adding presets as subcommands, including the default one
-        command.addCommand(
-          addPresetOptions({
-            presetConfig,
-            presetCommand,
-            commandKey,
-            commandConfig,
-            actionCallBack: (genericCommand) => {
-              parsedCommand = genericCommand;
-            },
-          }),
-        );
       }
     }
 
