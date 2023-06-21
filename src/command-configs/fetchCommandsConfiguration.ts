@@ -68,8 +68,8 @@ export async function fetchCommandsConfiguration(
   });
 }
 
-function getDocsUrl(filename: string, repo?: string): string {
-  const url = new URL(path.join(config.cmdBotUrl, DOCS_URL_PATH, getDocsFilename(filename)));
+export function getDocsUrl(filename?: string, repo?: string): string {
+  const url = new URL(path.join(config.cmdBotUrl, DOCS_URL_PATH, getDocsFilename(filename ?? LATEST)));
 
   if (repo) {
     url.searchParams.set("repo", repo);

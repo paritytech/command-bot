@@ -127,7 +127,10 @@ function buildGuessedCommandArgs(
         }
       } else if (typeof arg.type_string === "string") {
         // we won't add to recommendation, because it's default anyway
-        args = args.replace(a[argName], "").trim();
+        // but clear from the args, so we could find the type_rule easier
+        if (args.includes(arg.type_string)) {
+          args = args.replace(arg.type_string, "").trim();
+        }
       } else if (typeof arg.type_rule === "string") {
         // assume that this arg is provided anyway
         const isTheLastOne = args.split(" ").length === 1;

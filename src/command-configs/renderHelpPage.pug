@@ -37,12 +37,12 @@ html
                   option(value=repo) #{repo}
             | Commands Navigation:
             each cfg, commandName in commandConfigs
-              ul
-                li
+              ul.nav
+                li.nav-command
                   a(href="\#link-" + commandName) #{ commandName }
                   if cfg.command.presets
-                    each preset, presetId in cfg.command.presets
-                      ul
+                    ul.nav-preset
+                      each preset, presetId in cfg.command.presets
                         li(class="preset-link " + preset.repos.join(' '))
                           a(href="\#link-" + presetId) #{ presetId }
             | Env Variables
@@ -58,51 +58,91 @@ html
           each cfg, commandName in commandConfigs
             div.command
               h4(id="link-" + commandName) #{ commandName }
-              p #{ cfg.command.description }
+              p.mb-lg #{ cfg.command.description }
 
               if cfg.command.presets
                 each preset, presetId in cfg.command.presets
                   div(class="preset " + preset.repos.join(' '))
-                    h6.mb-sm(id="link-"+presetId) #{commandStart} #{ commandName } #{presetId}
+                    h6.mb-md(id="link-"+presetId) #{commandStart} #{ commandName } #{presetId === 'default' ? '' : presetId}
+                    p.mb-md.muted Works in these repos: [#{preset.repos.join(', ')}]
+                    -let defaultArgs = []
+                    if preset.args && Object.values(preset.args).length > 0
+                      //table.ms-table.mb-lg
+                      //  thead
+                      //    tr
+                      //      each arg, argKey in preset.args
+                      //        // output only arrays with more than 1 element or regex (type_rule)
+                      //        if arg.type_one_of && arg.type_one_of.length > 1
+                      //          th.lowercase
+                      //            | [--#{arg.label}]
+                      //        if arg.type_rule
+                      //          th.lowercase
+                      //            | --#{arg.label} (required)
+                      //  tr
+                      //    each arg, argKey in preset.args
+                      //      if arg.type_one_of && arg.type_one_of.length > 1
+                      //        td
+                      //          each one, i in arg.type_one_of
+                      //            div.mb-sm #{one}
+                      //              if i === 0
+                      //                | &nbsp;[default]
+                      //      else if arg.type_rule
+                      //        td
+                      //          div #{arg.type_rule}
+                      //      else
+                      //        -defaultArgs.push({[argKey]: arg})
 
-                    if preset.args
-                      table.ms-table
-                        thead
-                          tr
-                            each arg, argKey in preset.args
-                              th.center.lowercase
+                      div.preset-args.mb-lg.ml-md
+                        each arg, argKey in preset.args
+                          div.row.mb-sm
+                            // output only arrays with more than 1 element or regex (type_rule)
+                            if arg.type_one_of && arg.type_one_of.length > 1
+                              div.col-4.lowercase
                                 | --#{arg.label}
-                        tr
-                          each arg, argKey in preset.args
-                            td.center
-                              if arg.type_one_of
+                              div.col-8.lowercase
                                 each one, i in arg.type_one_of
-                                  div.mb-sm #{one}
+                                  span.mb-sm
                                     if i === 0
-                                      | &nbsp;(default)
-                              if arg.type_rule
-                                div #{arg.type_rule}
-                              if arg.type_string
-                                div #{arg.type_string} (default)
+                                      | #{one} (default)&nbsp;
+                                    else
+                                      | | #{one}&nbsp;
+                            else if arg.type_rule
+                              div.col-4.lowercase
+                                | --#{arg.label}
+                                span(style="color: red;") &nbsp;*&nbsp;
+                                | (required):
+                              div.col-8.lowercase
+                                | #{arg.type_rule}&nbsp;
+                                if arg.example
+                                  | (Example: "#{arg.example}")
+                            else
+                              -defaultArgs.push({[argKey]: arg})
+                        if defaultArgs.length > 0
+                          p.muted Default static args:
+                          ul
+                            each argObj in defaultArgs
+                              each arg, argKey in argObj
+                                if arg.type_one_of && arg.type_one_of.length === 1
+                                  li.muted #{argKey}: #{arg.type_one_of[0]}
+                                else if arg.type_string
+                                  li.muted #{argKey}: #{arg.type_string}
 
                     p Example:&nbsp;
                       code
-                        | #{commandStart} #{commandName}
-                        | #{presetId}&nbsp;
+                        | #{commandStart} #{commandName} #{presetId === 'default' ? '' : presetId}
                         if preset.args
                           each arg, argKey in preset.args
                             if arg.type_rule
                               if arg.example
-                                i --#{argKey}=#{arg.example}
+                                i &nbsp;--#{argKey}=#{arg.example}
                               else
-                                i --#{argKey}=#{arg.type_rule}
+                                i &nbsp;--#{argKey}=#{arg.type_rule}
 
               else
                 p Example:&nbsp;
                   code
                     | #{commandStart} #{commandName}
 
-            hr
           div(id="link-companion").command
             h5 Patch Companion
 
@@ -146,8 +186,12 @@ html
       }
 
       .preset {
-          margin-bottom: 120px;
+          margin-bottom: 80px;
           padding-left: 30px;
+      }
+
+      .preset-args {
+          padding: 15px;
       }
 
       .preset h5 {
@@ -166,8 +210,17 @@ html
       .mb-sm {
           margin-bottom: 5px;
       }
+
+      .mb-md {
+          margin-bottom: 15px;
+      }
+
       .mt-sm {
           margin-top: 5px;
+      }
+
+      .ml-md {
+          margin-top: 15px;
       }
 
       .mb-lg {
@@ -180,6 +233,10 @@ html
 
       .lowercase {
           text-transform: lowercase;
+      }
+
+      .muted {
+          color: #6c757d;
       }
 
     script.
@@ -206,12 +263,37 @@ html
       }
 
       function updatePresetLinks(repo) {
-        const presets = document.querySelectorAll('.preset, .preset-link');
-        presets.forEach(function(preset) {
+        for (let preset of document.querySelectorAll('.preset, .preset-link')) {
           if (!repo || preset.classList.contains(repo)) {
             preset.style.display = 'block';
           } else {
             preset.style.display = 'none';
+          }
+        }
+
+        // hide commands where all presets are hidden
+        document.querySelectorAll('.command').forEach(function(command) {
+          const presets = command.querySelectorAll('.preset');
+          const visiblePresets = Array.from(presets).filter(function(preset) {
+            return preset.style.display !== 'none';
+          });
+          if (visiblePresets.length === 0 && presets.length > 0) {
+            command.style.display = 'none';
+          } else {
+            command.style.display = 'block';
+          }
+        });
+
+        // hide nav where all presets are hidden
+        document.querySelectorAll('.nav-command').forEach(function(command) {
+          const presets = command.querySelectorAll('.nav-preset li');
+          const visiblePresets = Array.from(presets).filter(function(preset) {
+            return preset.style.display !== 'none';
+          });
+          if (visiblePresets.length === 0 && presets.length > 0) {
+            command.style.display = 'none';
+          } else {
+            command.style.display = 'block';
           }
         });
       }

@@ -24,10 +24,22 @@ const dataProvider: DataProvider[] = [
     result: "bot sample --input=args",
   },
   {
-    suitName: "cumulus assets",
-    command: "bench $ pallet statemint assets pallet_assets",
+    suitName: "cumulus assets polkadot",
+    command: "bench $ pallet asset-hub-polkadot assets pallet_xz",
     repo: "polkadot-sdk",
-    result: "bot bench cumulus-assets --runtime=statemint --pallet=pallet_assets",
+    result: "bot bench cumulus-assets --pallet=pallet_xz",
+  },
+  {
+    suitName: "cumulus assets kusama",
+    command: "bench $ pallet asset-hub-kusama assets pallet_xz",
+    repo: "polkadot-sdk",
+    result: "bot bench cumulus-assets --runtime=asset-hub-kusama --pallet=pallet_xz",
+  },
+  {
+    suitName: "cumulus assets old kusama: will endup with default, as can't find `statemine`",
+    command: "bench $ pallet statemine assets pallet_xz",
+    repo: "polkadot-sdk",
+    result: "bot bench cumulus-assets --pallet=pallet_name",
   },
   {
     suitName: "polkadot runtime",
@@ -41,13 +53,7 @@ const dataProvider: DataProvider[] = [
     repo: "polkadot-sdk",
     result: "bot bench polkadot-pallet --pallet=pallet_contracts",
   },
-  {
-    suitName: "polkadot overhead",
-    command: "bench $ overhead kusama-dev",
-    repo: "polkadot-sdk",
-    result: "bot bench polkadot-overhead",
-  },
-  { suitName: "polkadot all", command: "bench-all $ kusama", repo: "polkadot", result: "bot bench-all polkadot-all" },
+  { suitName: "polkadot all", command: "bench-all $ kusama", repo: "polkadot", result: "bot bench-all polkadot" },
   {
     suitName: "cumulus bridge-hubs",
     command: "bench $ xcm bridge-hub-kusama bridge-hubs pallet_name",
@@ -58,8 +64,9 @@ const dataProvider: DataProvider[] = [
     suitName: "try-runtime default",
     command: "try-runtime $ westend",
     repo: "polkadot",
-    result: "bot try-runtime --network=westend",
+    result: "bot try-runtime --chain=westend",
   },
+  { suitName: "try-runtime default", command: "try-runtime $ polkadot", repo: "polkadot", result: "bot try-runtime" },
 ];
 
 describe("guessCommand", () => {

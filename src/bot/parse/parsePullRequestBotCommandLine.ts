@@ -2,6 +2,7 @@ import { botPullRequestCommentMention } from "src/bot";
 import { guessCommand } from "src/bot/parse/guessCommand";
 import { ParsedCommand } from "src/bot/parse/ParsedCommand";
 import { SkipEvent } from "src/bot/types";
+import { fetchCommandsConfiguration } from "src/command-configs/fetchCommandsConfiguration";
 import { parseCommand } from "src/commander/parseCommand";
 import { LoggerContext } from "src/logger";
 
@@ -22,10 +23,11 @@ export const parsePullRequestBotCommandLine = async (
 
   const positionedCommandStartSymbol = "$ ";
   if (commandLine.includes(positionedCommandStartSymbol)) {
+    const { docsPath } = await fetchCommandsConfiguration(ctx, undefined, repo);
     const guesswork = await guessCommand(ctx, commandLine, repo);
     const suggestMessage = guesswork ? `I guess you meant \`${guesswork}\`, but I could be wrong.` : "";
     return new Error(
-      `Positioned arguments are not supported anymore. ${suggestMessage}\nUse \`bot help\` to find out how to run your command.`,
+      `Positioned arguments are not supported anymore. ${suggestMessage}\n[Read docs](${docsPath}) to find out how to run your command.`,
     );
   }
 

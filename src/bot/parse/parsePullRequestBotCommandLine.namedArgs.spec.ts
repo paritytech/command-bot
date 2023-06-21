@@ -27,7 +27,7 @@ const dataProvider: DataProvider[] = [
         gitlab: { job: { tags: ["bench-bot"], variables: {} } },
       },
       {},
-      '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=runtime --runtime=polkadot --dir=polkadot --pallet=pallet_referenda',
+      '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=runtime --runtime=polkadot --target_dir=polkadot --pallet=pallet_referenda',
     ),
   },
   {
@@ -41,7 +41,7 @@ const dataProvider: DataProvider[] = [
         gitlab: { job: { tags: ["bench-bot"], variables: {} } },
       },
       { PIPELINE_SCRIPTS_REF: "branch" },
-      '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=xcm --runtime=bridge-hub-kusama --kind=bridge-hubs --dir=cumulus --pallet=pallet_name',
+      '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=xcm --runtime=bridge-hub-kusama --runtime_dir=bridge-hubs --target_dir=cumulus --pallet=pallet_name',
     ),
   },
   {
@@ -51,7 +51,7 @@ const dataProvider: DataProvider[] = [
   },
   {
     suitName: "try-runtime-bot with default preset mentioned explicitly",
-    commandLine: "bot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace -v SECOND=val default --network=kusama",
+    commandLine: "bot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace -v SECOND=val default --chain=kusama",
     expectedResponse: new GenericCommand(
       "try-runtime",
       {
@@ -59,12 +59,12 @@ const dataProvider: DataProvider[] = [
         gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
       },
       { RUST_LOG: "remote-ext=debug,runtime=trace", SECOND: "val" },
-      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --network=kusama',
+      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama --target_path=. --chain_node=polkadot',
     ),
   },
   {
     suitName: "try-runtime-bot testing default without mentioning preset name",
-    commandLine: "bot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace -v SECOND=val --network=kusama",
+    commandLine: "bot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace -v SECOND=val --chain=kusama",
     expectedResponse: new GenericCommand(
       "try-runtime",
       {
@@ -72,7 +72,7 @@ const dataProvider: DataProvider[] = [
         gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
       },
       { RUST_LOG: "remote-ext=debug,runtime=trace", SECOND: "val" },
-      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --network=kusama',
+      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama --target_path=. --chain_node=polkadot',
     ),
   },
   {
@@ -85,7 +85,7 @@ const dataProvider: DataProvider[] = [
         gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
       },
       {},
-      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --network=polkadot',
+      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=polkadot --target_path=. --chain_node=polkadot',
     ),
   },
   {
@@ -238,35 +238,35 @@ const dataProvider: DataProvider[] = [
     suitName: "nonexistent command, should return proper error",
     commandLine: "bot nope 123123",
     expectedResponse: new Error(
-      'Unknown command "nope"; Available ones are bench-all, bench-vm, bench, fmt, merge, rebase, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+      'Unknown command "nope"; Available ones are bench-all, bench-overhead, bench-vm, bench, fmt, merge, rebase, sample, try-runtime, update-ui. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     ),
   },
   {
     suitName: "not provided command, returns proper error",
     commandLine: "bot $",
     expectedResponse: new Error(
-      'Unknown command "$"; Available ones are bench-all, bench-vm, bench, fmt, merge, rebase, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+      'Unknown command "$"; Available ones are bench-all, bench-overhead, bench-vm, bench, fmt, merge, rebase, sample, try-runtime, update-ui. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     ),
   },
   {
     suitName: "non existed config must return error with explanation",
     commandLine: "bot xz",
     expectedResponse: new Error(
-      `Unknown command "xz"; Available ones are bench-all, bench-vm, bench, fmt, merge, rebase, sample, try-runtime. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
+      `Unknown command "xz"; Available ones are bench-all, bench-overhead, bench-vm, bench, fmt, merge, rebase, sample, try-runtime, update-ui. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
     ),
   },
   {
     suitName: "non existed config must return error with explanation",
     commandLine: "bot bench $ pallet dev some_pallet",
     expectedResponse: new Error(
-      `Positioned arguments are not supported anymore. I guess you meant \`bot bench polkadot-pallet --pallet=pallet_name\`, but I could be wrong.\nUse \`bot help\` to find out how to run your command.`,
+      `Positioned arguments are not supported anymore. I guess you meant \`bot bench polkadot-pallet --pallet=pallet_name\`, but I could be wrong.\n[Read docs](http://cmd-bot.docs.com/static/docs/latest.html) to find out how to run your command.`,
     ),
   },
   {
     suitName: "non existed config must return error with explanation",
-    commandLine: "bot bench $ overhead kusama-dev",
+    commandLine: "bot bench-overhead $ kusama",
     expectedResponse: new Error(
-      `Positioned arguments are not supported anymore. I guess you meant \`bot bench polkadot-overhead\`, but I could be wrong.\nUse \`bot help\` to find out how to run your command.`,
+      `Positioned arguments are not supported anymore. I guess you meant \`bot bench-overhead --runtime=kusama\`, but I could be wrong.\n[Read docs](http://cmd-bot.docs.com/static/docs/latest.html) to find out how to run your command.`,
     ),
   },
 ];

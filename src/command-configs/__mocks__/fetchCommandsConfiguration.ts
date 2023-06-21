@@ -8,32 +8,70 @@ export const cmd: CommandConfigs = {
     command: {
       description: "This is a wrapper to run `bench` for all pallets within BM4,5,6 runners",
       configuration: {
-        gitlab: { job: { tags: ["weights"], variables: {} } },
+        gitlab: { job: { tags: ["weights-vm"], variables: {} } },
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench-all/bench-all.sh"'],
       },
       presets: {
-        "substrate-all": {
+        substrate: {
           description: "Pallet + Overhead + Machine Benchmark for Substrate for all pallets",
           repos: ["substrate", "polkadot-sdk"],
-          args: { dir: { label: "repo", type_string: "cumulus" } },
+          args: { target_dir: { label: "Target Directory", type_string: "substrate" } },
         },
-        "polkadot-all": {
+        polkadot: {
           description: "Pallet + Overhead Benchmark for Polkadot",
           repos: ["polkadot", "polkadot-sdk"],
           args: {
             runtime: { label: "Runtime", type_one_of: ["kusama", "polkadot", "rococo", "westend"] },
-            dir: { label: "repo", type_string: "polkadot" },
+            target_dir: { label: "Target Directory", type_string: "polkadot" },
           },
         },
-        "cumulus-all": {
+        cumulus: {
           description: "Pallet Benchmark for Cumulus",
           repos: ["cumulus", "polkadot-sdk"],
-          args: { dir: { label: "repo", type_string: "cumulus" } },
+          args: { target_dir: { label: "Target Directory", type_string: "cumulus" } },
         },
-        "trappist-all": {
+        trappist: {
           description: "Pallet Benchmark for Trappist",
           repos: ["trappist"],
-          args: { runtime: { label: "Runtime", type_one_of: ["trappist"] } },
+          args: { runtime: { label: "Runtime", type_one_of: ["trappist", "stout"] } },
+        },
+      },
+    },
+  },
+  "bench-overhead": {
+    $schema: "../../node_modules/command-bot/src/schema/schema.cmd.json",
+    command: {
+      description: "Run benchmarks overhead and commit back results to PR",
+      configuration: {
+        gitlab: { job: { tags: ["bench-bot"], variables: {} } },
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench-overhead/bench-overhead.sh"'],
+      },
+      presets: {
+        default: {
+          description: "Runs `benchmark overhead` and commits back to PR the updated `extrinsic_weights.rs` files",
+          repos: ["polkadot", "polkadot-sdk"],
+          args: {
+            runtime: { label: "Runtime", type_one_of: ["polkadot", "kusama", "rococo", "westend"] },
+            target_dir: { label: "Target Directory", type_string: "polkadot" },
+          },
+        },
+        substrate: {
+          description: "Runs `benchmark overhead` and commits back to PR the updated `extrinsic_weights.rs` files",
+          repos: ["substrate", "polkadot-sdk"],
+          args: { target_dir: { label: "Target Directory", type_string: "substrate" } },
+        },
+        cumulus: {
+          description: "Runs `benchmark overhead` and commits back to PR the updated `extrinsic_weights.rs` files",
+          repos: ["cumulus", "polkadot-sdk"],
+          args: {
+            runtime: { label: "Runtime", type_one_of: ["asset-hub-polkadot", "asset-hub-kusama", "asset-hub-westend"] },
+            target_dir: { label: "Target Directory", type_string: "cumulus" },
+          },
+        },
+        trappist: {
+          description: "Runs `benchmark overhead` and commits back to PR",
+          repos: ["trappist"],
+          args: { runtime: { label: "Runtime", type_one_of: ["trappist", "stout"] } },
         },
       },
     },
@@ -64,7 +102,7 @@ export const cmd: CommandConfigs = {
             subcommand: { label: "Subcommand", type_one_of: ["pallet"] },
             runtime: { label: "Runtime", type_one_of: ["dev"] },
             pallet: { label: "pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
-            dir: { label: "Target Directory", type_string: "substrate" },
+            target_dir: { label: "Target Directory", type_string: "substrate" },
           },
         },
         "polkadot-pallet": {
@@ -74,7 +112,7 @@ export const cmd: CommandConfigs = {
             subcommand: { label: "Subcommand", type_one_of: ["runtime", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["polkadot", "kusama", "rococo", "westend"] },
             pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
-            dir: { label: "Target Directory", type_string: "polkadot" },
+            target_dir: { label: "Target Directory", type_string: "polkadot" },
           },
         },
         "cumulus-assets": {
@@ -82,10 +120,10 @@ export const cmd: CommandConfigs = {
           repos: ["cumulus", "polkadot-sdk"],
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
-            runtime: { label: "Runtime", type_one_of: ["statemine", "statemint", "test-utils", "westmint"] },
-            kind: { label: "Kind", type_one_of: ["assets"] },
+            runtime: { label: "Runtime", type_one_of: ["asset-hub-polkadot", "asset-hub-kusama", "asset-hub-westend"] },
             pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
-            dir: { label: "Target Directory", type_string: "cumulus" },
+            runtime_dir: { label: "Runtime Dir", type_string: "assets" },
+            target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
         },
         "cumulus-collectives": {
@@ -94,9 +132,9 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["collectives-polkadot"] },
-            kind: { label: "Kind", type_one_of: ["collectives"] },
             pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
-            dir: { label: "Target Directory", type_string: "cumulus" },
+            runtime_dir: { label: "Runtime Dir", type_string: "collectives" },
+            target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
         },
         "cumulus-bridge-hubs": {
@@ -108,9 +146,9 @@ export const cmd: CommandConfigs = {
               label: "Runtime",
               type_one_of: ["bridge-hub-polkadot", "bridge-hub-kusama", "bridge-hub-rococo"],
             },
-            kind: { label: "Kind", type_one_of: ["bridge-hubs"] },
             pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
-            dir: { label: "Target Directory", type_string: "cumulus" },
+            runtime_dir: { label: "Runtime Dir", type_string: "bridge-hubs" },
+            target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
         },
         "cumulus-contracts": {
@@ -119,9 +157,9 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["contracts-rococo"] },
-            kind: { label: "Kind", type_one_of: ["contracts"] },
+            runtime_dir: { label: "Runtime Dir", type_string: "contracts" },
             pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
-            dir: { label: "Target Directory", type_string: "cumulus" },
+            target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
         },
         "cumulus-glutton": {
@@ -130,9 +168,9 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet"] },
             runtime: { label: "Runtime", type_one_of: ["glutton-kusama", "glutton-kusama-dev-1300"] },
-            kind: { label: "Kind", type_one_of: ["glutton"] },
             pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
-            dir: { label: "Target Directory", type_string: "cumulus" },
+            runtime_dir: { label: "Runtime Dir", type_string: "glutton" },
+            target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
         },
         "cumulus-starters": {
@@ -141,9 +179,9 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["seedling", "shell"] },
-            kind: { label: "Kind", type_one_of: ["starters"] },
             pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
-            dir: { label: "Target Directory", type_string: "cumulus" },
+            runtime_dir: { label: "Runtime Dir", type_string: "starters" },
+            target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
         },
         "cumulus-testing": {
@@ -152,44 +190,17 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["penpal", "rococo-parachain"] },
-            kind: { label: "Kind", type_one_of: ["testing"] },
             pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
-            dir: { label: "Target Directory", type_string: "cumulus" },
-          },
-        },
-        "substrate-overhead": {
-          description: "Runs `benchmark overhead` and commits back to PR the updated `extrinsic_weights.rs` files",
-          repos: ["substrate", "polkadot-sdk"],
-          args: {
-            subcommand: { label: "Subcommand", type_one_of: ["overhead"] },
-            dir: { label: "Target Directory", type_string: "substrate" },
-          },
-        },
-        "polkadot-overhead": {
-          description: "Runs `benchmark overhead` and commits back to PR the updated `extrinsic_weights.rs` files",
-          repos: ["polkadot", "polkadot-sdk"],
-          args: {
-            subcommand: { label: "Subcommand", type_one_of: ["overhead"] },
-            runtime: { label: "Runtime", type_one_of: ["kusama-dev", "polkadot-dev", "rococo-dev", "westend-dev"] },
-            dir: { label: "Target Directory", type_string: "polkadot" },
-          },
-        },
-        "cumulus-overhead": {
-          description: "Runs `benchmark overhead` and commits back to PR the updated `extrinsic_weights.rs` files",
-          repos: ["cumulus", "polkadot-sdk"],
-          args: {
-            subcommand: { label: "Subcommand", type_one_of: ["overhead"] },
-            kind: { label: "Kind", type_one_of: ["assets"] },
-            runtime: { label: "Runtime", type_one_of: ["statemine", "statemint", "test-utils", "westmint"] },
-            dir: { label: "Target Directory", type_string: "cumulus" },
+            runtime_dir: { label: "Runtime Dir", type_string: "testing" },
+            target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
         },
         "trappist-pallet": {
           description: "Pallet Benchmark for Trappist for specific pallet",
           repos: ["trappist"],
           args: {
-            subcommand: { label: "Subcommand", type_one_of: ["runtime"] },
-            runtime: { label: "Runtime", type_one_of: ["trappist"] },
+            subcommand: { label: "Subcommand", type_one_of: ["runtime", "xcm"] },
+            runtime: { label: "Runtime", type_one_of: ["trappist", "stout"] },
             pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
           },
         },
@@ -256,9 +267,59 @@ export const cmd: CommandConfigs = {
       },
       presets: {
         default: {
-          description: "Run try-runtime with specified network",
+          description: "Run try-runtime with specified runtime for Polkadot repo",
           repos: ["polkadot", "command-bot-test"],
-          args: { network: { label: "Network", type_one_of: ["polkadot", "kusama", "westend", "rococo"] } },
+          args: {
+            chain: { label: "Chain", type_one_of: ["polkadot", "kusama", "westend", "rococo"] },
+            target_path: { label: "Target Path", type_string: "." },
+            chain_node: { label: "Chain Node", type_string: "polkadot" },
+          },
+        },
+        polkadot: {
+          description: "Run try-runtime with specified runtime for monorepo Polkadot SDK",
+          repos: ["polkadot-sdk"],
+          args: {
+            chain: { label: "Chain", type_one_of: ["polkadot", "kusama", "westend", "rococo"] },
+            target_path: { label: "Target Path", type_string: "./polkadot" },
+            chain_node: { label: "Chain Node", type_string: "polkadot" },
+          },
+        },
+        trappist: {
+          description: "Run try-runtime for Trappist",
+          repos: ["trappist"],
+          args: {
+            chain: { label: "Chain", type_one_of: ["trappist"] },
+            chain_node: { label: "Chain Node", type_string: "trappist-node" },
+            target_path: { label: "Target Path", type_string: "." },
+          },
+        },
+      },
+    },
+  },
+  "update-ui": {
+    $schema: "../../node_modules/command-bot/src/schema/schema.cmd.json",
+    command: {
+      description: "Update UI tests, e.g. after a rust toolchain upgrade, and commit them to your PR.",
+      configuration: {
+        gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/update-ui/update-ui.sh"'],
+      },
+      presets: {
+        default: {
+          description: "Update substrate UI tests in Substrate Repo",
+          repos: ["substrate"],
+          args: {
+            rust_version: { label: "Rust version", type_rule: "/^[0-9.]+$/", example: "1.70" },
+            target_path: { label: "Target path", type_string: "." },
+          },
+        },
+        substrate: {
+          description: "Update substrate UI tests in Monorepo/substrate",
+          repos: ["polkadot-sdk"],
+          args: {
+            rust_version: { label: "Rust version", type_rule: "/^[0-9.]+$/", example: "1.70" },
+            target_path: { label: "Target path", type_string: "./substrate" },
+          },
         },
       },
     },
