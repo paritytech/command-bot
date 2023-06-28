@@ -118,5 +118,7 @@ function getBotEnv(
     NODE_EXTRA_CA_CERTS: selfSignedCertPath,
 
     MIN_LOG_LEVEL: "debug",
+
+    BOT_PR_COMMENT_MENTION: "bot",
   };
 }

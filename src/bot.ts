@@ -4,7 +4,6 @@ import { onIssueCommentCreated } from "src/bot/events/onIssueCommentCreated";
 import { setupEvent } from "src/bot/setupEvent";
 import { Context } from "src/types";
 
-export const botPullRequestCommentMention = "bot";
 // just do nothing, completely skip
 export const botPullRequestIgnoreCommands = ["merge", "rebase"];
 export const botPullRequestCommentSubcommands: {

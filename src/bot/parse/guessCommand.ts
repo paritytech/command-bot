@@ -1,6 +1,6 @@
-import { botPullRequestCommentMention } from "src/bot";
 import { fetchCommandsConfiguration } from "src/command-configs/fetchCommandsConfiguration";
 import { optionValuesToFlags } from "src/commander/commander";
+import { config } from "src/config";
 import { LoggerContext } from "src/logger";
 import { CmdJson } from "src/schema/schema.cmd";
 
@@ -15,6 +15,7 @@ import { CmdJson } from "src/schema/schema.cmd";
 
 export async function guessCommand(ctx: LoggerContext, command: string, repo: string): Promise<string> {
   const { commandConfigs } = await fetchCommandsConfiguration(ctx, undefined, repo);
+  const { botPullRequestCommentMention } = config;
 
   // extract first wor from command
   const commandName = command.split(" ")[0];

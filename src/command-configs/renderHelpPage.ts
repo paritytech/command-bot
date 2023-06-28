@@ -1,7 +1,6 @@
 import path from "path";
 import * as pug from "pug";
 
-import { botPullRequestCommentMention } from "src/bot";
 import { CommandConfigs } from "src/command-configs/types";
 import { Config } from "src/config";
 import { CmdJson } from "src/schema/schema.cmd";
@@ -16,7 +15,7 @@ export function renderHelpPage(params: {
   const { commandConfigs, scriptsRevision, headBranch, config } = params;
 
   const repoLink = new URL(path.join(config.pipelineScripts.repository, "tree", headBranch)).toString();
-  const commandStart = botPullRequestCommentMention;
+  const commandStart = config.botPullRequestCommentMention;
 
   const preparedConfigs = prepareConfigs(commandConfigs);
 

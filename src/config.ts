@@ -57,6 +57,7 @@ export type Config = {
   gitlabPushNamespace: string;
   gitlabJobImage: string;
   cmdBotUrl: string;
+  botPullRequestCommentMention: string;
 };
 
 export const config: Config = {
@@ -85,4 +86,5 @@ export const config: Config = {
   gitlabPushNamespace: envVar("GITLAB_PUSH_NAMESPACE"),
   gitlabJobImage: envVar("GITLAB_JOB_IMAGE"),
   cmdBotUrl: envVar("CMD_BOT_URL"),
+  botPullRequestCommentMention: process.env.BOT_PR_COMMENT_MENTION || "bot",
 };

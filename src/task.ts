@@ -8,7 +8,8 @@ import LevelErrors from "level-errors";
 import { Probot } from "probot";
 
 import { getApiTaskEndpoint } from "src/api";
-import { botPullRequestCommentMention, botPullRequestCommentSubcommands } from "src/bot";
+import { botPullRequestCommentSubcommands } from "src/bot";
+import { config } from "src/config";
 import { prepareBranch } from "src/core";
 import { getSortedTasks } from "src/db";
 import { getPostPullRequestResult, updateComment } from "src/github";
@@ -92,6 +93,7 @@ export const queueTask = async (
   const taskEventChannel = new EventEmitter();
   queuedTasks.set(task.id, taskEventChannel);
 
+  const { botPullRequestCommentMention } = config;
   const ctx = { ...parentCtx, logger: parentCtx.logger.child({ taskId: task.id }) };
   const { taskDb, getFetchEndpoint, gitlab, logger } = ctx;
   const { db } = taskDb;

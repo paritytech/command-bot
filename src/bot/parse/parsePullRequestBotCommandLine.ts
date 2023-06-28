@@ -1,9 +1,9 @@
-import { botPullRequestCommentMention } from "src/bot";
 import { guessCommand } from "src/bot/parse/guessCommand";
 import { ParsedCommand } from "src/bot/parse/ParsedCommand";
 import { SkipEvent } from "src/bot/types";
 import { fetchCommandsConfiguration } from "src/command-configs/fetchCommandsConfiguration";
 import { parseCommand } from "src/commander/parseCommand";
+import { config } from "src/config";
 import { LoggerContext } from "src/logger";
 
 export const parsePullRequestBotCommandLine = async (
@@ -12,6 +12,7 @@ export const parsePullRequestBotCommandLine = async (
   repo: string,
 ): Promise<SkipEvent | Error | ParsedCommand> => {
   let commandLine = rawCommandLine.trim();
+  const { botPullRequestCommentMention } = config;
 
   // Add trailing whitespace so that bot can be differentiated from /cmd-[?]
   if (!commandLine.startsWith(`${botPullRequestCommentMention} `)) {

@@ -1,6 +1,5 @@
 import { Command } from "commander";
 
-import { botPullRequestCommentMention } from "src/bot";
 import { fetchCommandsConfiguration } from "src/command-configs/fetchCommandsConfiguration";
 import { CommandConfigs } from "src/command-configs/types";
 import { getVariablesOption, variablesExitOverride } from "src/commander/getVariablesOption";
@@ -17,6 +16,7 @@ type ExtendedFetchCommander = Command & {
 };
 
 export function fetchConfigsCommander(ctx: LoggerContext, repo: string): ExtendedFetchCommander {
+  const { botPullRequestCommentMention } = config;
   const root = new Command(botPullRequestCommentMention) as ExtendedFetchCommander;
   let scriptsBranch = config.pipelineScripts.ref;
 
