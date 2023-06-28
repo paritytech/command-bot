@@ -14,7 +14,7 @@ export const parsePullRequestBotCommandLine = async (
   let commandLine = rawCommandLine.trim();
   const { botPullRequestCommentMention } = config;
 
-  // Add trailing whitespace so that bot can be differentiated from /cmd-[?]
+  // Add trailing whitespace so that bot can be differentiated
   if (!commandLine.startsWith(`${botPullRequestCommentMention} `)) {
     return new SkipEvent("Not a command");
   }

@@ -35,12 +35,14 @@ type CommandDataProviderItem = {
 const commandsDataProvider: CommandDataProviderItem[] = [
   {
     suitName: "[help] command",
-    commandLine: "bot help",
-    expected: { startMessage: "Here's a [link to docs](http://localhost:3000/static/docs/latest.html" },
+    commandLine: "testbot help",
+    expected: {
+      startMessage: "Here's a [link to docs](http://localhost:3000/static/docs/latest.html?repo=command-bot-test)",
+    },
   },
   {
     suitName: "[help] command with branch override",
-    commandLine: "bot help -v PIPELINE_SCRIPTS_REF=tests",
+    commandLine: "testbot help -v PIPELINE_SCRIPTS_REF=tests",
     expected: {
       startMessage:
         "Here's a [link to docs](http://localhost:3000/static/docs/1245345a4376f18f3ef98195055876ff293f8622.html",
@@ -48,29 +50,29 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   },
   {
     suitName: "[wrong] command",
-    commandLine: "bot hrlp", // intentional typo
+    commandLine: "testbot hrlp", // intentional typo
     expected: {
       startMessage:
-        '@somedev123 Unknown command "hrlp"; Available ones are bench-all, bench-overhead, bench-vm, bench, fmt, merge, rebase, sample, try-runtime, update-ui. Refer to [help docs](http://localhost:3000/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+        '@somedev123 Unknown command "hrlp"; Available ones are bench-all, bench-bm, bench-overhead, bench, fmt, merge, rebase, sample, try-runtime, update-ui. Refer to [help docs](http://localhost:3000/static/docs/latest.html?repo=command-bot-test) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     },
   },
   {
     suitName: "[not allowed] command",
-    commandLine: "bot bench-all", // command-bot-test repo is not in a list of repos: [...] array
+    commandLine: "testbot bench-all", // command-bot-test repo is not in a list of repos: [...] array
     expected: {
       startMessage:
-        '@somedev123 The command: "bench-all" is not supported in **command-bot-test** repository. Refer to [help docs](http://localhost:3000/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+        '@somedev123 Missing arguments for command "bench-all". Refer to [help docs](http://localhost:3000/static/docs/latest.html?repo=command-bot-test) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     },
   },
   {
     suitName: "[cancel] command for no jobs",
-    commandLine: "bot cancel",
+    commandLine: "testbot cancel",
     expected: { startMessage: "@somedev123 No task is being executed for this pull request" },
   },
   // TODO: add test for clean after moving to opstooling-testing
   // {
   //   suitName: "[clean] command",
-  //   commandLine: "bot clean",
+  //   commandLine: "testbot clean",
   //   expected: {
   //     startReaction: "eyes",
   //     finishReaction: "+1"

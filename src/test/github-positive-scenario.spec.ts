@@ -35,28 +35,28 @@ type CommandDataProviderItem = {
 const commandsDataProvider: CommandDataProviderItem[] = [
   {
     suitName: "[sample] command",
-    commandLine: "bot sample $ helloworld",
+    commandLine: "testbot sample --input=helloworld",
     taskId: 1,
     expected: {
       startMessage:
-        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh" helloworld". This comment will be updated later.',
+        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh" --input=helloworld". This comment will be updated later.',
       finishMessage:
-        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh" helloworld` has finished. Result: https://example.com/foo/bar/-/jobs/6 has finished. If any artifacts were generated, you can download them from https://example.com/foo/bar/-/jobs/6/artifacts/download',
+        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/sample/sample.sh" --input=helloworld` has finished. Result: https://example.com/foo/bar/-/jobs/6 has finished. If any artifacts were generated, you can download them from https://example.com/foo/bar/-/jobs/6/artifacts/download',
     },
   },
   {
-    suitName: "[fmt] command with args",
-    commandLine: "bot fmt $ 1",
+    suitName: "[fmt] command with falsy args - won't be passed",
+    commandLine: "testbot fmt 1",
     taskId: 2,
     expected: {
       startMessage:
-        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh" 1". This comment will be updated later.',
-      finishMessage: '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh" 1` has finished.',
+        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"". This comment will be updated later.',
+      finishMessage: '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"` has finished.',
     },
   },
   {
     suitName: "[fmt] command no args",
-    commandLine: "bot fmt",
+    commandLine: "testbot fmt",
     taskId: 3,
     expected: {
       startMessage:
@@ -66,25 +66,24 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   },
   {
     suitName: "[bench-bot] command",
-    commandLine: "bot bench $ runtime kusama-dev pallet_referenda",
+    commandLine: "testbot bench polkadot-pallet --runtime=kusama --pallet=pallet_referenda",
     taskId: 4,
     expected: {
       startMessage:
-        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" runtime kusama-dev pallet_referenda". This comment will be updated later.',
+        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=runtime --runtime=kusama --target_dir=polkadot --pallet=pallet_referenda". This comment will be updated later.',
       finishMessage:
-        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" runtime kusama-dev pallet_referenda` has finished.',
+        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=runtime --runtime=kusama --target_dir=polkadot --pallet=pallet_referenda` has finished.',
     },
   },
   {
     suitName: "[try-runtime] command",
-    commandLine:
-      "bot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace $ --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443",
+    commandLine: "testbot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace --chain=kusama",
     taskId: 5,
     expected: {
       startMessage:
-        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443". This comment will be updated later.',
+        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama --target_path=. --chain_node=polkadot',
       finishMessage:
-        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama-dev --execution=Wasm --no-spec-name-check on-runtime-upgrade live --uri wss://kusama-try-runtime-node.parity-chains.parity.io:443` has finished. Result: https://example.com/foo/bar/-/jobs/6 has finished. If any artifacts were generated, you can download them from https://example.com/foo/bar/-/jobs/6/artifacts/download.',
+        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama --target_path=. --chain_node=polkadot` has finished. Result: https://example.com/foo/bar/-/jobs/6 has finished. If any artifacts were generated, you can download them from https://example.com/foo/bar/-/jobs/6/artifacts/download.',
     },
   },
 ];

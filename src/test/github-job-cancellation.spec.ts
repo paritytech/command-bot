@@ -14,7 +14,7 @@ const restFixures = getRestFixtures({
     repo: "command-bot-test",
     prAuthor: "somedev123",
     headBranch: "prBranch1",
-    comments: [{ author: "somedev123", body: "bot sample $ hi", id: 500 }],
+    comments: [{ author: "somedev123", body: "testbot sample --input=hi", id: 500 }],
   },
   gitlab: { cmdBranch: "cmd-bot/4-1" },
 });
@@ -24,7 +24,7 @@ const jsonResponseHeaders = { "content-type": "application/json" };
 const mockedEndpoints: Record<string, MockedEndpoint> = {};
 
 describe("Job cancellation (GitHub webhook)", () => {
-  const cancelCommandRegex = /`bot cancel (.+?)`/;
+  const cancelCommandRegex = /`testbot cancel (.+?)`/;
   let lastCommentBody: string = "";
 
   const getCommentResponse = async (request: CompletedRequest) => {
@@ -96,7 +96,7 @@ describe("Job cancellation (GitHub webhook)", () => {
       () => lastCommentBody.match(cancelCommandRegex) !== null,
       100,
       50,
-      `Expected comment body to include "bot cancel". Instead, got: ${lastCommentBody}`,
+      `Expected comment body to include "testbot cancel". Instead, got: ${lastCommentBody}`,
     );
   });
 
@@ -108,7 +108,7 @@ describe("Job cancellation (GitHub webhook)", () => {
       .thenReply(200, restFixures.gitlab.cancelledPipeline, jsonResponseHeaders);
 
     const commandId = ensureDefined(lastCommentBody.match(cancelCommandRegex)?.[1]);
-    await triggerWebhook("cancelCommandComment", { body: `bot cancel ${commandId}` });
+    await triggerWebhook("cancelCommandComment", { body: `testbot cancel ${commandId}` });
 
     await until(async () => !(await mockedEndpoint.isPending()), 300, 50);
   });
@@ -133,7 +133,7 @@ describe("Job cancellation (GitHub webhook)", () => {
       .forPatch("/repos/paritytech-stg/command-bot-test/issues/comments/555")
       .thenCallback(getCommentResponse);
 
-    await triggerWebhook("cancelCommandComment", { body: `bot cancel` });
+    await triggerWebhook("cancelCommandComment", { body: `testbot cancel` });
 
     await until(async () => !(await mockedEndpoint.isPending()), 300, 50);
   });

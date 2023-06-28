@@ -1,22 +1,44 @@
 import { ensureDefined } from "@eng-automation/js";
 import { beforeAll, describe, expect, test } from "@jest/globals";
 
+import { getRestFixtures } from "src/test/fixtures";
+import { getMockServers } from "src/test/setup/mockServers";
+
 import { triggerWebhook } from "./helpers";
 import { getBotInstance } from "./setup/bot";
 import { initRepo, startGitDaemons } from "./setup/gitDaemons";
+
+const jsonResponseHeaders = { "content-type": "application/json" };
+
+const restFixures = getRestFixtures({
+  github: {
+    org: "paritytech-stg",
+    repo: "command-bot-test",
+    prAuthor: "somedev123",
+    headBranch: "prBranch1",
+    comments: [{ author: "somedev123", body: "testbot merge", id: 500 }],
+  },
+  gitlab: { cmdBranch: "cmd-bot/4-1" },
+});
 
 type CommandDataProviderItem = {
   suitName: string;
   commandLine: string;
 };
 const commandsDataProvider: CommandDataProviderItem[] = [
-  { suitName: "[merge] command to ignore", commandLine: "bot merge" },
-  { suitName: "[merge *] command to ignore", commandLine: "bot merge force" },
-  { suitName: "[rebase] command to ignore", commandLine: "bot rebase" },
+  { suitName: "[merge] command to ignore", commandLine: "testbot merge" },
+  { suitName: "[merge *] command to ignore", commandLine: "testbot merge force" },
+  { suitName: "[rebase] command to ignore", commandLine: "testbot rebase" },
 ];
 
 beforeAll(async () => {
   const gitDaemons = await startGitDaemons();
+  const mockServers = ensureDefined(getMockServers());
+  await mockServers.gitHub
+    .forPost("/app/installations/25299948/access_tokens")
+    .thenReply(200, restFixures.github.appInstallationToken, jsonResponseHeaders);
+
+  await mockServers.gitHub.forGet("/organizations/123/members/somedev123").thenReply(204);
 
   await initRepo(gitDaemons.gitHub, "paritytech-stg", "command-bot-test.git", []);
   await initRepo(gitDaemons.gitHub, "somedev123", "command-bot-test.git", ["prBranch1"]);

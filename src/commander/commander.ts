@@ -39,7 +39,8 @@ export function getCommanderFromConfiguration(
   root.addHelpCommand(false);
   root
     .command("help")
-    .exitOverride()
+    .addOption(getVariablesOption())
+    .exitOverride(variablesExitOverride)
     .action(() => {
       parsedCommand = new HelpCommand(docsPath);
     });
@@ -62,7 +63,7 @@ export function getCommanderFromConfiguration(
 
   for (const ignoredCommand of botPullRequestIgnoreCommands) {
     root
-      .command(ignoredCommand, { hidden: true })
+      .command(ignoredCommand)
       .exitOverride()
       .action(() => {
         parsedCommand = new SkipEvent(`Ignored command: ${ignoredCommand}`);

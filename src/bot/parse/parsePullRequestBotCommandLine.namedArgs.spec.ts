@@ -175,6 +175,11 @@ const dataProvider: DataProvider[] = [
     commandLine: "bot help",
     expectedResponse: new HelpCommand("http://cmd-bot.docs.com/static/docs/latest.html"),
   },
+  {
+    suitName: "help",
+    commandLine: "bot help -v PIPELINE_SCRIPTS_REF=help-branch",
+    expectedResponse: new HelpCommand("http://cmd-bot.docs.com/static/docs/latest.html"),
+  },
   { suitName: "clean", commandLine: "bot clean", expectedResponse: new CleanCommand() },
   { suitName: "clear", commandLine: "bot clear", expectedResponse: new CleanCommand() },
 
@@ -193,7 +198,21 @@ const dataProvider: DataProvider[] = [
     expectedResponse: new SkipEvent("Not a command"),
   },
   { suitName: "no subcommand - ignore", commandLine: "bot ", expectedResponse: new SkipEvent("Not a command") },
-  { suitName: "ignored command", commandLine: "bot merge", expectedResponse: new SkipEvent("Ignored command: merge") },
+  {
+    suitName: "ignored command merge",
+    commandLine: "bot merge",
+    expectedResponse: new SkipEvent("Ignored command: merge"),
+  },
+  {
+    suitName: "ignored command merge force",
+    commandLine: "bot merge force",
+    expectedResponse: new SkipEvent("Ignored command: merge"),
+  },
+  {
+    suitName: "ignored command rebase",
+    commandLine: "bot rebase",
+    expectedResponse: new SkipEvent("Ignored command: rebase"),
+  },
   {
     suitName: "ignored command 2",
     commandLine: "bot rebase",
