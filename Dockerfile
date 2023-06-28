@@ -1,4 +1,4 @@
-FROM docker.io/node:16.13.2-bullseye-slim as base
+FROM docker.io/node:18-bullseye-slim as base
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -22,7 +22,7 @@ RUN apt-get update && \
 
 COPY . /builder
 WORKDIR /builder
-RUN yarn --ignore-optional --immutable && yarn build
+RUN yarn --ignore-optional --frozen-lockfile && yarn build
 
 # ---------------------- app ---------------------- #
 

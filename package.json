@@ -42,7 +42,7 @@
     "@types/jest": "^29.0.0",
     "@types/levelup": "5.1.1",
     "@types/lodash": "4.14.181",
-    "@types/node": "^16",
+    "@types/node": "^18",
     "@types/rocksdb": "3.0.1",
     "@types/shelljs": "0.8.11",
     "@types/stoppable": "1.1.1",
