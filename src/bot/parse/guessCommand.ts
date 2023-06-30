@@ -17,7 +17,7 @@ export async function guessCommand(ctx: LoggerContext, command: string, repo: st
   const { commandConfigs } = await fetchCommandsConfiguration(ctx, undefined, repo);
   const { botPullRequestCommentMention } = config;
 
-  // extract first wor from command
+  // extract first word from command
   const commandName = command.split(" ")[0];
   // extract args from command
   const [_, args] = command.split("$ ");
