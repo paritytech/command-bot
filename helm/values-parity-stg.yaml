@@ -24,6 +24,8 @@ common:
     DB_CLIENT: postgres
     DB_PORT: 5432
     CMD_BOT_URL: https://command-bot.parity-stg.parity.io/
+    PIPELINE_SCRIPTS_REF: monorepo
+    BOT_PR_COMMENT_MENTION: stgbot
   secrets:
     ALLOWED_ORGANIZATIONS: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#ALLOWED_ORGANIZATIONS
     APP_ID: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-stg#APP_ID

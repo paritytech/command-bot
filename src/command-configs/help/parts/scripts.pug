@@ -1,0 +1,58 @@
+script.
+  document.getElementById('repos').addEventListener('change', function(e) {
+    const selected = e.target.value;
+    // update a query string
+    const urlParams = new URLSearchParams(window.location.search);
+
+    if (selected) {
+      urlParams.set('repo', selected);
+    } else {
+      urlParams.delete('repo');
+    }
+    window.history.replaceState({}, '', `${location.pathname}${urlParams ? "?" + urlParams.toString() : ''}`);
+
+    updatePresetLinks(selected);
+  });
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const repo = urlParams.get('repo');
+  if (repo) {
+    document.getElementById('repos').value = repo;
+    updatePresetLinks(repo);
+  }
+
+  function updatePresetLinks(repo) {
+    for (let preset of document.querySelectorAll('.preset, .preset-link')) {
+      if (!repo || preset.classList.contains(repo)) {
+        preset.style.display = 'block';
+      } else {
+        preset.style.display = 'none';
+      }
+    }
+
+    // hide commands where all presets are hidden
+    document.querySelectorAll('.command').forEach(function(command) {
+      const presets = command.querySelectorAll('.preset');
+      const visiblePresets = Array.from(presets).filter(function(preset) {
+        return preset.style.display !== 'none';
+      });
+      if (visiblePresets.length === 0 && presets.length > 0) {
+        command.style.display = 'none';
+      } else {
+        command.style.display = 'block';
+      }
+    });
+
+    // hide nav where all presets are hidden
+    document.querySelectorAll('.nav-command').forEach(function(command) {
+      const presets = command.querySelectorAll('.nav-preset li');
+      const visiblePresets = Array.from(presets).filter(function(preset) {
+        return preset.style.display !== 'none';
+      });
+      if (visiblePresets.length === 0 && presets.length > 0) {
+        command.style.display = 'none';
+      } else {
+        command.style.display = 'block';
+      }
+    });
+  }

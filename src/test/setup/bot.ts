@@ -89,7 +89,7 @@ function getBotEnv(
     DATA_PATH: path.join(process.cwd(), "data"),
 
     PIPELINE_SCRIPTS_REPOSITORY: "https://github.com/paritytech/command-bot-scripts",
-    PIPELINE_SCRIPTS_REF: "main",
+    PIPELINE_SCRIPTS_REF: "monorepo",
 
     PRIVATE_KEY_BASE64: readFileSync(path.join(process.cwd(), "src", "test", "testing-app.txt"), "base64"),
 
@@ -118,5 +118,7 @@ function getBotEnv(
     NODE_EXTRA_CA_CERTS: selfSignedCertPath,
 
     MIN_LOG_LEVEL: "debug",
+
+    BOT_PR_COMMENT_MENTION: "testbot",
   };
 }

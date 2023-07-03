@@ -9,15 +9,13 @@ import { renderHelpPage } from "src/command-configs/renderHelpPage";
 import { CommandConfigs, FetchCommandConfigsResult } from "src/command-configs/types";
 import { config } from "src/config";
 import { LoggerContext } from "src/logger";
-import { DOCS_DIR, DOCS_URL_PATH, GENERATED_DIR } from "src/setup";
+import { DOCS_DIR, DOCS_URL_PATH, GENERATED_DIR, LATEST } from "src/setup";
 import { CommandRunner } from "src/shell";
-
-export const PIPELINE_SCRIPTS_REF = "PIPELINE_SCRIPTS_REF";
-export const LATEST = "latest";
 
 export async function fetchCommandsConfiguration(
   ctx: LoggerContext,
   overriddenBranch?: string,
+  repo?: string,
 ): Promise<FetchCommandConfigsResult> {
   const cmdRunner = new CommandRunner(ctx);
   /* every re-deploy this folder will be cleaned,
@@ -64,14 +62,20 @@ export async function fetchCommandsConfiguration(
     }
 
     return {
-      docsPath: getDocsUrl(overriddenBranch ? scriptsRevision : LATEST),
+      docsPath: getDocsUrl(overriddenBranch ? scriptsRevision : LATEST, repo),
       commandConfigs: JSON.parse(fs.readFileSync(commandsOutputPath).toString()) as CommandConfigs,
     };
   });
 }
 
-function getDocsUrl(filename: string): string {
-  return new URL(path.join(config.cmdBotUrl, DOCS_URL_PATH, getDocsFilename(filename))).toString();
+export function getDocsUrl(filename?: string, repo?: string): string {
+  const url = new URL(path.join(config.cmdBotUrl, DOCS_URL_PATH, getDocsFilename(filename ?? LATEST)));
+
+  if (repo) {
+    url.searchParams.set("repo", repo);
+  }
+
+  return url.toString();
 }
 
 export function getDocsFilename(scriptsRevision: string): string {

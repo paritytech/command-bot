@@ -1,0 +1,19 @@
+html
+  head
+    title Help - Command Bot
+    meta(name="color-scheme" content="light dark")
+    link(rel="stylesheet" href="https://cdn.jsdelivr.net/npm/minstyle.io@2.0.1/dist/css/minstyle.io.min.css")
+    script(type="text/javascript" src="https://cdn.jsdelivr.net/npm/dark-mode-switcher@0.0.1/dist/dark.min.js")
+
+  body
+    article.container
+      include parts/hero.pug
+
+      div.row
+        div.col-3
+          include parts/navigation.pug
+
+        div.col-8
+          include parts/commands.pug
+    include parts/styles.pug
+    include parts/scripts.pug

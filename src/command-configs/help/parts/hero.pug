@@ -1,0 +1,19 @@
+div.ms-hero.mb-lg
+  div.ms-hero-body
+    h1.ms-hero-title Command Bot - Help Docs
+    div.ms-hero-content
+      p
+        | Based on
+        a(href=repoLink) #{repoLink}
+      p rev: #{scriptsRevision}
+      p running custom commands, like:
+        br
+        code #{commandStart} command-name -v VAR=value id --argument=1 --argument=2
+      p to add new command:
+        ul
+          li go to
+            a(href=config.pipelineScripts.repository) #{config.pipelineScripts.repository}
+          li add new command and open PR
+          li read
+            a(href="\#link-new-command") how to test new command before merging
+          li merge. Then after merge PR, it accessible without branch override

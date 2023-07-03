@@ -17,7 +17,7 @@ export type GitRef = {
 
 export type PipelineScripts = {
   repository: string;
-  ref: string | undefined;
+  ref: string;
 };
 
 export type Context = {

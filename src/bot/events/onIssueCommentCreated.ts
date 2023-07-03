@@ -15,8 +15,11 @@ import {
   removeReactionToComment,
   updateComment,
 } from "src/github";
+import { counters, getMetricsPrData } from "src/metrics";
 import { cancelTask, getNextTaskId, PullRequestTask, queueTask, serializeTaskQueuedDate } from "src/task";
 import { getLines } from "src/utils";
+
+const eventName = "issue_comment.created";
 
 export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = async (ctx, octokit, payload) => {
   const { repositoryCloneDirectory, gitlab, logger } = ctx;
@@ -48,13 +51,14 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
   let getError = (body: string) => new PullRequestError(pr, { body, requester, requesterCommentId: comment.id });
 
   try {
-    const commands: ParsedCommand[] = [];
+    const commands: (ParsedCommand | SkipEvent)[] = [];
+
+    if (!(await isRequesterAllowed(ctx, octokit, requester))) {
+      return getError("Requester could not be detected as a member of an allowed organization.");
+    }
+
     for (const line of getLines(comment.body)) {
       const parsedCommand = await parsePullRequestBotCommandLine(line, ctx, pr.repo);
-
-      if (parsedCommand instanceof SkipEvent) {
-        return parsedCommand;
-      }
 
       if (parsedCommand instanceof Error) {
         return getError(parsedCommand.message);
@@ -67,12 +71,17 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
       return new SkipEvent("No commands found within a comment");
     }
 
-    if (!(await isRequesterAllowed(ctx, octokit, requester))) {
-      return getError("Requester could not be detected as a member of an allowed organization.");
-    }
-
     for (const parsedCommand of commands) {
       logger.debug({ parsedCommand }, "Processing parsed command");
+
+      if (parsedCommand instanceof SkipEvent) {
+        const skip = getMetricsPrData("skip", eventName, pr, parsedCommand.reason);
+        counters.commandsRun.inc({ ...skip });
+        logger.debug(
+          { command: comment.body, payload, ...skip },
+          `Skip command with reason: "${parsedCommand.reason}"`,
+        );
+      }
 
       if (parsedCommand instanceof HelpCommand) {
         await createComment(ctx, octokit, {

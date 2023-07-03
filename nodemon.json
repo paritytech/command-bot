@@ -2,6 +2,6 @@
   "verbose": false,
   "watch": ["src/", ".env.cjs"],
   "ignore": ["src/test/", "node_modules/", ".git", "src/schema/*.ts"],
-  "ext": ".ts",
+  "ext": ".ts,.pug",
   "exec": "node -r ts-node/register -r ./.env.cjs"
 }
