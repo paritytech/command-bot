@@ -18,29 +18,25 @@ export async function parseCommand(
     error = e as Error;
   });
 
-  // now with commandConfigs we can build the actual commander
-  if (parsedConfigs) {
-    if (typeof parsedConfigs.result?.commandConfigs !== "undefined") {
-      const commander = getCommanderFromConfiguration(
-        ctx,
-        parsedConfigs.result.docsPath,
-        parsedConfigs.result.commandConfigs,
-      );
-      const cmdParsed = await commander.parseAsync(processArgv, { from: "user" }).catch((e) => {
-        error = e as Error;
-      });
-
-      if (cmdParsed) {
-        if (typeof cmdParsed.parseResults?.parsedCommand !== "undefined") {
-          return cmdParsed.parseResults?.parsedCommand;
-        } else {
-          return error;
-        }
-      }
-    } else {
-      return error;
-    }
+  if (!parsedConfigs || typeof parsedConfigs.result?.commandConfigs === "undefined") {
+    return error;
   }
 
-  return error;
+  // now with commandConfigs we can build the actual commander
+  const commander = getCommanderFromConfiguration(
+    ctx,
+    parsedConfigs.result.docsPath,
+    parsedConfigs.result.commandConfigs,
+  );
+
+  // parse the command again, this time with the argument validators based on branch from above
+  const cmdParsed = await commander.parseAsync(processArgv, { from: "user" }).catch((e) => {
+    error = e as Error;
+  });
+
+  if (!cmdParsed || typeof cmdParsed.parseResults?.parsedCommand === "undefined") {
+    return error;
+  }
+
+  return cmdParsed.parseResults?.parsedCommand;
 }

@@ -101,7 +101,7 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet"] },
             runtime: { label: "Runtime", type_one_of: ["dev"] },
-            pallet: { label: "pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
+            pallet: { label: "pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             target_dir: { label: "Target Directory", type_string: "substrate" },
           },
         },
@@ -111,7 +111,7 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["runtime", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["polkadot", "kusama", "rococo", "westend"] },
-            pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
+            pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             target_dir: { label: "Target Directory", type_string: "polkadot" },
           },
         },
@@ -121,7 +121,7 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["asset-hub-polkadot", "asset-hub-kusama", "asset-hub-westend"] },
-            pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
+            pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "assets" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
@@ -132,7 +132,7 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["collectives-polkadot"] },
-            pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
+            pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "collectives" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
@@ -146,7 +146,7 @@ export const cmd: CommandConfigs = {
               label: "Runtime",
               type_one_of: ["bridge-hub-polkadot", "bridge-hub-kusama", "bridge-hub-rococo"],
             },
-            pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
+            pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "bridge-hubs" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
@@ -158,7 +158,7 @@ export const cmd: CommandConfigs = {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["contracts-rococo"] },
             runtime_dir: { label: "Runtime Dir", type_string: "contracts" },
-            pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
+            pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
         },
@@ -168,7 +168,7 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet"] },
             runtime: { label: "Runtime", type_one_of: ["glutton-kusama", "glutton-kusama-dev-1300"] },
-            pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
+            pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "glutton" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
@@ -179,7 +179,7 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["seedling", "shell"] },
-            pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
+            pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "starters" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
@@ -190,7 +190,7 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["penpal", "rococo-parachain"] },
-            pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
+            pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "testing" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
@@ -201,7 +201,7 @@ export const cmd: CommandConfigs = {
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["runtime", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["trappist", "stout"] },
-            pallet: { label: "Pallet", type_rule: "/^([a-z_]+)([:]{2}[a-z_]+)?$/", example: "pallet_name" },
+            pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
           },
         },
       },
@@ -309,7 +309,7 @@ export const cmd: CommandConfigs = {
           description: "Update substrate UI tests in Substrate Repo",
           repos: ["substrate"],
           args: {
-            rust_version: { label: "Rust version", type_rule: "/^[0-9.]+$/", example: "1.70" },
+            rust_version: { label: "Rust version", type_rule: "^[0-9.]+$", example: "1.70" },
             target_path: { label: "Target path", type_string: "." },
           },
         },
@@ -317,7 +317,7 @@ export const cmd: CommandConfigs = {
           description: "Update substrate UI tests in Monorepo/substrate",
           repos: ["polkadot-sdk"],
           args: {
-            rust_version: { label: "Rust version", type_rule: "/^[0-9.]+$/", example: "1.70" },
+            rust_version: { label: "Rust version", type_rule: "^[0-9.]+$", example: "1.70" },
             target_path: { label: "Target path", type_string: "./substrate" },
           },
         },

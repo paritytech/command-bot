@@ -1,0 +1,24 @@
+div.sticky-nav
+  label(for="repos") Select repo:
+    select.mt-sm(id="repos")
+      option(value="") All Repos
+      each repo in repos
+        option(value=repo) #{repo}
+  | Commands Navigation:
+  each cfg, commandName in commandConfigs
+    ul.nav
+      li.nav-command
+        a(href="\#link-" + commandName) #{ commandName }
+        if cfg.command.presets
+          ul.nav-preset
+            each preset, presetId in cfg.command.presets
+              li(class="preset-link " + preset.repos.join(' '))
+                a(href="\#link-" + presetId) #{ presetId }
+  | Env Variables
+  ul
+    li
+      a(href="\#link-companion") Patch Companion
+    li
+      a(href="\#link-new-command") How to test new command (test dev branch)
+    li
+      a(href="\#link-rust") Rust Log, etc

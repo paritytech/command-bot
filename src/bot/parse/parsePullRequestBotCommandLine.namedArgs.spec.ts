@@ -226,7 +226,7 @@ const dataProvider: DataProvider[] = [
     suitName: "bench-bot --pallet should validate the matching rule",
     commandLine: "bot bench polkadot-pallet --pallet=00034",
     expectedResponse: new Error(
-      "option '--pallet <value>' argument '00034' is invalid. argument pallet is not matching rule /^([a-z_]+)([:]{2}[a-z_]+)?$/",
+      "option '--pallet <value>' argument '00034' is invalid. argument pallet is not matching rule ^([a-z_]+)([:]{2}[a-z_]+)?$",
     ),
   },
   {

@@ -209,8 +209,7 @@ function convertOption(
   } else if (typeof argConfig.type_string === "string" && argConfig.type_string) {
     option.default(argConfig.type_string);
   } else if (typeof argConfig.type_rule === "string") {
-    // FIXME: currently rules are defined as "/^([a-z_]+)([:]{2}[a-z_]+)?$/", with extra slashes
-    const ruleRegex = new RegExp(argConfig.type_rule.substring(1, argConfig.type_rule.length - 1));
+    const ruleRegex = new RegExp(argConfig.type_rule);
     const commandParser = (value: string): string => {
       if (!value.match(ruleRegex)) {
         // eslint-disable-next-line @typescript-eslint/restrict-template-expressions

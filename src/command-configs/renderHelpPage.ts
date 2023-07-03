@@ -11,7 +11,7 @@ export function renderHelpPage(params: {
   scriptsRevision: string;
   headBranch: string;
 }): string {
-  const tmplPath = path.join(__dirname, "renderHelpPage.pug");
+  const tmplPath = path.join(__dirname, "help", "main.pug");
   const { commandConfigs, scriptsRevision, headBranch, config } = params;
 
   const repoLink = new URL(path.join(config.pipelineScripts.repository, "tree", headBranch)).toString();
@@ -20,17 +20,15 @@ export function renderHelpPage(params: {
   const preparedConfigs = prepareConfigs(commandConfigs);
 
   // getting list of possible repos, to be able to filter out relevant commands
-  let repos: string[] = Object.values(preparedConfigs).reduce((acc: string[], cmdConfig: CmdJson) => {
-    const currentRepos: string[] = cmdConfig.command.presets
-      ? Object.values(cmdConfig.command.presets)
-          .map((p) => p.repos?.filter((r) => !!r) || [])
-          .flat()
-      : [];
-    return [...acc, ...currentRepos];
-  }, []);
-
-  // deduplicate repos
-  repos = [...new Set(repos)];
+  const reposSet = new Set<string>();
+  for (const cmdConfig of Object.values(preparedConfigs)) {
+    for (const preset of Object.values(cmdConfig.command.presets ?? {})) {
+      for (const repo of preset.repos ?? []) {
+        reposSet.add(repo);
+      }
+    }
+  }
+  const repos = [...reposSet];
 
   // TODO: depends on headBranch, if overridden: add `-v PIPELINE_SCRIPTS_REF=branch` to all command examples same for PATCH_repo=xxx
   // TODO: Simplify the PIPELINE_SCRIPTS_REF to something more rememberable */

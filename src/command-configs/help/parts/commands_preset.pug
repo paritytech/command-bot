@@ -1,0 +1,50 @@
+div(class="preset " + preset.repos.join(' '))
+  h6.mb-md(id="link-"+presetId) #{commandStart} #{ commandName } #{presetId === 'default' ? '' : presetId}
+  p.mb-md.muted Works in these repos: [#{preset.repos.join(', ')}]
+  -let defaultArgs = []
+  if preset.args && Object.values(preset.args).length > 0
+    div.preset-args.mb-lg.ml-md
+      each arg, argKey in preset.args
+        div.row.mb-sm
+          // output only arrays with more than 1 element or regex (type_rule)
+          if arg.type_one_of && arg.type_one_of.length > 1
+            div.col-4.lowercase
+              | --#{arg.label}
+            div.col-8.lowercase
+              each one, i in arg.type_one_of
+                span.mb-sm
+                  if i === 0
+                    | #{one} (default)&nbsp;
+                  else
+                    | | #{one}&nbsp;
+          else if arg.type_rule
+            div.col-4.lowercase
+              | --#{arg.label}
+              span(style="color: red;") &nbsp;*&nbsp;
+              | (required):
+            div.col-8.lowercase
+              | #{arg.type_rule}&nbsp;
+              if arg.example
+                | (Example: "#{arg.example}")
+          else
+            -defaultArgs.push({[argKey]: arg})
+      if defaultArgs.length > 0
+        p.muted Default static args:
+        ul
+          each argObj in defaultArgs
+            each arg, argKey in argObj
+              if arg.type_one_of && arg.type_one_of.length === 1
+                li.muted #{argKey}: #{arg.type_one_of[0]}
+              else if arg.type_string
+                li.muted #{argKey}: #{arg.type_string}
+
+  p Example:&nbsp;
+    code
+      | #{commandStart} #{commandName} #{presetId === 'default' ? '' : presetId}
+      if preset.args
+        each arg, argKey in preset.args
+          if arg.type_rule
+            if arg.example
+              i &nbsp;--#{argKey}=#{arg.example}
+            else
+              i &nbsp;--#{argKey}=#{arg.type_rule}
