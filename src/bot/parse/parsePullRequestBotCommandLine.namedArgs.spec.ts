@@ -191,7 +191,7 @@ const dataProvider: DataProvider[] = [
 
   /*
      Ignore cases
-      */
+*/
   {
     suitName: "empty command line returns nothing (ignores)",
     commandLine: "",
