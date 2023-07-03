@@ -9,11 +9,19 @@ div.ms-hero.mb-lg
       p running custom commands, like:
         br
         code #{commandStart} command-name -v VAR=value id --argument=1 --argument=2
-      p to add new command:
+        br
+        | Or even multiple commands in one comment:
+        br
+        code #{commandStart} clean
+        br
+        code #{commandStart} command-name --argument=2
+        br
+        code #{commandStart} command-name --argument=3
+      p To add new command: &nbsp;
         ul
           li go to
             a(href=config.pipelineScripts.repository) #{config.pipelineScripts.repository}
           li add new command and open PR
-          li read
+          li read &nbsp;
             a(href="\#link-new-command") how to test new command before merging
           li merge. Then after merge PR, it accessible without branch override
