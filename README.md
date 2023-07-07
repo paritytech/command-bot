@@ -1,6 +1,6 @@
 # Introduction
 
-command-bot provides interfaces for executing arbitrary commands on GitLab CI.
+command-bot provides interfaces for executing pre-defined commands on GitLab CI.
 
 [![GitHub Issue Sync](https://github.com/paritytech/command-bot/actions/workflows/github-issue-sync.yml/badge.svg)](https://github.com/paritytech/command-bot/actions/workflows/github-issue-sync.yml)
 
