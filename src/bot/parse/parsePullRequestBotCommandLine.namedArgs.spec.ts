@@ -278,14 +278,14 @@ const dataProvider: DataProvider[] = [
     suitName: "non existed config must return error with explanation",
     commandLine: "bot bench $ pallet dev some_pallet",
     expectedResponse: new Error(
-      `Positioned arguments are not supported anymore. I guess you meant \`bot bench polkadot-pallet --pallet=pallet_name\`, but I could be wrong.\n[Read docs](http://cmd-bot.docs.com/static/docs/latest.html) to find out how to run your command.`,
+      `Positional arguments are not supported anymore. I guess you meant \`bot bench polkadot-pallet --pallet=pallet_name\`, but I could be wrong.\n[Read docs](http://cmd-bot.docs.com/static/docs/latest.html) to find out how to run your command.`,
     ),
   },
   {
     suitName: "non existed config must return error with explanation",
     commandLine: "bot bench-overhead $ kusama",
     expectedResponse: new Error(
-      `Positioned arguments are not supported anymore. I guess you meant \`bot bench-overhead --runtime=kusama\`, but I could be wrong.\n[Read docs](http://cmd-bot.docs.com/static/docs/latest.html) to find out how to run your command.`,
+      `Positional arguments are not supported anymore. I guess you meant \`bot bench-overhead --runtime=kusama\`, but I could be wrong.\n[Read docs](http://cmd-bot.docs.com/static/docs/latest.html) to find out how to run your command.`,
     ),
   },
 ];
