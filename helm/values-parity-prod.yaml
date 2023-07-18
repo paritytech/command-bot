@@ -12,7 +12,7 @@ gcloud-sqlproxy:
 common:
   env:
     GITLAB_PUSH_NAMESPACE: parity/mirrors
-    GITLAB_JOB_IMAGE: paritytech/ci-linux:production
+    GITLAB_JOB_IMAGE: paritytech/ci-unified:bullseye-1.70.0-2023-05-23
     GITLAB_DOMAIN: gitlab.parity.io
     DATA_PATH: /data
     IS_DEPLOYMENT: true
