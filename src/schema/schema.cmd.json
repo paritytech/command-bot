@@ -30,9 +30,6 @@
                     "variables": {
                       "type": "object",
                       "additionalProperties": true
-                    },
-                    "image": {
-                      "type": "string"
                     }
                   },
                   "required": ["tags"]

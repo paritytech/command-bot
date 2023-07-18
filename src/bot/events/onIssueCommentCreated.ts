@@ -151,8 +151,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
 
         const defaultVariables = parsedCommand.configuration.gitlab?.job.variables;
         const overriddenVariables = parsedCommand.variables;
-        const configJobImage = parsedCommand.configuration.gitlab?.job.image;
-        let image: string = typeof configJobImage === "string" ? configJobImage : gitlab.defaultJobImage;
+        let image: string = gitlab.defaultJobImage;
 
         if (typeof overriddenVariables?.[CMD_IMAGE] === "string") {
           image = overriddenVariables[CMD_IMAGE] as string;
