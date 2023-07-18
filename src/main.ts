@@ -37,7 +37,7 @@ const main = async () => {
               accessTokenUsername: config.gitlabAccessTokenUsername,
               domain: config.gitlabDomain,
               pushNamespace: config.gitlabPushNamespace,
-              jobImage: config.gitlabJobImage,
+              defaultJobImage: config.gitlabJobImage,
             },
           }).then(resolve, reject),
       )

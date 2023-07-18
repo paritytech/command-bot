@@ -19,7 +19,12 @@ export const DOCS_URL_PATH = "/static/docs/";
 export const GENERATED_DIR = path.join(process.cwd(), "generated");
 export const DOCS_DIR = path.join(GENERATED_DIR, "docs");
 
+// -v --variable to override scripts branch to test new features
 export const PIPELINE_SCRIPTS_REF = "PIPELINE_SCRIPTS_REF";
+
+// -v --variable to override default image revision
+export const CMD_IMAGE = "CMD_IMAGE";
+
 export const LATEST = "latest";
 
 export const setup = async (

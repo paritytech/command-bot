@@ -13,8 +13,6 @@ Before starting to work on this project, we recommend reading the
 - [Pull request commands](#pull-request-commands)
   - [Help](#pull-request-command-help)
   - [Cancel](#pull-request-command-cancel)
-  - [Generic](#pull-request-command-generic)
-  - [Testing generic command in dev](#pull-request-command-generic-dev)
 - [API](#api)
   - [Queue](#api-command-queue)
   - [Cancel](#api-command-cancel)
@@ -59,14 +57,6 @@ In `[bot-args]` are optional, you can provide the following options
 `bot help`
 
 Bot responds with an actual list of commands generated from pipeline.
-
-## Example of one generic command Bench <a name="pull-request-command-generic"></a>
-
-`bot bench $ runtime westend-dev pallet_balances`
-
-#### Testing the updates to command-bot-scripts by overriding its default branch <a name="pull-request-command-generic-dev"></a>
-
-`bot bench -v PIPELINE_SCRIPTS_REF=your-branch $ overhead assets westmint`
 
 ## Cancel <a name="pull-request-command-cancel"></a>
 
