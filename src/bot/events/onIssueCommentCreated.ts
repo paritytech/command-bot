@@ -16,6 +16,7 @@ import {
   updateComment,
 } from "src/github";
 import { counters, getMetricsPrData } from "src/metrics";
+import { CMD_IMAGE } from "src/setup";
 import { cancelTask, getNextTaskId, PullRequestTask, queueTask, serializeTaskQueuedDate } from "src/task";
 import { getLines } from "src/utils";
 
@@ -150,6 +151,11 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
 
         const defaultVariables = parsedCommand.configuration.gitlab?.job.variables;
         const overriddenVariables = parsedCommand.variables;
+        let image: string = gitlab.defaultJobImage;
+
+        if (typeof overriddenVariables?.[CMD_IMAGE] === "string") {
+          image = overriddenVariables[CMD_IMAGE] as string;
+        }
 
         const task: PullRequestTask = {
           ...pr,
@@ -167,8 +173,8 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
           queuedDate: serializeTaskQueuedDate(queuedDate),
           gitlab: {
             job: {
+              image,
               tags: parsedCommand.configuration.gitlab?.job.tags || [],
-              image: gitlab.jobImage,
               variables: Object.assign(defaultVariables, overriddenVariables),
             },
             pipeline: null,

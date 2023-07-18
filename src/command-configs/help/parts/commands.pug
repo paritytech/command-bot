@@ -37,6 +37,18 @@ div(id="link-new-command").command
   p
     code #{commandStart} new-command -v PIPELINE_SCRIPTS_REF=mak/new-command new-id --new-arg=value
 
+div(id="link-override-ci-image").command
+  h5 Override Command's CI Image
+  p You can override command's CI image with any other image, for example when you need to test new version of Rust
+
+  p Syntax (after command name):
+  p
+    code -v CMD_IMAGE=paritytech/ci-unified:bullseye-1.70.0-2023-05-23
+
+  p Examples:
+  p
+    code #{commandStart} update-ui -v CMD_IMAGE=paritytech/ci-unified:bullseye-1.70.0-2023-05-23 --rust_version=1.70.0
+
 div(id="link-rust").command
   h5 Rust Log, etc
   p You can define custom env variables like for RUST env

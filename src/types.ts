@@ -32,7 +32,7 @@ export type Context = {
     accessToken: string;
     domain: string;
     pushNamespace: string;
-    jobImage: string;
+    defaultJobImage: string;
     accessTokenUsername: string;
   };
 };
