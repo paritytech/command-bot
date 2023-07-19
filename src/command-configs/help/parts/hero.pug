@@ -3,12 +3,13 @@ div.ms-hero.mb-lg
     h1.ms-hero-title Command Bot - Help Docs
     div.ms-hero-content
       p
-        | Based on
+        | Based on&nbsp;
         a(href=repoLink) #{repoLink}
       p rev: #{scriptsRevision}
-      p running custom commands, like:
+      p Running custom commands, like:
         br
         code #{commandStart} command-name -v VAR=value id --argument=1 --argument=2
+        br
         br
         | Or even multiple commands in one comment:
         br
@@ -17,11 +18,11 @@ div.ms-hero.mb-lg
         code #{commandStart} command-name --argument=2
         br
         code #{commandStart} command-name --argument=3
-      p To add new command: &nbsp;
-        ul
-          li go to
+      p To add a new command: &nbsp;
+        ol
+          li Go to&nbsp;
             a(href=config.pipelineScripts.repository) #{config.pipelineScripts.repository}
-          li add new command and open PR
-          li read &nbsp;
-            a(href="\#link-new-command") how to test new command before merging
-          li merge. Then after merge PR, it accessible without branch override
+          li Add new command and open a PR.
+          li Read&nbsp;
+            a(href="\#link-new-command") how to test the new command before merging.
+          li Merge. Then after merging the PR, it will be accessible without branch override.
