@@ -61,7 +61,16 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
         return getError(parsedCommand.message);
       }
 
-      commands.push(parsedCommand);
+      if (parsedCommand instanceof SkipEvent) {
+        const skip = getMetricsPrData("skip", eventName, pr, parsedCommand.reason);
+        counters.commandsRun.inc({ ...skip });
+        logger.debug(
+          { command: comment.body, payload, ...skip },
+          `Skip command with reason: "${parsedCommand.reason}"`,
+        );
+      } else {
+        commands.push(parsedCommand);
+      }
     }
 
     if (commands.length === 0) {
@@ -74,15 +83,6 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
 
     for (const parsedCommand of commands) {
       logger.debug({ parsedCommand }, "Processing parsed command");
-
-      if (parsedCommand instanceof SkipEvent) {
-        const skip = getMetricsPrData("skip", eventName, pr, parsedCommand.reason);
-        counters.commandsRun.inc({ ...skip });
-        logger.debug(
-          { command: comment.body, payload, ...skip },
-          `Skip command with reason: "${parsedCommand.reason}"`,
-        );
-      }
 
       if (parsedCommand instanceof HelpCommand) {
         await createComment(ctx, octokit, {
