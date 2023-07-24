@@ -54,26 +54,12 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
   try {
     const commands: (ParsedCommand | SkipEvent)[] = [];
 
-    if (!(await isRequesterAllowed(ctx, octokit, requester))) {
-      return getError("Requester could not be detected as a member of an allowed organization.");
-    }
-
     for (const line of getLines(comment.body)) {
       const parsedCommand = await parsePullRequestBotCommandLine(line, ctx, pr.repo);
 
       if (parsedCommand instanceof Error) {
         return getError(parsedCommand.message);
       }
-
-      commands.push(parsedCommand);
-    }
-
-    if (commands.length === 0) {
-      return new SkipEvent("No commands found within a comment");
-    }
-
-    for (const parsedCommand of commands) {
-      logger.debug({ parsedCommand }, "Processing parsed command");
 
       if (parsedCommand instanceof SkipEvent) {
         const skip = getMetricsPrData("skip", eventName, pr, parsedCommand.reason);
@@ -82,7 +68,21 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
           { command: comment.body, payload, ...skip },
           `Skip command with reason: "${parsedCommand.reason}"`,
         );
+      } else {
+        commands.push(parsedCommand);
       }
+    }
+
+    if (commands.length === 0) {
+      return new SkipEvent("No commands found within a comment");
+    }
+
+    if (!(await isRequesterAllowed(ctx, octokit, requester))) {
+      return getError("Requester could not be detected as a member of an allowed organization.");
+    }
+
+    for (const parsedCommand of commands) {
+      logger.debug({ parsedCommand }, "Processing parsed command");
 
       if (parsedCommand instanceof HelpCommand) {
         await createComment(ctx, octokit, {
