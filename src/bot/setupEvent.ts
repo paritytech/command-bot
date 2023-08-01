@@ -1,7 +1,14 @@
 import { Probot } from "probot";
 
 import { extractPullRequestData } from "src/bot/parse/extractPullRequestData";
-import { FinishedEvent, PullRequestError, WebhookEventPayload, WebhookEvents, WebhookHandler } from "src/bot/types";
+import {
+  FinishedEvent,
+  PullRequestError,
+  SkipEvent,
+  WebhookEventPayload,
+  WebhookEvents,
+  WebhookHandler,
+} from "src/bot/types";
 import { createComment, getOctokit, updateComment } from "src/github";
 import { logger as parentLogger } from "src/logger";
 import { counters, getMetricsPrData, summaries } from "src/metrics";
@@ -55,6 +62,8 @@ export const setupEvent = <E extends WebhookEvents>(
           const ok = getMetricsPrData("ok", eventName, prData, result.comment.body);
           counters.commandsRun.inc({ ...ok, repo: result.pr.repo, pr: result.pr.number });
           eventLogger.info({ result }, "Finished command");
+        } else if (result instanceof SkipEvent) {
+          eventLogger.debug({ result }, "Skipping command");
         } else {
           const message = "Unknown result type";
           const error = getMetricsPrData("error", eventName, prData, message);

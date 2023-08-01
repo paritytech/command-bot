@@ -37,7 +37,7 @@ export type WebhookHandler<E extends WebhookEvents> = (
   ctx: Context,
   octokit: ExtendedOctokit,
   event: WebhookEventPayload<E>,
-) => Promise<PullRequestError | SkipEvent | FinishedEvent>;
+) => Promise<PullRequestError | SkipEvent | FinishedEvent | unknown>;
 
 export class SkipEvent {
   constructor(public reason: string = "") {}

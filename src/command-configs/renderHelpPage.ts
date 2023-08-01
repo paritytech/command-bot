@@ -47,8 +47,8 @@ function prepareConfigs(cmdConfigs: CommandConfigs): CommandConfigs {
   const newCmdConfigs: CommandConfigs = {};
 
   // these commands are added here, as they are defined inside of bot
-  newCmdConfigs.help = mockStaticConfig("Generates help page & provides a link");
-  newCmdConfigs.clean = mockStaticConfig("Clears bot comments in PR");
+  newCmdConfigs.help = mockStaticConfig("Generates the help page & provides a link.");
+  newCmdConfigs.clean = mockStaticConfig("Clears bot comments in the PR.");
 
   // clean up excluded
   for (const cmdName in cmdConfigs) {
