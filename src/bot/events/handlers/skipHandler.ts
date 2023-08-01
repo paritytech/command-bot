@@ -1,4 +1,4 @@
-import { EventHandler, EventHandlerError } from "src/bot/events/handlers/eventHandler";
+import { EventHandler, EventHandlerError } from "src/bot/events/handlers/EventHandler";
 import { eventName } from "src/bot/events/onIssueCommentCreated";
 import { extractPullRequestData } from "src/bot/parse/extractPullRequestData";
 import { SkipEvent } from "src/bot/types";

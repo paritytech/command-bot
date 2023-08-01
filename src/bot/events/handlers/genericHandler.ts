@@ -1,6 +1,6 @@
 import path from "path";
 
-import { EventHandler, EventHandlerError } from "src/bot/events/handlers/eventHandler";
+import { EventHandler, EventHandlerError } from "src/bot/events/handlers/EventHandler";
 import { GenericCommand } from "src/bot/parse/ParsedCommand";
 import { PullRequestError } from "src/bot/types";
 import { createComment, getPostPullRequestResult, updateComment } from "src/github";

@@ -1,4 +1,4 @@
-import { EventHandler, EventHandlerError } from "src/bot/events/handlers/eventHandler";
+import { EventHandler, EventHandlerError } from "src/bot/events/handlers/EventHandler";
 import { CancelCommand } from "src/bot/parse/ParsedCommand";
 import { PullRequestError } from "src/bot/types";
 import { getSortedTasks } from "src/db";

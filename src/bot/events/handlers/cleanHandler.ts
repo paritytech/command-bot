@@ -1,4 +1,4 @@
-import { EventHandler, EventHandlerError } from "src/bot/events/handlers/eventHandler";
+import { EventHandler, EventHandlerError } from "src/bot/events/handlers/EventHandler";
 import { HelpCommand } from "src/bot/parse/ParsedCommand";
 import { cleanComments, reactToComment, removeReactionToComment } from "src/github";
 
