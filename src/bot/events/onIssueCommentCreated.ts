@@ -6,7 +6,6 @@ import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand
 import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine";
 import { CommentData, FinishedEvent, PullRequestError, SkipEvent, WebhookHandler } from "src/bot/types";
 import { isRequesterAllowed } from "src/core";
-import { counters, getMetricsPrData } from "src/metrics";
 import { getLines } from "src/utils";
 
 export const eventName = "issue_comment.created";
@@ -48,15 +47,9 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
 
       if (parsedCommand instanceof Error) {
         return getError(parsedCommand.message);
-      }
-
-      if (parsedCommand instanceof SkipEvent) {
-        const skip = getMetricsPrData("skip", eventName, pr, parsedCommand.reason);
-        counters.commandsRun.inc({ ...skip });
-        logger.debug(
-          { command: comment.body, payload, ...skip },
-          `Skip command with reason: "${parsedCommand.reason}"`,
-        );
+      } else if (parsedCommand instanceof SkipEvent) {
+        const eventHandler = new EventHandler(ctx, payload, octokit, parsedCommand, commentParams);
+        eventHandler.skipHandler();
       } else {
         commands.push(parsedCommand);
       }
@@ -75,9 +68,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
       let handlerResult: PullRequestError | undefined;
       logger.debug({ parsedCommand }, "Processing parsed command");
 
-      if (parsedCommand instanceof SkipEvent) {
-        eventHandler.skipHandler();
-      } else if (parsedCommand instanceof HelpCommand) {
+      if (parsedCommand instanceof HelpCommand) {
         await eventHandler.helpHandler();
       } else if (parsedCommand instanceof CleanCommand) {
         await eventHandler.cleanHandler();
