@@ -8,7 +8,7 @@ import { CMD_IMAGE } from "src/setup";
 import { getNextTaskId, PullRequestTask, queueTask, serializeTaskQueuedDate } from "src/task";
 
 export async function genericHandler(this: EventHandler): Promise<PullRequestError | undefined> {
-  // eslint-disable-next-line no-invalid-this,@typescript-eslint/unbound-method
+  // eslint-disable-next-line no-invalid-this
   const { ctx, octokit, commentParams, parsedCommand, payload, pr, requester, getError } = this;
   const { repositoryCloneDirectory, gitlab } = ctx;
   if (!(parsedCommand instanceof GenericCommand)) {

@@ -6,10 +6,11 @@ import { updateComment } from "src/github";
 import { cancelTask, PullRequestTask } from "src/task";
 
 export async function cancelHandler(this: EventHandler): Promise<PullRequestError | undefined> {
-  // eslint-disable-next-line no-invalid-this,@typescript-eslint/unbound-method
+  // eslint-disable-next-line no-invalid-this
   const { ctx, payload, octokit, commentParams, parsedCommand, pr, requester, getError } = this;
   const { logger } = ctx;
   const { comment } = payload;
+
   if (!(parsedCommand instanceof CancelCommand)) {
     throw new EventHandlerError();
   }

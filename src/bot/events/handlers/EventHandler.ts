@@ -34,15 +34,15 @@ export class EventHandler {
   public cleanHandler = cleanHandler.bind(this);
   public cancelHandler = cancelHandler.bind(this);
   public genericHandler = genericHandler.bind(this);
-  public getError(body: string): PullRequestError {
-    const comment: PullRequestCommentMeta = { body, requesterCommentId: this.payload.comment.id };
+  public getError = ((body: string): PullRequestError => {
+    const comment: PullRequestCommentMeta = { body, requesterCommentId: this.payload?.comment?.id };
 
     if (this.createdComment?.id) {
       comment.botCommentId = this.createdComment.id;
     }
 
     return new PullRequestError(this.pr, comment);
-  }
+  }).bind(this);
 }
 
 export class EventHandlerError extends Error {
