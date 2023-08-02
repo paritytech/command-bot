@@ -1,5 +1,6 @@
 import { normalizeValue } from "@eng-automation/js";
 import assert from "assert";
+import { OptionValues } from "commander";
 import Joi from "joi";
 import fetch from "node-fetch";
 
@@ -139,3 +140,15 @@ export const retriable = async <T>(
 
   throw Error(`Couldn't resolve a promise after ${options.attempts} attempts with ${options.timeoutMs}ms timeout`);
 };
+
+export function optionValuesToFlags(options?: OptionValues): string {
+  return Object.entries(options || {})
+    .map(([key, value]) => {
+      if (value === true) {
+        return `--${key}`;
+      }
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+      return `--${key}=${value}`;
+    })
+    .join(" ");
+}

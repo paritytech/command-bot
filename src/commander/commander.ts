@@ -8,6 +8,7 @@ import { getVariablesOption, variablesExitOverride } from "src/commander/getVari
 import { config } from "src/config";
 import { LoggerContext } from "src/logger";
 import { CmdJson } from "src/schema/schema.cmd";
+import { optionValuesToFlags } from "src/utils";
 
 export type ParseResults = {
   command: string | undefined;
@@ -221,18 +222,6 @@ function convertOption(
     option.makeOptionMandatory(true);
   }
   return option;
-}
-
-export function optionValuesToFlags(options?: OptionValues): string {
-  return Object.entries(options || {})
-    .map(([key, value]) => {
-      if (value === true) {
-        return `--${key}`;
-      }
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      return `--${key}=${value}`;
-    })
-    .join(" ");
 }
 
 function getGenericCommand(settings: {

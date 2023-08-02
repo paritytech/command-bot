@@ -1,8 +1,8 @@
 import { fetchCommandsConfiguration } from "src/command-configs/fetchCommandsConfiguration";
-import { optionValuesToFlags } from "src/commander/commander";
 import { config } from "src/config";
 import { LoggerContext } from "src/logger";
 import { CmdJson } from "src/schema/schema.cmd";
+import { optionValuesToFlags } from "src/utils";
 
 /**
  * DISCLAIMER: don't even try to understand this code :D it's a mess
