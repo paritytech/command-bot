@@ -35,7 +35,11 @@ export class EventHandler {
   public cancelHandler = cancelHandler.bind(this);
   public genericHandler = genericHandler.bind(this);
   public getError = ((body: string): PullRequestError => {
-    const comment: PullRequestCommentMeta = { body, requesterCommentId: this.payload?.comment?.id };
+    const comment: PullRequestCommentMeta = {
+      body,
+      requester: this.requester,
+      requesterCommentId: this.payload?.comment?.id,
+    };
 
     if (this.createdComment?.id) {
       comment.botCommentId = this.createdComment.id;
