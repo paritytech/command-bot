@@ -10,6 +10,13 @@ export type PullRequestData = {
   number: number;
 };
 
+export type PullRequestCommentMeta = {
+  body: string;
+  botCommentId?: number;
+  requesterCommentId: number;
+  requester?: string;
+};
+
 export type CommentData = {
   owner: string;
   repo: string;
@@ -23,15 +30,7 @@ export type WebhookEventPayload<E extends WebhookEvents> = E extends "issue_comm
   : never;
 
 export class PullRequestError {
-  constructor(
-    public pr: PullRequestData,
-    public comment: {
-      body: string;
-      botCommentId?: number;
-      requesterCommentId: number;
-      requester?: string;
-    },
-  ) {}
+  constructor(public pr: PullRequestData, public comment: PullRequestCommentMeta) {}
 }
 
 export type WebhookHandler<E extends WebhookEvents> = (
