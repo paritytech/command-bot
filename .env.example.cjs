@@ -124,3 +124,5 @@ process.env.CMD_BOT_URL ??= "http://localhost:3000/"
 process.env.MIN_LOG_LEVEL ??= "debug"
 
 process.env.BOT_PR_COMMENT_MENTION ??= "localbot"
+
+process.env.PROCESSBOT_SUPPORTED_REPOS: "substrate,polkadot,cumulus"

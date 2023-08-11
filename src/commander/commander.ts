@@ -1,6 +1,6 @@
 import { Command, CommanderError, InvalidArgumentError, Option, OptionValues } from "commander";
 
-import { botPullRequestIgnoreCommands, processBotSupportedRepos } from "src/bot";
+import { botPullRequestIgnoreCommands } from "src/bot";
 import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand";
 import { SkipEvent } from "src/bot/types";
 import { CommandConfigs } from "src/command-configs/types";
@@ -32,7 +32,7 @@ export function getCommanderFromConfiguration(
   commandConfigs: CommandConfigs,
   repo: string,
 ): ExtendedCommander {
-  const { botPullRequestCommentMention } = config;
+  const { botPullRequestCommentMention, processBotSupportedRepos } = config;
   const root = new Command(botPullRequestCommentMention) as ExtendedCommander;
   let unknownCommand: string | undefined;
   let parsedCommand: ParseResults["parsedCommand"] = undefined;

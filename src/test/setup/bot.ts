@@ -120,5 +120,7 @@ function getBotEnv(
     MIN_LOG_LEVEL: "debug",
 
     BOT_PR_COMMENT_MENTION: "testbot",
+
+    PROCESSBOT_SUPPORTED_REPOS: "substrate,polkadot,cumulus",
   };
 }

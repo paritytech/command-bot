@@ -6,7 +6,6 @@ import { Context } from "src/types";
 
 // just do nothing, completely skip
 export const botPullRequestIgnoreCommands = ["merge", "rebase"];
-export const processBotSupportedRepos = ["substrate", "polkadot", "cumulus"];
 export const botPullRequestCommentSubcommands: {
   [Subcommand in "cancel"]: Subcommand;
 } = { cancel: "cancel" };
