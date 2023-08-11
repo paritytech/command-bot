@@ -1,6 +1,6 @@
 import { Command, CommanderError, InvalidArgumentError, Option, OptionValues } from "commander";
 
-import { botPullRequestIgnoreCommands } from "src/bot";
+import { botPullRequestIgnoreCommands, processBotSupportedRepos } from "src/bot";
 import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand";
 import { SkipEvent } from "src/bot/types";
 import { CommandConfigs } from "src/command-configs/types";
@@ -30,6 +30,7 @@ export function getCommanderFromConfiguration(
   ctx: LoggerContext,
   docsPath: string,
   commandConfigs: CommandConfigs,
+  repo: string,
 ): ExtendedCommander {
   const { botPullRequestCommentMention } = config;
   const root = new Command(botPullRequestCommentMention) as ExtendedCommander;
@@ -62,13 +63,16 @@ export function getCommanderFromConfiguration(
       parsedCommand = new CancelCommand(taskId || "");
     });
 
-  for (const ignoredCommand of botPullRequestIgnoreCommands) {
-    root
-      .command(ignoredCommand)
-      .exitOverride()
-      .action(() => {
-        parsedCommand = new SkipEvent(`Ignored command: ${ignoredCommand}`);
-      });
+  // ignore `bot merge` / `bot rebase` for repos which support processbot
+  if (processBotSupportedRepos.includes(repo)) {
+    for (const ignoredCommand of botPullRequestIgnoreCommands) {
+      root
+        .command(ignoredCommand)
+        .exitOverride()
+        .action(() => {
+          parsedCommand = new SkipEvent(`Ignored command: ${ignoredCommand}`);
+        });
+    }
   }
 
   for (const [commandKey, commandConfig] of Object.entries(commandConfigs)) {

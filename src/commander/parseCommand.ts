@@ -27,6 +27,7 @@ export async function parseCommand(
     ctx,
     parsedConfigs.result.docsPath,
     parsedConfigs.result.commandConfigs,
+    repo,
   );
 
   // parse the command again, this time with the argument validators based on branch from above
