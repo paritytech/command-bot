@@ -121,6 +121,6 @@ function getBotEnv(
 
     BOT_PR_COMMENT_MENTION: "testbot",
 
-    PROCESSBOT_SUPPORTED_REPOS: "substrate,polkadot,cumulus",
+    PROCESSBOT_SUPPORTED_REPOS: "substrate,polkadot,cumulus,command-bot-test",
   };
 }
