@@ -31,6 +31,11 @@ const allowedOrganizations = envVar("ALLOWED_ORGANIZATIONS")
     return parsedValue;
   });
 
+const processBotSupportedRepos = envVar("PROCESSBOT_SUPPORTED_REPOS")
+  .split(",")
+  .map((repo) => repo.trim())
+  .filter((value) => value.length !== 0);
+
 export type Config = {
   dataPath: string;
   pipelineScripts: PipelineScripts;
@@ -58,6 +63,7 @@ export type Config = {
   gitlabJobImage: string;
   cmdBotUrl: string;
   botPullRequestCommentMention: string;
+  processBotSupportedRepos: string[];
 };
 
 export const config: Config = {
@@ -87,4 +93,5 @@ export const config: Config = {
   gitlabJobImage: envVar("GITLAB_JOB_IMAGE"),
   cmdBotUrl: envVar("CMD_BOT_URL"),
   botPullRequestCommentMention: process.env.BOT_PR_COMMENT_MENTION || "bot",
+  processBotSupportedRepos,
 };

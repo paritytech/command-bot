@@ -26,6 +26,7 @@ common:
     CMD_BOT_URL: https://command-bot.parity-prod.parity.io/
     BOT_PR_COMMENT_MENTION: bot
     PIPELINE_SCRIPTS_REF: main
+    PROCESSBOT_SUPPORTED_REPOS: "substrate,polkadot,cumulus"
   secrets:
     ALLOWED_ORGANIZATIONS: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-prod#ALLOWED_ORGANIZATIONS
     APP_ID: ref+vault://kv/gitlab/parity/mirrors/command-bot/devops-parity-prod#APP_ID
