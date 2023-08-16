@@ -20,6 +20,12 @@ export class CleanCommand extends ParsedCommand {
   }
 }
 
+export class RebaseCommand extends ParsedCommand {
+  constructor() {
+    super("rebase");
+  }
+}
+
 export class HelpCommand extends ParsedCommand {
   constructor(public docsPath: string) {
     super("help");

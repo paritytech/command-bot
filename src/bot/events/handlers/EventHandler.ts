@@ -4,6 +4,7 @@ import { cancelHandler } from "src/bot/events/handlers/cancelHandler";
 import { cleanHandler } from "src/bot/events/handlers/cleanHandler";
 import { genericHandler } from "src/bot/events/handlers/genericHandler";
 import { helpHandler } from "src/bot/events/handlers/helpHandler";
+import { rebaseHandler } from "src/bot/events/handlers/rebaseHandler";
 import { skipHandler } from "src/bot/events/handlers/skipHandler";
 import { extractPullRequestData } from "src/bot/parse/extractPullRequestData";
 import { ParsedCommand } from "src/bot/parse/ParsedCommand";
@@ -33,6 +34,7 @@ export class EventHandler {
   public helpHandler = helpHandler.bind(this);
   public cleanHandler = cleanHandler.bind(this);
   public cancelHandler = cancelHandler.bind(this);
+  public rebaseHandler = rebaseHandler.bind(this);
   public genericHandler = genericHandler.bind(this);
   public getError = ((body: string): PullRequestError => {
     const comment: PullRequestCommentMeta = {

@@ -1,7 +1,14 @@
 import { Command, CommanderError, InvalidArgumentError, Option, OptionValues } from "commander";
 
 import { botPullRequestIgnoreCommands } from "src/bot";
-import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand";
+import {
+  CancelCommand,
+  CleanCommand,
+  GenericCommand,
+  HelpCommand,
+  ParsedCommand,
+  RebaseCommand,
+} from "src/bot/parse/ParsedCommand";
 import { SkipEvent } from "src/bot/types";
 import { CommandConfigs } from "src/command-configs/types";
 import { getVariablesOption, variablesExitOverride } from "src/commander/getVariablesOption";
@@ -53,6 +60,14 @@ export function getCommanderFromConfiguration(
     .exitOverride()
     .action(() => {
       parsedCommand = new CleanCommand();
+    });
+
+  root
+    .command("rebase")
+    .alias("refresh")
+    .exitOverride()
+    .action(() => {
+      parsedCommand = new RebaseCommand();
     });
 
   root

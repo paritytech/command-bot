@@ -2,7 +2,14 @@ import { displayError, intoError } from "@eng-automation/js";
 
 import { EventHandler } from "src/bot/events/handlers/EventHandler";
 import { extractPullRequestData } from "src/bot/parse/extractPullRequestData";
-import { CancelCommand, CleanCommand, GenericCommand, HelpCommand, ParsedCommand } from "src/bot/parse/ParsedCommand";
+import {
+  CancelCommand,
+  CleanCommand,
+  GenericCommand,
+  HelpCommand,
+  ParsedCommand,
+  RebaseCommand,
+} from "src/bot/parse/ParsedCommand";
 import { parsePullRequestBotCommandLine } from "src/bot/parse/parsePullRequestBotCommandLine";
 import { CommentData, FinishedEvent, PullRequestError, SkipEvent, WebhookHandler } from "src/bot/types";
 import { isRequesterAllowed } from "src/core";
@@ -72,6 +79,8 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
         await eventHandler.helpHandler();
       } else if (parsedCommand instanceof CleanCommand) {
         await eventHandler.cleanHandler();
+      } else if (parsedCommand instanceof RebaseCommand) {
+        await eventHandler.rebaseHandler();
       } else if (parsedCommand instanceof GenericCommand) {
         handlerResult = await eventHandler.genericHandler();
       } else if (parsedCommand instanceof CancelCommand) {
@@ -84,7 +93,7 @@ export const onIssueCommentCreated: WebhookHandler<"issue_comment.created"> = as
     }
   } catch (rawError) {
     const errMessage = intoError(rawError);
-    const msg = `Exception caught in webhook handler\n${errMessage.message}`;
+    const msg = `Exception caught in webhook handler: "${errMessage.message}"`;
     logger.fatal(displayError(rawError), msg);
     return getError(msg);
   }
