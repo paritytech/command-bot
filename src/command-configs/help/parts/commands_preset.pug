@@ -1,5 +1,5 @@
 div(class="preset " + preset.repos.join(' '))
-  h6.mb-md(id="link-"+presetId) #{commandStart} #{ commandName } #{presetId === 'default' ? '' : presetId}
+  h6.mb-md(id="link-"+ commandName + "-" + presetId) #{commandStart} #{ commandName } #{presetId === 'default' ? '' : presetId}
   p.mb-md.muted
     | Works in these repos:&nbsp;
     each repo in preset.repos
