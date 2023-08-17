@@ -13,7 +13,7 @@ div.sticky-nav
           ul.nav-preset
             each preset, presetId in cfg.command.presets
               li(class="preset-link " + preset.repos.join(' '))
-                a(href="\#link-" + presetId) #{ presetId }
+                a(href="\#link-" + commandName + "-" + presetId) #{ presetId }
   | Env Variables
   ul
     li
