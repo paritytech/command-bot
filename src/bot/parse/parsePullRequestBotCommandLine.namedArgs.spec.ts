@@ -14,6 +14,7 @@ type DataProvider = {
   suitName: string;
   commandLine: string;
   expectedResponse: SkipEvent | ParsedCommand | Error;
+  repo?: string;
 };
 
 const dataProvider: DataProvider[] = [
@@ -24,7 +25,7 @@ const dataProvider: DataProvider[] = [
       "bench",
       {
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh"'],
-        gitlab: { job: { tags: ["bench-bot"], variables: {} } },
+        gitlab: { job: { tags: ["weights-vm"], variables: {} } },
       },
       {},
       '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=runtime --runtime=polkadot --target_dir=polkadot --pallet=pallet_referenda',
@@ -38,29 +39,17 @@ const dataProvider: DataProvider[] = [
       "bench",
       {
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh"'],
-        gitlab: { job: { tags: ["bench-bot"], variables: {} } },
+        gitlab: { job: { tags: ["weights-vm"], variables: {} } },
       },
       { PIPELINE_SCRIPTS_REF: "branch" },
       '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=xcm --runtime=bridge-hub-kusama --runtime_dir=bridge-hubs --target_dir=cumulus --pallet=pallet_name',
     ),
+    repo: "cumulus",
   },
   {
     suitName: "unrelated to bot comment returns nothing (ignores)",
     commandLine: "something from comments",
     expectedResponse: new SkipEvent("Not a command"),
-  },
-  {
-    suitName: "try-runtime-bot with default preset mentioned explicitly",
-    commandLine: "bot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace -v SECOND=val default --chain=kusama",
-    expectedResponse: new GenericCommand(
-      "try-runtime",
-      {
-        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh"'],
-        gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
-      },
-      { RUST_LOG: "remote-ext=debug,runtime=trace", SECOND: "val" },
-      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama --target_path=. --chain_node=polkadot',
-    ),
   },
   {
     suitName: "try-runtime-bot testing default without mentioning preset name",
@@ -87,6 +76,43 @@ const dataProvider: DataProvider[] = [
       {},
       '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=polkadot --target_path=. --chain_node=polkadot',
     ),
+  },
+  {
+    suitName: "try-runtime-bot testing wrong presets",
+    commandLine: "bot try-runtime unbelievable",
+    expectedResponse: new Error(
+      `Unknown subcommand of "try-runtime". Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
+    ),
+  },
+  {
+    suitName: "try-runtime-bot testing trappist",
+    commandLine: "bot try-runtime trappist",
+    expectedResponse: new GenericCommand(
+      "try-runtime",
+      {
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh"'],
+        gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
+      },
+      {},
+      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=trappist --chain_node=trappist-node --target_path=. --live_uri=rococo-trappist',
+    ),
+    repo: "trappist",
+  },
+  {
+    suitName: "try-runtime-bot testing trappist with existing but unsupported preset [default]",
+    commandLine: "bot try-runtime",
+    expectedResponse: new Error(
+      `Missing arguments for command "try-runtime". Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
+    ),
+    repo: "trappist",
+  },
+  {
+    suitName: "try-runtime-bot testing trappist with existing but unsupported preset [polkadot]",
+    commandLine: "bot try-runtime polkadot",
+    expectedResponse: new Error(
+      `Unknown subcommand of "try-runtime". Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
+    ),
+    repo: "trappist",
   },
   {
     suitName: "fmt, no args should be allowed and return config",
@@ -142,7 +168,7 @@ const dataProvider: DataProvider[] = [
   },
   {
     suitName: "command, with 'default' preset should add properly",
-    commandLine: "bot sample default --input=bla",
+    commandLine: "bot sample --input=bla",
     expectedResponse: new GenericCommand(
       "sample",
       {
@@ -168,8 +194,8 @@ const dataProvider: DataProvider[] = [
   },
 
   /*
-    Help cases
-   */
+      Help cases
+     */
   {
     suitName: "help",
     commandLine: "bot help",
@@ -184,14 +210,14 @@ const dataProvider: DataProvider[] = [
   { suitName: "clear", commandLine: "bot clear", expectedResponse: new CleanCommand() },
 
   /*
-    Cancel cases
-   */
+      Cancel cases
+     */
   { suitName: "cancel no-taskId", commandLine: "bot cancel", expectedResponse: new CancelCommand("") },
   { suitName: "cancel with taskId", commandLine: "bot cancel 123123", expectedResponse: new CancelCommand("123123") },
 
   /*
-     Ignore cases
-*/
+       Ignore cases
+  */
   {
     suitName: "empty command line returns nothing (ignores)",
     commandLine: "",
@@ -220,8 +246,8 @@ const dataProvider: DataProvider[] = [
   },
 
   /*
-    Expected Error cases
-   */
+      Expected Error cases
+     */
   {
     suitName: "bench-bot --pallet should validate the matching rule",
     commandLine: "bot bench polkadot-pallet --pallet=00034",
@@ -240,6 +266,7 @@ const dataProvider: DataProvider[] = [
     suitName: "bench-bot, no required args, should return error",
     commandLine: "bot bench cumulus-bridge-hubs",
     expectedResponse: new Error(`required option '--pallet <value>' not specified`),
+    repo: "cumulus",
   },
   {
     suitName: "sample without required arg should return error",
@@ -257,21 +284,21 @@ const dataProvider: DataProvider[] = [
     suitName: "nonexistent command, should return proper error",
     commandLine: "bot nope 123123",
     expectedResponse: new Error(
-      'Unknown command "nope"; Available ones are bench-all, bench-overhead, bench-vm, bench, fmt, merge, rebase, sample, try-runtime, update-ui. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+      'Unknown command "nope". Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     ),
   },
   {
     suitName: "not provided command, returns proper error",
     commandLine: "bot $",
     expectedResponse: new Error(
-      'Unknown command "$"; Available ones are bench-all, bench-overhead, bench-vm, bench, fmt, merge, rebase, sample, try-runtime, update-ui. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+      'Unknown command "$". Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     ),
   },
   {
     suitName: "non existed config must return error with explanation",
     commandLine: "bot xz",
     expectedResponse: new Error(
-      `Unknown command "xz"; Available ones are bench-all, bench-overhead, bench-vm, bench, fmt, merge, rebase, sample, try-runtime, update-ui. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
+      `Unknown command "xz". Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
     ),
   },
   {
@@ -291,9 +318,9 @@ const dataProvider: DataProvider[] = [
 ];
 
 describe("parsePullRequestBotCommandLine", () => {
-  for (const { suitName, commandLine, expectedResponse } of dataProvider) {
-    test(`test commandLine: ${commandLine} [${suitName}]`, async () => {
-      const res = await parsePullRequestBotCommandLine(commandLine, { logger }, "polkadot");
+  for (const { suitName, commandLine, expectedResponse, repo } of dataProvider) {
+    test(`test commandLine: "${commandLine}" [${suitName}] ${repo ? "repo: [" + repo + "]" : ""}`, async () => {
+      const res = await parsePullRequestBotCommandLine(commandLine, { logger }, repo || "polkadot");
       expect(res).toEqual(expectedResponse);
     });
   }

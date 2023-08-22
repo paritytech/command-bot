@@ -34,7 +34,7 @@ const dataProvider: DataProvider[] = [
       "bench",
       {
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh"'],
-        gitlab: { job: { tags: ["bench-bot"], variables: {} } },
+        gitlab: { job: { tags: ["weights-vm"], variables: {} } },
       },
       { PIPELINE_SCRIPTS_REF: "hello-is-this-even-used" },
       '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" runtime kusama-dev pallet_referenda',
@@ -130,21 +130,21 @@ const dataProvider: DataProvider[] = [
     suitName: "nonexistent command, should return proper error",
     commandLine: "bot nope 123123",
     expectedResponse: new Error(
-      'Unknown command "nope"; Available ones are bench-all, bench-overhead, bench-vm, bench, fmt, merge, rebase, sample, try-runtime, update-ui. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+      'Unknown command "nope". Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     ),
   },
   {
     suitName: "not provided command, returns proper error",
     commandLine: "bot $",
     expectedResponse: new Error(
-      'Unknown command "$"; Available ones are bench-all, bench-overhead, bench-vm, bench, fmt, merge, rebase, sample, try-runtime, update-ui. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+      'Unknown command "$". Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     ),
   },
   {
     suitName: "non existed config must return error with explanation",
     commandLine: "bot xz",
     expectedResponse: new Error(
-      `Unknown command "xz"; Available ones are bench-all, bench-overhead, bench-vm, bench, fmt, merge, rebase, sample, try-runtime, update-ui. Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
+      `Unknown command "xz". Refer to [help docs](http://cmd-bot.docs.com/static/docs/latest.html) and/or [source code](https://github.com/paritytech/command-bot-scripts).`,
     ),
   },
 ];
