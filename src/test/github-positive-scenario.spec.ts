@@ -45,19 +45,9 @@ const commandsDataProvider: CommandDataProviderItem[] = [
     },
   },
   {
-    suitName: "[fmt] command with falsy args - won't be passed",
-    commandLine: "testbot fmt 1",
-    taskId: 2,
-    expected: {
-      startMessage:
-        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"". This comment will be updated later.',
-      finishMessage: '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"` has finished.',
-    },
-  },
-  {
     suitName: "[fmt] command no args",
     commandLine: "testbot fmt",
-    taskId: 3,
+    taskId: 2,
     expected: {
       startMessage:
         'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/fmt/fmt.sh"". This comment will be updated later.',
@@ -67,7 +57,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   {
     suitName: "[bench-bot] command",
     commandLine: "testbot bench polkadot-pallet --runtime=kusama --pallet=pallet_referenda",
-    taskId: 4,
+    taskId: 3,
     expected: {
       startMessage:
         'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=runtime --runtime=kusama --target_dir=polkadot --pallet=pallet_referenda". This comment will be updated later.',
@@ -78,7 +68,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   {
     suitName: "[try-runtime] command",
     commandLine: "testbot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace --chain=kusama",
-    taskId: 5,
+    taskId: 4,
     expected: {
       startMessage:
         'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama --target_path=. --chain_node=polkadot',

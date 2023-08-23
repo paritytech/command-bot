@@ -53,7 +53,7 @@ const commandsDataProvider: CommandDataProviderItem[] = [
     commandLine: "testbot hrlp", // intentional typo
     expected: {
       startMessage:
-        '@somedev123 Unknown command "hrlp"; Available ones are bench-all, bench-bm, bench-overhead, bench, fmt, merge, rebase, sample, try-runtime, update-ui. Refer to [help docs](http://localhost:3000/static/docs/latest.html?repo=command-bot-test) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+        '@somedev123 Unknown command "hrlp". Refer to [help docs](http://localhost:3000/static/docs/latest.html?repo=command-bot-test) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     },
   },
   {
@@ -61,13 +61,22 @@ const commandsDataProvider: CommandDataProviderItem[] = [
     commandLine: "testbot bench-all", // command-bot-test repo is not in a list of repos: [...] array
     expected: {
       startMessage:
-        '@somedev123 Missing arguments for command "bench-all". Refer to [help docs](http://localhost:3000/static/docs/latest.html?repo=command-bot-test) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+        '@somedev123 Unknown command "bench-all". Refer to [help docs](http://localhost:3000/static/docs/latest.html?repo=command-bot-test) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     },
   },
   {
     suitName: "[cancel] command for no jobs",
     commandLine: "testbot cancel",
     expected: { startMessage: "@somedev123 No task is being executed for this pull request" },
+  },
+
+  {
+    suitName: "[fmt] command with falsy args - won't be passed",
+    commandLine: "testbot fmt 1",
+    expected: {
+      startMessage:
+        '@somedev123 Unknown subcommand of "fmt". Refer to [help docs](http://localhost:3000/static/docs/latest.html?repo=command-bot-test) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
+    },
   },
   // TODO: add test for clean after moving to opstooling-testing
   // {

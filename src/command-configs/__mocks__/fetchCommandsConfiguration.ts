@@ -33,8 +33,21 @@ export const cmd: CommandConfigs = {
         trappist: {
           description: "Pallet Benchmark for Trappist",
           repos: ["trappist"],
-          args: { runtime: { label: "Runtime", type_one_of: ["trappist", "stout"] } },
+          args: {
+            runtime: { label: "Runtime", type_one_of: ["trappist", "stout"] },
+            target_dir: { label: "Target Directory", type_string: "trappist" },
+          },
         },
+      },
+    },
+  },
+  "bench-bm": {
+    $schema: "../../node_modules/command-bot/src/schema/schema.cmd.json",
+    command: {
+      description: "This is a testing for `bench` command running on legacy BM machines",
+      configuration: {
+        gitlab: { job: { tags: ["weights-vm"], variables: {} } },
+        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench-bm/bench-bm.sh"'],
       },
     },
   },
@@ -43,7 +56,7 @@ export const cmd: CommandConfigs = {
     command: {
       description: "Run benchmarks overhead and commit back results to PR",
       configuration: {
-        gitlab: { job: { tags: ["bench-bot"], variables: {} } },
+        gitlab: { job: { tags: ["weights-vm"], variables: {} } },
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench-overhead/bench-overhead.sh"'],
       },
       presets: {
@@ -76,22 +89,12 @@ export const cmd: CommandConfigs = {
       },
     },
   },
-  "bench-vm": {
-    $schema: "../../node_modules/command-bot/src/schema/schema.cmd.json",
-    command: {
-      description: "This is a testing for `bench` command running on VM machine",
-      configuration: {
-        gitlab: { job: { tags: ["weights-vm"], variables: {} } },
-        commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench-vm/bench-vm.sh"'],
-      },
-    },
-  },
   bench: {
     $schema: "../../node_modules/command-bot/src/schema/schema.cmd.json",
     command: {
       description: "Runs `benchmark pallet` or `benchmark overhead` against your PR and commits back updated weights",
       configuration: {
-        gitlab: { job: { tags: ["bench-bot"], variables: {} } },
+        gitlab: { job: { tags: ["weights-vm"], variables: {} } },
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh"'],
       },
       presets: {
@@ -202,6 +205,7 @@ export const cmd: CommandConfigs = {
             subcommand: { label: "Subcommand", type_one_of: ["runtime", "xcm"] },
             runtime: { label: "Runtime", type_one_of: ["trappist", "stout"] },
             pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
+            target_dir: { label: "Target Directory", type_string: "trappist" },
           },
         },
       },
@@ -226,6 +230,7 @@ export const cmd: CommandConfigs = {
         gitlab: { job: { tags: [""] } },
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/merge/merge.sh"'],
       },
+      presets: { default: { description: "merge PR", repos: ["substrate", "polkadot", "cumulus"] } },
     },
   },
   rebase: {
@@ -234,9 +239,10 @@ export const cmd: CommandConfigs = {
       description:
         "create a merge commit from the target branch into the PR. Read more: https://github.com/paritytech/parity-processbot/",
       configuration: {
-        gitlab: { job: { tags: [""] } },
+        gitlab: { job: { tags: [""], variables: {} } },
         commandStart: ['"$PIPELINE_SCRIPTS_DIR/commands/rebase/rebase.sh"'],
       },
+      presets: { default: { description: "pull latest from the base", repos: ["substrate", "polkadot", "cumulus"] } },
     },
   },
   sample: {
@@ -291,6 +297,7 @@ export const cmd: CommandConfigs = {
             chain: { label: "Chain", type_one_of: ["trappist"] },
             chain_node: { label: "Chain Node", type_string: "trappist-node" },
             target_path: { label: "Target Path", type_string: "." },
+            live_uri: { label: "Live Node URI ID", type_string: "rococo-trappist" },
           },
         },
       },
