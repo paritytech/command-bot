@@ -21,7 +21,7 @@ export function getSupportedRepoNames(
       if (repos.length === 0) {
         includesGenericPresets = true;
       }
-      for (const repo of preset.repos ?? []) {
+      for (const repo of repos) {
         reposSet.add(repo);
       }
     }
