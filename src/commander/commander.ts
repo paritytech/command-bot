@@ -41,7 +41,7 @@ export function getCommanderFromConfiguration(
 
   const exitOverride = (commandKey: string) => (e: CommanderError) => {
     if (e.code === "commander.excessArguments") {
-      throw new Error(((e as CommanderError).message = `Unknown subcommand of "${commandKey}". ${helpStr}`));
+      throw new Error(`Unknown subcommand of "${commandKey}". ${helpStr}`);
     }
     throw new Error((e as CommanderError).message.replace("error: ", ""));
   };
