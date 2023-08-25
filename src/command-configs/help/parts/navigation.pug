@@ -12,9 +12,8 @@ div.sticky-nav
         if cfg.command.presets
           ul.nav-preset
             each preset, presetId in cfg.command.presets
-              if presetId !== 'default'
-                li(class="preset-link " + preset.repos.join(' '))
-                  a(href="\#link-" + commandName + "-" + presetId) #{ presetId }
+              li(class="preset-link " + preset.repos.join(' ') + (presetId === 'default' ? ' hidden' : ''))
+                a(href="\#link-" + commandName + "-" + presetId) #{ presetId }
   | Env Variables
   ul
     li
