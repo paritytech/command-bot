@@ -1,0 +1,53 @@
+common:
+  fullnameOverride: "command-bot-dev"
+  extraLabels:
+    team: "opstooling-dev"
+  serviceAccount:
+    create: false
+  image:
+    repository: command-bot-dev
+    pullPolicy: IfNotPresent
+  useSecret: false,
+  envFrom: false
+  service:
+    ports:
+      - name: http
+        protocol: TCP
+        port: 80
+        targetPort: 3000
+  ingress:
+    enabled: false
+  persistence:
+    enabled: false
+  env:
+    GITLAB_PUSH_NAMESPACE: parity/mirrors
+    GITLAB_JOB_IMAGE: paritytech/ci-unified:bullseye-1.70.0-2023-05-23
+    GITLAB_DOMAIN: gitlab-stg.parity.io
+    PIPELINE_SCRIPTS_REPOSITORY: https://github.com/paritytech/command-bot-scripts
+    PIPELINE_SCRIPTS_REF: main
+
+    APP_ID: 123456
+    CLIENT_ID: "client-id"
+    CLIENT_SECRET: "secret"
+
+    GITLAB_ACCESS_TOKEN: "token"
+    GITLAB_ACCESS_TOKEN_USERNAME: "token_username"
+    PRIVATE_KEY_BASE64: "base64_encoded_private_key"
+
+    DATA_PATH: "data"
+    ALLOWED_ORGANIZATIONS: "123456"
+    MASTER_TOKEN: "placeholder"
+    # DISABLE_PR_COMMENT: true
+    WEBHOOK_SECRET: "development"
+    WEBHOOK_PROXY_URL: "https://smee.io/1234"
+
+    CMD_BOT_URL: "http://localhost:3000/"
+    MIN_LOG_LEVEL: "debug"
+    BOT_PR_COMMENT_MENTION: "bot"
+    PROCESSBOT_SUPPORTED_REPOS: "substrate,polkadot,cumulus"
+  autoscaling:
+    enabled: false
+  livenessProbe: false
+  readinessProbe: false
+  serviceMonitor:
+    enabled: false

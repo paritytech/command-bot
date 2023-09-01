@@ -13,6 +13,7 @@
   "dependencies": {
     "@eng-automation/js": "^0.0.21",
     "@eng-automation/js-style": "^2.0.0",
+    "@kubernetes/client-node": "^0.18.1",
     "@octokit/auth-token": "3.0.0",
     "@octokit/rest": "19.0.3",
     "@octokit/webhooks": "10.0.0",

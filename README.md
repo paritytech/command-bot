@@ -199,8 +199,16 @@ once the application starts.
    Note: The GitLab repository name should match how the repository is named on
    GitHub.
 
-5. Run `yarn` to install the dependencies
-6. Run `yarn dev` to start a development server or `yarn watch` for a
+5. Run helm commands once. This will install the necessary dependencies for
+   running the commands.
+ 
+`helm repo add paritytech https://paritytech.github.io/helm-charts/`
+
+`helm repo update`
+
+`helm dep build helm`
+
+6. Run `skaffold dev` for a
    development server which automatically restarts when you make changes to the
    source files
 7. Trigger the [commands](#pull-request-commands) in the repositories where
@@ -208,7 +216,7 @@ once the application starts.
 
    The `sample` configuration is available for debugging purposes.
 
-   `bot sample $ hi` will run `echo hi` in a GitLab job (GitLab
+   `bot sample --input=123` will run `echo 123` in a GitLab job (GitLab
    repository from Step 4).
 
 # Deployment <a name="deployment"></a>

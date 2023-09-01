@@ -1,0 +1,37 @@
+apiVersion: skaffold/v4beta6
+kind: Config
+metadata:
+  name: command-bot-dev
+build:
+  tagPolicy:
+    dateTime:
+      format: "2006-01-02_15-04-05.999_MST"
+      timezone: "Europe/Lisbon"
+  artifacts:
+    - image: command-bot-dev
+      context: .
+      sync:
+        manual:
+          - src: 'src/**/*.ts'
+            dest: /app-dev
+          - src: 'src/**/*.pug'
+            dest: /app-dev
+          - src: 'src/**/*.json'
+            dest: /app-dev
+      docker:
+        target: app-dev
+deploy:
+  helm:
+    releases:
+      - name: command-bot-dev
+        chartPath: helm
+        valuesFiles:
+          - helm/values-parity-dev.yaml
+        setValueTemplates:
+          image.repository: "{{.IMAGE_NAME}}"
+          image.tag: "{{.DIGEST_HEX}}"
+portForward:
+  - resourceType: service
+    resourceName: command-bot-dev
+    port: 80
+    localPort: 3000

@@ -35,3 +35,16 @@ COPY --from=base /builder/ /app
 RUN chown -R node:node /app
 
 CMD yarn start
+
+
+# ---------------------- app-dev ---------------------- #
+
+FROM base AS app-dev
+
+WORKDIR /app-dev
+
+COPY --from=base /builder/ /app-dev
+
+RUN chown -R node:node /app-dev
+
+CMD yarn dev

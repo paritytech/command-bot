@@ -1,1 +1,27 @@
+# IDEs
+.idea/
+.vscode/
+
+# git and other VCS files
+.git/
 .gitignore
+.dockerignore
+.prettierignore
+.eslintignore
+
+# Ignore node modules and logs
+node_modules/
+npm-debug.log
+
+# Ignore any other log, temp, or cache files
+*.log
+*.tmp
+*.swp
+*.pem
+*.key
+.DS_Store
+.cache/
+.env.cjs
+generated/
+data/
+build/

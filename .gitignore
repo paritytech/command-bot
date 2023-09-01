@@ -18,3 +18,5 @@ src/schema/schema.cmd.d.ts
 generated/
 
 *-error.log
+
+helm/values-parity-dev.yaml
