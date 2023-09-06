@@ -20,9 +20,11 @@ RUN apt-get update && \
     git config --global user.name command-bot && \
     git config --global user.email "opstooling+commandbot@parity.io"
 
-COPY . /builder
+COPY package.json yarn.lock /builder/
 WORKDIR /builder
-RUN yarn --ignore-optional --frozen-lockfile && yarn build
+RUN yarn --ignore-optional --frozen-lockfile
+COPY . /builder
+RUN yarn build
 
 # ---------------------- app ---------------------- #
 

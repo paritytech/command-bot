@@ -175,9 +175,8 @@ GitHub App, install it in a repository through
 
 ## Environment variables <a name="setup-environment-variables"></a>
 
-All environment variables are documented in the
-[.env.example.cjs](./.env.example.cjs) file. For development you're welcome to
-copy that file to `.env.cjs` so that all values will be loaded automatically
+All environment variables are documented in the `helm/values-parity-dev.yaml.example` file. For development you're welcome to
+copy that file to `helm/values-parity-dev.yaml` so that all values will be loaded automatically 123
 once the application starts.
 
 # Development <a name="development"></a>

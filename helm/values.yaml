@@ -23,6 +23,8 @@ common:
         protocol: TCP
         port: 80
         targetPort: 3000
+  rbac:
+    create: true
   ingress:
     enabled: true
     annotations:
