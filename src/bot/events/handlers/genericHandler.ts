@@ -22,12 +22,6 @@ export async function genericHandler(this: EventHandler): Promise<PullRequestErr
 
   const { data: fetchedPr } = await octokit.pulls.get({ owner: pr.owner, repo: pr.repo, pull_number: pr.number });
 
-  // const upstream = {
-  //   owner: fetchedPr.base.repo.owner.login,
-  //   repo: fetchedPr.base.repo.name,
-  //   branch: fetchedPr.base.ref,
-  // };
-
   const contributorUsername = fetchedPr.head?.user?.login;
   if (!contributorUsername) {
     return getError("Failed to read repository owner username for contributor in pull request response");
@@ -43,11 +37,17 @@ export async function genericHandler(this: EventHandler): Promise<PullRequestErr
     return getError("Failed to read branch name for contributor in pull request response");
   }
 
+  const contributorRepoUrl = fetchedPr.head?.repo?.clone_url;
+  if (!contributorRepoUrl) {
+    return getError("Failed to read repository clone URL for contributor in pull request response");
+  }
+
+  const headSha = fetchedPr.head?.sha;
+
   // Update pr in case the upstream repository has been renamed
   pr.owner = contributorUsername;
   pr.repo = contributorRepository;
 
-  // const contributor = { owner: contributorUsername, repo: contributorRepository, branch: contributorBranch };
   const commentBody = `Preparing command "${parsedCommand.command}". This comment will be updated later.`.trim();
 
   const createdComment = await createComment(ctx, octokit, { ...commentParams, body: commentBody });
@@ -63,12 +63,27 @@ export async function genericHandler(this: EventHandler): Promise<PullRequestErr
   }
 
   console.log(
+    `Creating job with image ${image} and variables`,
     await createJob({
-      image,
-      repo: contributorRepository,
-      revision: contributorBranch,
-      scriptPath: parsedCommand.command,
-      variables: Object.assign(defaultVariables, overriddenVariables),
+      container: {
+        image,
+        variables: Object.assign(defaultVariables, overriddenVariables),
+        command: parsedCommand.command,
+      },
+      gitRef: {
+        upstream: {
+          owner: fetchedPr.base.repo.owner.login,
+          repo: fetchedPr.base.repo.name,
+          branch: fetchedPr.base.ref,
+        },
+        contributor: {
+          owner: contributorUsername,
+          repo: contributorRepository,
+          branch: contributorBranch,
+          repoUrl: contributorRepoUrl,
+          headSha,
+        },
+      },
       callback: () => {},
     }),
   );
