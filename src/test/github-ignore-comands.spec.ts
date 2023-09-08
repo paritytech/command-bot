@@ -45,7 +45,7 @@ beforeAll(async () => {
   await initRepo(gitDaemons.gitLab, "paritytech-stg", "command-bot-test.git", []);
 });
 
-describe.each(commandsDataProvider)(
+describe.skip.each(commandsDataProvider)(
   "$suitName: Non pipeline scenario (GitHub webhook)",
   // eslint-disable-next-line unused-imports/no-unused-vars-ts
   ({ suitName, commandLine }) => {

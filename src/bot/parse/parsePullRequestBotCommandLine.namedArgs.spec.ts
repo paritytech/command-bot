@@ -227,22 +227,23 @@ const dataProvider: DataProvider[] = [
   {
     suitName: "ignored command merge",
     commandLine: "bot merge",
-    expectedResponse: new SkipEvent("Ignored command: merge"),
+    expectedResponse: new Error(
+      `\`bot merge\` and \`bot rebase\` are not supported anymore. Please use native Github "Auto-Merge" and "Update Branch" buttons instead. \n![image](https://github.com/paritytech/polkadot-sdk/assets/1177472/e0883113-9440-4517-9d42-d4255573a2be)`,
+    ),
   },
   {
     suitName: "ignored command merge force",
     commandLine: "bot merge force",
-    expectedResponse: new SkipEvent("Ignored command: merge"),
+    expectedResponse: new Error(
+      `\`bot merge\` and \`bot rebase\` are not supported anymore. Please use native Github "Auto-Merge" and "Update Branch" buttons instead. \n![image](https://github.com/paritytech/polkadot-sdk/assets/1177472/e0883113-9440-4517-9d42-d4255573a2be)`,
+    ),
   },
   {
     suitName: "ignored command rebase",
     commandLine: "bot rebase",
-    expectedResponse: new SkipEvent("Ignored command: rebase"),
-  },
-  {
-    suitName: "ignored command 2",
-    commandLine: "bot rebase",
-    expectedResponse: new SkipEvent("Ignored command: rebase"),
+    expectedResponse: new Error(
+      `\`bot merge\` and \`bot rebase\` are not supported anymore. Please use native Github "Auto-Merge" and "Update Branch" buttons instead. \n![image](https://github.com/paritytech/polkadot-sdk/assets/1177472/e0883113-9440-4517-9d42-d4255573a2be)`,
+    ),
   },
 
   /*

@@ -45,6 +45,7 @@ export function getCommanderFromConfiguration(
     }
     throw new Error((e as CommanderError).message.replace("error: ", ""));
   };
+
   const addPresetOptions = (cfg: {
     presetCommand: Command;
     presetConfig: NonNullable<CmdJson["command"]["presets"]>[keyof NonNullable<CmdJson["command"]["presets"]>];
@@ -89,6 +90,16 @@ export function getCommanderFromConfiguration(
     });
 
   root
+    .command("merge")
+    .alias("rebase")
+    .exitOverride()
+    .action(() => {
+      parsedCommand = new Error(
+        `\`bot merge\` and \`bot rebase\` are not supported anymore. Please use native Github "Auto-Merge" and "Update Branch" buttons instead. \n![image](https://github.com/paritytech/polkadot-sdk/assets/1177472/e0883113-9440-4517-9d42-d4255573a2be)`,
+      );
+    });
+
+  root
     .command("cancel [taskid]")
     .description("cancel previous command")
     .exitOverride()
@@ -108,6 +119,8 @@ export function getCommanderFromConfiguration(
     }
   }
 
+  // allows unknown options, so we can parse them later if command is unknown
+  root.allowUnknownOption(true);
   root.addOption(getVariablesOption()).exitOverride(variablesExitOverride);
 
   for (const [commandKey, commandConfig] of Object.entries(commandConfigs)) {
