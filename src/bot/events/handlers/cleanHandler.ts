@@ -1,11 +1,11 @@
 import { EventHandler, EventHandlerError } from "src/bot/events/handlers/EventHandler";
-import { HelpCommand } from "src/bot/parse/ParsedCommand";
+import { CleanCommand } from "src/bot/parse/ParsedCommand";
 import { cleanComments, reactToComment, removeReactionToComment } from "src/github";
 
 export async function cleanHandler(this: EventHandler): Promise<void> {
   // eslint-disable-next-line no-invalid-this
   const { ctx, octokit, commentParams, parsedCommand, payload, pr } = this;
-  if (!(parsedCommand instanceof HelpCommand)) {
+  if (!(parsedCommand instanceof CleanCommand)) {
     throw new EventHandlerError();
   }
 
