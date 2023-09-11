@@ -78,6 +78,33 @@ const commandsDataProvider: CommandDataProviderItem[] = [
         '@somedev123 Unknown subcommand of "fmt". Refer to [help docs](http://localhost:3000/static/docs/latest.html?repo=command-bot-test) and/or [source code](https://github.com/paritytech/command-bot-scripts).',
     },
   },
+
+  {
+    suitName: "[merge/rebase] merge",
+    commandLine: "testbot merge",
+    expected: {
+      startMessage: `@somedev123 \`bot merge\` and \`bot rebase\` are not supported anymore. Please use native Github "Auto-Merge" and "Update Branch" buttons instead. 
+![image](https://github.com/paritytech/polkadot-sdk/assets/1177472/e0883113-9440-4517-9d42-d4255573a2be)`,
+    },
+  },
+
+  {
+    suitName: "[merge/rebase] merge force",
+    commandLine: "testbot merge force",
+    expected: {
+      startMessage: `@somedev123 \`bot merge\` and \`bot rebase\` are not supported anymore. Please use native Github "Auto-Merge" and "Update Branch" buttons instead. 
+![image](https://github.com/paritytech/polkadot-sdk/assets/1177472/e0883113-9440-4517-9d42-d4255573a2be)`,
+    },
+  },
+
+  {
+    suitName: "[merge/rebase] rebase",
+    commandLine: "testbot rebase",
+    expected: {
+      startMessage: `@somedev123 \`bot merge\` and \`bot rebase\` are not supported anymore. Please use native Github "Auto-Merge" and "Update Branch" buttons instead. 
+![image](https://github.com/paritytech/polkadot-sdk/assets/1177472/e0883113-9440-4517-9d42-d4255573a2be)`,
+    },
+  },
   // TODO: add test for clean after moving to opstooling-testing
   // {
   //   suitName: "[clean] command",
