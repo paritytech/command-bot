@@ -7,7 +7,7 @@ stages:
 variables:
   IMAGE_NAME:                      "docker.io/paritytech/command-bot"
   CI_IMAGE:                        "docker.io/paritytech/command-bot:ci"
-  BUILDAH_IMAGE:                   "quay.io/buildah/stable:v1.29"
+  # BUILDAH_IMAGE is defined in group variables
   BUILDAH_COMMAND:                 "buildah --storage-driver overlay2"
   DOCKER_TAG:                      ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
   DATA_PATH:                       /data
