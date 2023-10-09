@@ -24,16 +24,16 @@ const dataProvider: DataProvider[] = [
     result: "bot sample --input=args",
   },
   {
-    suitName: "cumulus assets polkadot",
-    command: "bench $ pallet asset-hub-polkadot assets pallet_xz",
+    suitName: "cumulus assets westend",
+    command: "bench $ pallet asset-hub-westend assets pallet_xz",
     repo: "polkadot-sdk",
     result: "bot bench cumulus-assets --pallet=pallet_xz",
   },
   {
-    suitName: "cumulus assets kusama",
+    suitName: "cumulus assets will end up with default as kusama no longer in repo",
     command: "bench $ pallet asset-hub-kusama assets pallet_xz",
     repo: "polkadot-sdk",
-    result: "bot bench cumulus-assets --runtime=asset-hub-kusama --pallet=pallet_xz",
+    result: "bot bench cumulus-assets --pallet=pallet_name",
   },
   {
     suitName: "cumulus assets old kusama: will endup with default, as can't find `statemine`",
@@ -53,20 +53,14 @@ const dataProvider: DataProvider[] = [
     repo: "polkadot-sdk",
     result: "bot bench polkadot-pallet --pallet=pallet_contracts",
   },
-  { suitName: "polkadot all", command: "bench-all $ kusama", repo: "polkadot", result: "bot bench-all polkadot" },
+  { suitName: "polkadot all", command: "bench-all $ rococo", repo: "polkadot", result: "bot bench-all polkadot" },
   {
-    suitName: "cumulus bridge-hubs",
-    command: "bench $ xcm bridge-hub-kusama bridge-hubs pallet_name",
+    suitName: "cumulus bridge-hubs default",
+    command: "bench $ xcm bridge-hub-rococo bridge-hubs pallet_name",
     repo: "cumulus",
-    result: "bot bench cumulus-bridge-hubs --subcommand=xcm --runtime=bridge-hub-kusama --pallet=pallet_name",
+    result: "bot bench cumulus-bridge-hubs --subcommand=xcm --pallet=pallet_name",
   },
-  {
-    suitName: "try-runtime default",
-    command: "try-runtime $ westend",
-    repo: "polkadot",
-    result: "bot try-runtime --chain=westend",
-  },
-  { suitName: "try-runtime default", command: "try-runtime $ polkadot", repo: "polkadot", result: "bot try-runtime" },
+  { suitName: "try-runtime default", command: "try-runtime $ westend", repo: "polkadot", result: "bot try-runtime" },
 ];
 
 describe("guessCommand", () => {

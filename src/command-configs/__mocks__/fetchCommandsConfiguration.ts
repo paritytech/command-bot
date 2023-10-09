@@ -21,7 +21,7 @@ export const cmd: CommandConfigs = {
           description: "Pallet + Overhead Benchmark for Polkadot",
           repos: ["polkadot", "polkadot-sdk"],
           args: {
-            runtime: { label: "Runtime", type_one_of: ["kusama", "polkadot", "rococo", "westend"] },
+            runtime: { label: "Runtime", type_one_of: ["rococo", "westend"] },
             target_dir: { label: "Target Directory", type_string: "polkadot" },
           },
         },
@@ -64,7 +64,7 @@ export const cmd: CommandConfigs = {
           description: "Runs `benchmark overhead` and commits back to PR the updated `extrinsic_weights.rs` files",
           repos: ["polkadot", "polkadot-sdk"],
           args: {
-            runtime: { label: "Runtime", type_one_of: ["polkadot", "kusama", "rococo", "westend"] },
+            runtime: { label: "Runtime", type_one_of: ["westend", "rococo"] },
             target_dir: { label: "Target Directory", type_string: "polkadot" },
           },
         },
@@ -113,7 +113,7 @@ export const cmd: CommandConfigs = {
           repos: ["polkadot", "command-bot-test", "polkadot-sdk"],
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["runtime", "xcm"] },
-            runtime: { label: "Runtime", type_one_of: ["polkadot", "kusama", "rococo", "westend"] },
+            runtime: { label: "Runtime", type_one_of: ["westend", "rococo"] },
             pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             target_dir: { label: "Target Directory", type_string: "polkadot" },
           },
@@ -276,7 +276,7 @@ export const cmd: CommandConfigs = {
           description: "Run try-runtime with specified runtime for Polkadot repo",
           repos: ["polkadot", "command-bot-test"],
           args: {
-            chain: { label: "Chain", type_one_of: ["polkadot", "kusama", "westend", "rococo"] },
+            chain: { label: "Chain", type_one_of: ["westend", "rococo"] },
             target_path: { label: "Target Path", type_string: "." },
             chain_node: { label: "Chain Node", type_string: "polkadot" },
           },
@@ -285,7 +285,7 @@ export const cmd: CommandConfigs = {
           description: "Run try-runtime with specified runtime for monorepo Polkadot SDK",
           repos: ["polkadot-sdk"],
           args: {
-            chain: { label: "Chain", type_one_of: ["polkadot", "kusama", "westend", "rococo"] },
+            chain: { label: "Chain", type_one_of: ["westend", "rococo"] },
             target_path: { label: "Target Path", type_string: "./polkadot" },
             chain_node: { label: "Chain Node", type_string: "polkadot" },
           },
