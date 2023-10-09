@@ -145,10 +145,7 @@ export const cmd: CommandConfigs = {
           repos: ["cumulus", "polkadot-sdk"],
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
-            runtime: {
-              label: "Runtime",
-              type_one_of: ["bridge-hub-rococo"],
-            },
+            runtime: { label: "Runtime", type_one_of: ["bridge-hub-rococo"] },
             pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "bridge-hubs" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
