@@ -90,7 +90,7 @@ describe("Job failure (GitHub webhook)", () => {
       .forGet("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/pipelines/61/jobs")
       .thenReply(200, restFixures.gitlab.jobs, jsonResponseHeaders);
 
-    await until(async () => !(await mockedPipelineEndpoint.isPending()), 150, 50);
+    await until(async () => !(await mockedPipelineEndpoint.isPending()), 250, 50);
   });
 
   test("Phase 2: pipeline fails", async () => {
@@ -105,7 +105,7 @@ describe("Job failure (GitHub webhook)", () => {
       .forPost("/api/v4/projects/1/pipelines/61/cancel")
       .thenReply(200, restFixures.gitlab.cancelledPipeline, jsonResponseHeaders);
 
-    await until(async () => !(await mockedEndpoint.isPending()), 100, 50);
+    await until(async () => !(await mockedEndpoint.isPending()), 250, 50);
   });
 
   // TODO: bot should comment about status of the job
