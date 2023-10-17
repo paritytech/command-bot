@@ -166,6 +166,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
           .keys({ id: Joi.number().required(), project_id: Joi.number().required() })
           .options({ allowUnknown: true }),
       ),
+    { attempts: waitForBranchMaxTries, timeoutMs: waitForBranchRetryDelayMs },
   );
 
   logger.info({ pipeline, task }, `Created pipeline for task ${task.id}`);
