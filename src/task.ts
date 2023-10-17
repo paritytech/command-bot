@@ -37,6 +37,7 @@ type TaskBase<T> = {
   requester: string;
   gitlab: {
     job: {
+      timeout?: string;
       tags: string[];
       image: string;
       variables: {
