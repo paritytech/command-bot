@@ -117,8 +117,8 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
     registered the branch, therefore causing the "Reference not found" message.
   */
   let wasBranchRegistered = false;
-  const waitForBranchMaxTries = 3;
-  const waitForBranchRetryDelayMs = 2000;
+  const waitForBranchMaxTries = 5;
+  const waitForBranchRetryDelayMs = 5000;
 
   const branchPresenceUrl = `${gitlabProjectApi}/repository/branches/${branchNameUrlEncoded}`;
 
@@ -166,6 +166,7 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
           .keys({ id: Joi.number().required(), project_id: Joi.number().required() })
           .options({ allowUnknown: true }),
       ),
+    { attempts: waitForBranchMaxTries, timeoutMs: waitForBranchRetryDelayMs },
   );
 
   logger.info({ pipeline, task }, `Created pipeline for task ${task.id}`);

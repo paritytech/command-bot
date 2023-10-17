@@ -21,6 +21,9 @@
                 "job": {
                   "type": "object",
                   "properties": {
+                    "timeout": {
+                      "type": "string"
+                    },
                     "tags": {
                       "type": "array",
                       "items": {

@@ -170,7 +170,7 @@ describe.each(commandsDataProvider)(
         .forGet("/api/v4/projects/paritytech-stg%2Fcommand-bot-test/pipelines/61/jobs")
         .thenReply(200, restFixtures.gitlab.jobs, jsonResponseHeaders);
 
-      await until(async () => !(await mockedPipelineEndpoint.isPending()), 100, 50);
+      await until(async () => !(await mockedPipelineEndpoint.isPending()), 250, 50);
     });
 
     test("Phase 3: cmd-bot updates the comment with a link to the pipeline", async () => {
