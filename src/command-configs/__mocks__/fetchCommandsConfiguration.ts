@@ -134,7 +134,7 @@ export const cmd: CommandConfigs = {
           repos: ["cumulus", "polkadot-sdk"],
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
-            runtime: { label: "Runtime", type_one_of: ["collectives-polkadot"] },
+            runtime: { label: "Runtime", type_one_of: ["collectives-polkadot", "collectives-westend"] },
             pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "collectives" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
@@ -170,7 +170,7 @@ export const cmd: CommandConfigs = {
           repos: ["cumulus", "polkadot-sdk"],
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet"] },
-            runtime: { label: "Runtime", type_one_of: ["glutton-kusama", "glutton-kusama-dev-1300"] },
+            runtime: { label: "Runtime", type_one_of: ["glutton-kusama", "glutton-kusama-dev-1300", "glutton-westend", "glutton-westend-dev-1300"] },
             pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "glutton" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
