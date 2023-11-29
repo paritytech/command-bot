@@ -12,7 +12,7 @@ export function createCiConfig(
     workflow: { rules: [{ if: `$CI_PIPELINE_SOURCE == "api"` }, { if: `$CI_PIPELINE_SOURCE == "web"` }] },
     command: {
       timeout: "24 hours",
-      ...task.gitlab.job,
+      ...task.gitlab.job, // timeout could be overridden from the command configs
       script: [
         ...`
         echo "This job is related to task ${task.id}. ${jobTaskInfoMessage}."

@@ -81,6 +81,9 @@ export async function genericHandler(this: EventHandler): Promise<PullRequestErr
     gitlab: {
       job: {
         image,
+        ...(typeof parsedCommand.configuration.gitlab?.job.timeout === "string"
+          ? { timeout: parsedCommand.configuration.gitlab.job.timeout }
+          : {}),
         tags: parsedCommand.configuration.gitlab?.job.tags || [],
         variables: Object.assign(defaultVariables, overriddenVariables),
       },

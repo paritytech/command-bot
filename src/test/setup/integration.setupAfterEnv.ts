@@ -19,7 +19,7 @@ beforeAll(async () => {
   await launchBot(mockServers.gitHub.url, mockServers.gitLab.url, gitDaemons);
   console.log("Bot launched");
 
-  await delay(1000);
+  await delay(2000);
 });
 
 afterAll(async () => {
@@ -34,5 +34,5 @@ afterAll(async () => {
   await stopMockServers();
   console.log("MockServers stopped");
 
-  await delay(1000);
+  await delay(2000);
 });

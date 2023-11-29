@@ -144,7 +144,8 @@ export const setupApi = (ctx: Context, server: Server): void => {
       command,
       gitlab: {
         job: {
-          ...configuration.gitlab.job,
+          timeout: "24 hours",
+          ...configuration.gitlab.job, // might override default timeout
           variables: { ...configuration.gitlab.job.variables, ...variables },
           image: gitlab.defaultJobImage,
         },
