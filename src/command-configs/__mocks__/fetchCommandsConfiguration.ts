@@ -21,7 +21,7 @@ export const cmd: CommandConfigs = {
           description: "Pallet + Overhead Benchmark for Polkadot",
           repos: ["polkadot", "polkadot-sdk"],
           args: {
-            runtime: { label: "Runtime", type_one_of: ["kusama", "polkadot", "rococo", "westend"] },
+            runtime: { label: "Runtime", type_one_of: ["rococo", "westend"] },
             target_dir: { label: "Target Directory", type_string: "polkadot" },
           },
         },
@@ -64,7 +64,7 @@ export const cmd: CommandConfigs = {
           description: "Runs `benchmark overhead` and commits back to PR the updated `extrinsic_weights.rs` files",
           repos: ["polkadot", "polkadot-sdk"],
           args: {
-            runtime: { label: "Runtime", type_one_of: ["polkadot", "kusama", "rococo", "westend"] },
+            runtime: { label: "Runtime", type_one_of: ["westend", "rococo"] },
             target_dir: { label: "Target Directory", type_string: "polkadot" },
           },
         },
@@ -77,7 +77,7 @@ export const cmd: CommandConfigs = {
           description: "Runs `benchmark overhead` and commits back to PR the updated `extrinsic_weights.rs` files",
           repos: ["cumulus", "polkadot-sdk"],
           args: {
-            runtime: { label: "Runtime", type_one_of: ["asset-hub-polkadot", "asset-hub-kusama", "asset-hub-westend"] },
+            runtime: { label: "Runtime", type_one_of: ["asset-hub-westend"] },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
           },
         },
@@ -113,7 +113,7 @@ export const cmd: CommandConfigs = {
           repos: ["polkadot", "command-bot-test", "polkadot-sdk"],
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["runtime", "xcm"] },
-            runtime: { label: "Runtime", type_one_of: ["polkadot", "kusama", "rococo", "westend"] },
+            runtime: { label: "Runtime", type_one_of: ["westend", "rococo"] },
             pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             target_dir: { label: "Target Directory", type_string: "polkadot" },
           },
@@ -123,7 +123,7 @@ export const cmd: CommandConfigs = {
           repos: ["cumulus", "polkadot-sdk"],
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
-            runtime: { label: "Runtime", type_one_of: ["asset-hub-polkadot", "asset-hub-kusama", "asset-hub-westend"] },
+            runtime: { label: "Runtime", type_one_of: ["asset-hub-westend"] },
             pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "assets" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
@@ -134,7 +134,7 @@ export const cmd: CommandConfigs = {
           repos: ["cumulus", "polkadot-sdk"],
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
-            runtime: { label: "Runtime", type_one_of: ["collectives-polkadot"] },
+            runtime: { label: "Runtime", type_one_of: ["collectives-westend"] },
             pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "collectives" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
@@ -145,10 +145,7 @@ export const cmd: CommandConfigs = {
           repos: ["cumulus", "polkadot-sdk"],
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet", "xcm"] },
-            runtime: {
-              label: "Runtime",
-              type_one_of: ["bridge-hub-polkadot", "bridge-hub-kusama", "bridge-hub-rococo"],
-            },
+            runtime: { label: "Runtime", type_one_of: ["bridge-hub-rococo"] },
             pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "bridge-hubs" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
@@ -170,7 +167,7 @@ export const cmd: CommandConfigs = {
           repos: ["cumulus", "polkadot-sdk"],
           args: {
             subcommand: { label: "Subcommand", type_one_of: ["pallet"] },
-            runtime: { label: "Runtime", type_one_of: ["glutton-kusama", "glutton-kusama-dev-1300"] },
+            runtime: { label: "Runtime", type_one_of: ["glutton-westend", "glutton-westend-dev-1300"] },
             pallet: { label: "Pallet", type_rule: "^([a-z_]+)([:]{2}[a-z_]+)?$", example: "pallet_name" },
             runtime_dir: { label: "Runtime Dir", type_string: "glutton" },
             target_dir: { label: "Target Directory", type_string: "cumulus" },
@@ -276,7 +273,7 @@ export const cmd: CommandConfigs = {
           description: "Run try-runtime with specified runtime for Polkadot repo",
           repos: ["polkadot", "command-bot-test"],
           args: {
-            chain: { label: "Chain", type_one_of: ["polkadot", "kusama", "westend", "rococo"] },
+            chain: { label: "Chain", type_one_of: ["westend", "rococo"] },
             target_path: { label: "Target Path", type_string: "." },
             chain_node: { label: "Chain Node", type_string: "polkadot" },
           },
@@ -285,7 +282,7 @@ export const cmd: CommandConfigs = {
           description: "Run try-runtime with specified runtime for monorepo Polkadot SDK",
           repos: ["polkadot-sdk"],
           args: {
-            chain: { label: "Chain", type_one_of: ["polkadot", "kusama", "westend", "rococo"] },
+            chain: { label: "Chain", type_one_of: ["westend", "rococo"] },
             target_path: { label: "Target Path", type_string: "./polkadot" },
             chain_node: { label: "Chain Node", type_string: "polkadot" },
           },
