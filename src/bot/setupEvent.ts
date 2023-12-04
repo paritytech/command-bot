@@ -1,5 +1,3 @@
-import { Probot } from "probot";
-
 import { extractPullRequestData } from "src/bot/parse/extractPullRequestData";
 import {
   FinishedEvent,
@@ -16,10 +14,10 @@ import { Context } from "src/types";
 
 export const setupEvent = <E extends WebhookEvents>(
   parentCtx: Context,
-  bot: Probot,
   eventName: E,
   handler: WebhookHandler<E>,
 ): void => {
+  const { bot } = parentCtx;
   bot.on(eventName, async (event) => {
     const eventLogger = parentLogger.child({ eventId: event.id, eventName });
     const ctx: Context = { ...parentCtx, logger: eventLogger };

@@ -1,3 +1,4 @@
+import { Octokit } from "@octokit/rest";
 import assert from "assert";
 import { Mutex } from "async-mutex";
 import cp from "child_process";
@@ -88,6 +89,7 @@ export const queueTask = async (
   }: {
     onResult: (result: CommandOutput) => Promise<unknown>;
     updateProgress: ((message: string) => Promise<unknown>) | null;
+    octokit?: Octokit;
   },
 ): Promise<string> => {
   assert(!queuedTasks.has(task.id), `Attempted to queue task ${task.id} when it's already registered in the taskMap`);
@@ -96,7 +98,7 @@ export const queueTask = async (
 
   const { botPullRequestCommentMention } = config;
   const ctx = { ...parentCtx, logger: parentCtx.logger.child({ taskId: task.id }) };
-  const { taskDb, getFetchEndpoint, gitlab, logger } = ctx;
+  const { taskDb, getFetchEndpoint, gitlab, logger, bot } = ctx;
   const { db } = taskDb;
 
   await db.put(task.id, JSON.stringify(task));

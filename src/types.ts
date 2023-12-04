@@ -1,4 +1,5 @@
 import { Logger } from "@eng-automation/js";
+import { Probot } from "probot";
 
 import type { TaskDB } from "src/db";
 
@@ -21,6 +22,7 @@ export type PipelineScripts = {
 };
 
 export type Context = {
+  bot: Probot;
   taskDb: TaskDB;
   getFetchEndpoint: (installationId: number | null) => Promise<{ token: string | null; url: string }>;
   log: (str: string) => void;

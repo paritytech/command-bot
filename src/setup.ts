@@ -103,11 +103,19 @@ export const setup = async (
     return { url, token };
   };
 
-  const ctx: Context = { ...partialContext, taskDb, getFetchEndpoint, log: bot.log, logger, repositoryCloneDirectory };
+  const ctx: Context = {
+    ...partialContext,
+    bot,
+    taskDb,
+    getFetchEndpoint,
+    log: bot.log,
+    logger,
+    repositoryCloneDirectory,
+  };
 
   void requeueUnterminatedTasks(ctx, bot);
 
-  setupBot(ctx, bot);
+  setupBot(ctx);
   setupApi(ctx, server);
 
   // if we re-deploy server, the "generated" folder will be wiped,

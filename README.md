@@ -139,6 +139,8 @@ Configuration is done at `https://github.com/settings/apps/${APP}/permissions`.
   - Allows for interacting with the comments API
 - Pull Requests: Read & write
   - Allows for posting comments on pull requests
+- Actions: Read & write
+  - Allows starting workflows
 - Contents: Read-only
   - Allows for cloning repositories before running commands
 

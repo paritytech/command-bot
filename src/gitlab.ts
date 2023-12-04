@@ -1,4 +1,5 @@
 import { envNumberVar } from "@eng-automation/js";
+import console from "console";
 import EventEmitter from "events";
 import { writeFile } from "fs/promises";
 import Joi from "joi";
@@ -34,7 +35,7 @@ function getCiBranchName(task: Task): string {
 }
 
 export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Promise<GitlabTaskContext> => {
-  const { logger, gitlab } = ctx;
+  const { logger, gitlab, bot } = ctx;
   const { pipelineScripts } = config;
 
   const cmdRunner = new CommandRunner(ctx, { itemsToRedact: [gitlab.accessToken], cwd: task.repoPath });
@@ -71,6 +72,26 @@ export const runCommandInGitlabPipeline = async (ctx: Context, task: Task): Prom
     path.join(task.repoPath, ".gitlab-ci.yml"),
     yaml.stringify(createCiConfig(headSha, task, pipelineScripts, jobTaskInfoMessage)),
   );
+
+  if (task.tag === "PullRequestTask") {
+    const octokit = await bot.auth(task.installationId);
+
+    const githubPipeline = await octokit.request(
+      "POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches",
+      {
+        owner: task.gitRef.upstream.owner,
+        repo: task.gitRef.upstream.repo,
+        workflow_id: "command-bot.yml",
+        ref: task.gitRef.upstream.branch || "master",
+        inputs: {
+          // use_self_hosted: '',
+          IMAGE_: task.gitlab.job.image,
+          script_path: task.command,
+        },
+      },
+    );
+    console.log(githubPipeline);
+  }
 
   const branchName = getCiBranchName(task);
 
