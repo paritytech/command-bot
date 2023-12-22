@@ -15,7 +15,7 @@
     "@eng-automation/js-style": "^2.0.0",
     "@octokit/auth-token": "3.0.0",
     "@octokit/rest": "19.0.3",
-    "@octokit/webhooks": "10.0.0",
+    "@octokit/webhooks": "10.9.2",
     "@types/node-fetch": "^2.6.2",
     "@types/pug": "^2.0.6",
     "async-mutex": "0.3.2",
