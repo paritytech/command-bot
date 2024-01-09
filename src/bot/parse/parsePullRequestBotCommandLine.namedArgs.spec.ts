@@ -28,13 +28,13 @@ const dataProvider: DataProvider[] = [
         gitlab: { job: { tags: ["weights-vm"], variables: {} } },
       },
       {},
-      '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=runtime --runtime=polkadot --target_dir=polkadot --pallet=pallet_referenda',
+      '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=runtime --runtime=westend --target_dir=polkadot --pallet=pallet_referenda',
     ),
   },
   {
     suitName: "bench-bot cumulus",
     commandLine:
-      "bot bench cumulus-bridge-hubs -v PIPELINE_SCRIPTS_REF=branch --subcommand=xcm --runtime=bridge-hub-kusama --pallet=pallet_name",
+      "bot bench cumulus-bridge-hubs -v PIPELINE_SCRIPTS_REF=branch --subcommand=xcm --runtime=bridge-hub-rococo --pallet=pallet_name",
     expectedResponse: new GenericCommand(
       "bench",
       {
@@ -42,7 +42,7 @@ const dataProvider: DataProvider[] = [
         gitlab: { job: { tags: ["weights-vm"], variables: {} } },
       },
       { PIPELINE_SCRIPTS_REF: "branch" },
-      '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=xcm --runtime=bridge-hub-kusama --runtime_dir=bridge-hubs --target_dir=cumulus --pallet=pallet_name',
+      '"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=xcm --runtime=bridge-hub-rococo --runtime_dir=bridge-hubs --target_dir=cumulus --pallet=pallet_name',
     ),
     repo: "cumulus",
   },
@@ -53,7 +53,7 @@ const dataProvider: DataProvider[] = [
   },
   {
     suitName: "try-runtime-bot testing default without mentioning preset name",
-    commandLine: "bot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace -v SECOND=val --chain=kusama",
+    commandLine: "bot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace -v SECOND=val --chain=rococo",
     expectedResponse: new GenericCommand(
       "try-runtime",
       {
@@ -61,7 +61,7 @@ const dataProvider: DataProvider[] = [
         gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
       },
       { RUST_LOG: "remote-ext=debug,runtime=trace", SECOND: "val" },
-      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama --target_path=. --chain_node=polkadot',
+      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=rococo --target_path=. --chain_node=polkadot',
     ),
   },
   {
@@ -74,7 +74,7 @@ const dataProvider: DataProvider[] = [
         gitlab: { job: { tags: ["linux-docker-vm-c2"], variables: {} } },
       },
       {},
-      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=polkadot --target_path=. --chain_node=polkadot',
+      '"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=westend --target_path=. --chain_node=polkadot',
     ),
   },
   {
@@ -311,9 +311,9 @@ const dataProvider: DataProvider[] = [
   },
   {
     suitName: "non existed config must return error with explanation",
-    commandLine: "bot bench-overhead $ kusama",
+    commandLine: "bot bench-overhead $ rococo",
     expectedResponse: new Error(
-      `Positional arguments are not supported anymore. I guess you meant \`bot bench-overhead --runtime=kusama\`, but I could be wrong.\n[Read docs](http://cmd-bot.docs.com/static/docs/latest.html) to find out how to run your command.`,
+      `Positional arguments are not supported anymore. I guess you meant \`bot bench-overhead --runtime=rococo\`, but I could be wrong.\n[Read docs](http://cmd-bot.docs.com/static/docs/latest.html) to find out how to run your command.`,
     ),
   },
 ];
