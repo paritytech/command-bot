@@ -9,13 +9,17 @@ export async function cleanHandler(this: EventHandler): Promise<void> {
     throw new EventHandlerError();
   }
 
-  const { comment } = payload;
+  const { comment, sender } = payload;
 
   const reactionParams = { owner: pr.owner, repo: pr.repo, comment_id: comment.id };
   const reactionId = await reactToComment(ctx, octokit, { ...reactionParams, content: "eyes" });
-  await cleanComments(ctx, octokit, { ...commentParams });
+  await cleanComments(ctx, octokit, comment, parsedCommand.all, { ...commentParams, requester: sender.login });
   await Promise.all([
-    reactionId ? await removeReactionToComment(ctx, octokit, { ...reactionParams, reaction_id: reactionId }) : null,
+    reactionId
+      ? await removeReactionToComment(ctx, octokit, { ...reactionParams, reaction_id: reactionId }).catch((e) => {
+          ctx.logger.error(e, "Failed to remove reaction");
+        })
+      : null,
     await reactToComment(ctx, octokit, { ...reactionParams, content: "+1" }),
   ]);
 }

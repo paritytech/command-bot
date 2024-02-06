@@ -85,8 +85,9 @@ export function getCommanderFromConfiguration(
     .command("clear")
     .alias("clean")
     .exitOverride()
-    .action(() => {
-      parsedCommand = new CleanCommand();
+    .option("--all", "clear all comments, including bot and requesters' comments")
+    .action((options: { all: boolean }) => {
+      parsedCommand = new CleanCommand(options.all);
     });
 
   root

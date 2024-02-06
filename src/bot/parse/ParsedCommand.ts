@@ -15,7 +15,7 @@ export class CancelCommand extends ParsedCommand {
 }
 
 export class CleanCommand extends ParsedCommand {
-  constructor() {
+  constructor(public all: boolean = false) {
     super("clean");
   }
 }
