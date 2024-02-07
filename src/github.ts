@@ -289,12 +289,12 @@ export const cleanComments = async (
             .filter((comment) => {
               const isBot = comment.user?.type === "Bot";
               // to avoid deleting the original comment
-              const isOriginComment = comment.id === originalComment.id;
+              const isOriginalComment = comment.id === originalComment.id;
               // testing each comment with real commander and pulling repos (even cached) is quite expensive
               // so we just check if comment has the command pattern, assuming that if it includes pattern, it's a request to bot
               const commandPattern = new RegExp(`^${config.botPullRequestCommentMention} .*$`, "i");
               const hasCommand = comment.body?.split("\n").find((line) => commandPattern.test(line));
-              return (isBot || (isAll && hasCommand)) && !isOriginComment;
+              return (isBot || (isAll && hasCommand)) && !isOriginalComment;
             })
             .map((comment) => comment.id);
 
