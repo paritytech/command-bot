@@ -1,9 +1,12 @@
-div(class="preset " + preset.repos.join(' '))
+div(class="preset " + (typeof(preset.repos) !== 'undefined' ? preset.repos : []).join(' '))
   h6.mb-md(id="link-"+ commandName + "-" + presetId) #{commandStart} #{ commandName } #{presetId === 'default' ? '' : presetId}
   p.mb-md.muted
-    | Works in these repos:&nbsp;
-    each repo in preset.repos
-      span.ms-label #{repo}
+    if typeof(preset.repos) !== 'undefined'
+      | Works in these repos:&nbsp;
+      each repo in (typeof(preset.repos) !== 'undefined' ? preset.repos : [])
+        span.ms-label #{repo}
+    else
+      | Works in all repos
   -let defaultArgs = []
   if preset.args && Object.values(preset.args).length > 0
     div.preset-args.mb-lg.ml-md
@@ -15,17 +18,29 @@ div(class="preset " + preset.repos.join(' '))
               | --#{arg.label}
             div.col-8.lowercase
               each one, i in arg.type_one_of
+                if one.explanation
+                  p(style={"margin-top": 0}) #{one.explanation}&nbsp;
                 span.mb-sm
                   if i === 0
                     | #{one} (default)&nbsp;
                   else
                     | | #{one}&nbsp;
+          if arg.type_boolean
+            div.col-4.lowercase
+              | --#{arg.label}
+            div.col-8
+              if arg.explanation
+                p(style={"margin-top": 0}) #{arg.explanation}&nbsp;
+              span.mb-sm
+                | Default: #{arg.default}&nbsp;
           else if arg.type_rule
             div.col-4.lowercase
               | --#{arg.label}
               span(style="color: red;") &nbsp;*&nbsp;
               | (required):
             div.col-8.lowercase
+              if arg.explanation
+                p(style={"margin-top": 0}) #{arg.explanation}&nbsp;
               | #{arg.type_rule}&nbsp;
               if arg.example
                 | (Example: "#{arg.example}")

@@ -40,7 +40,19 @@ function prepareConfigs(cmdConfigs: CommandConfigs): CommandConfigs {
 
   // these commands are added here, as they are defined inside of bot
   newCmdConfigs.help = mockStaticConfig("Generates the help page & provides a link.");
-  newCmdConfigs.clean = mockStaticConfig("Clears bot comments in the PR.");
+  newCmdConfigs.clean = mockStaticConfig("Clears bot comments in the PR.", {
+    default: {
+      description: "Clears all bot comments in the PR. ",
+      args: {
+        all: {
+          label: "all",
+          type_boolean: true,
+          default: false,
+          explanation: "Clears all bot comments in the PR, including human comments requesting a command-bot.",
+        },
+      },
+    },
+  });
 
   // clean up excluded
   for (const cmdName in cmdConfigs) {
@@ -55,7 +67,7 @@ function prepareConfigs(cmdConfigs: CommandConfigs): CommandConfigs {
 }
 
 // append local (or "hardcoded") commands into documentation
-function mockStaticConfig(description: string) {
-  const config: CmdJson = { command: { description, configuration: {} } };
+function mockStaticConfig(description: string, presets?: CmdJson["command"]["presets"]): CmdJson {
+  const config: CmdJson = { command: { description, configuration: {}, presets } };
   return config;
 }

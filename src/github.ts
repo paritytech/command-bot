@@ -2,9 +2,11 @@ import { Logger } from "@eng-automation/js";
 import { OctokitResponse } from "@octokit/plugin-paginate-rest/dist-types/types";
 import { RequestError } from "@octokit/request-error";
 import { EndpointInterface, Endpoints, RequestInterface } from "@octokit/types";
+import { IssueComment } from "@octokit/webhooks-types";
 import { Mutex } from "async-mutex";
 import { Probot } from "probot";
 
+import { config } from "src/config";
 import { PullRequestTask } from "src/task";
 import { CommandOutput, Context } from "src/types";
 import { displayError, Err, millisecondsDelay, Ok } from "src/utils";
@@ -251,6 +253,8 @@ export const removeReactionToComment = async (
 export const cleanComments = async (
   ctx: Context,
   octokit: Octokit,
+  originalComment: IssueComment,
+  isAll: boolean,
   ...args: Parameters<typeof octokit.issues.listComments>
 ): Promise<void> => {
   if (ctx.disablePRComment) {
@@ -281,10 +285,22 @@ export const cleanComments = async (
             params.page = params.page + 1;
             ctx.logger.debug(null, `cleanComments: increase page ${params.page}`);
           }
-          // save ids
-          botCommentIds.push(...response.data.filter((comment) => comment.user?.type === "Bot").map((r) => r.id));
+          const filteredComments = response.data
+            .filter((comment) => {
+              const isBot = comment.user?.type === "Bot";
+              // to avoid deleting the original comment
+              const isOriginalComment = comment.id === originalComment.id;
+              // testing each comment with real commander and pulling repos (even cached) is quite expensive
+              // so we just check if comment has the command pattern, assuming that if it includes pattern, it's a request to bot
+              const commandPattern = new RegExp(`^${config.botPullRequestCommentMention} .*$`, "i");
+              const hasCommand = comment.body?.split("\n").find((line) => commandPattern.test(line));
+              return (isBot || (isAll && hasCommand)) && !isOriginalComment;
+            })
+            .map((comment) => comment.id);
+
+          botCommentIds.push(...filteredComments);
         } else {
-          ctx.logger.error(response, "cleanComments: listComments ended up unsuccessfully");
+          ctx.logger.error(response, "cleanComments: listComments ended up with error");
           stopped = true;
         }
       }
