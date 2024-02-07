@@ -1,9 +1,12 @@
 div(class="preset " + (typeof(preset.repos) !== 'undefined' ? preset.repos : []).join(' '))
   h6.mb-md(id="link-"+ commandName + "-" + presetId) #{commandStart} #{ commandName } #{presetId === 'default' ? '' : presetId}
   p.mb-md.muted
-    | Works in these repos:&nbsp;
-    each repo in (typeof(preset.repos) !== 'undefined' ? preset.repos : [])
-      span.ms-label #{repo}
+    if typeof(preset.repos) !== 'undefined'
+      | Works in these repos:&nbsp;
+      each repo in (typeof(preset.repos) !== 'undefined' ? preset.repos : [])
+        span.ms-label #{repo}
+    else
+      | Works in all repos
   -let defaultArgs = []
   if preset.args && Object.values(preset.args).length > 0
     div.preset-args.mb-lg.ml-md

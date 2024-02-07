@@ -43,7 +43,6 @@ function prepareConfigs(cmdConfigs: CommandConfigs): CommandConfigs {
   newCmdConfigs.clean = mockStaticConfig("Clears bot comments in the PR.", {
     default: {
       description: "Clears all bot comments in the PR. ",
-      repos: ["polkadot-sdk"],
       args: {
         all: {
           label: "all",
