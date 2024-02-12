@@ -10,19 +10,9 @@ variables:
   # BUILDAH_IMAGE is defined in group variables
   BUILDAH_COMMAND:                 "buildah --storage-driver overlay2"
   DOCKER_TAG:                      ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
-  DATA_PATH:                       /data
-  PING_PORT:                       3001
-  TASK_DB_VERSION:                 v3
   DOCKERFILE:                      Dockerfile
-  VAULT_ADDR:                      "https://vault.parity-mgmt-vault.parity.io"
-  VAULT_AUTH_PATH:                 "gitlab-parity-io-jwt-oidc"
-  VAULT_AUTH_ROLE:                 "gitlab_oidc_${CI_PROJECT_NAME}"
-  HELM_SECRETS_DRIVER:             vals
 
 default:
-  id_tokens:
-    VAULT_ID_TOKEN:
-      aud: https://gitlab.parity.io
   image: $CI_IMAGE
   tags:
     -  kubernetes-parity-build
@@ -129,53 +119,30 @@ push-docker-image-description:
 #### App deployment
 
 .deploy-k8s:                       &deploy-k8s
-  image:                           paritytech/kubetools:3.5.3
+  image:                           quay.io/argoproj/argocd:v2.7.9
+  variables:
+    ARGOCD_OPTS: --grpc-web --grpc-web-root-path /$ENVIRONMENT
+    APP: command-bot
+  environment:
+    name: $ENVIRONMENT
   script:
-    # Change the app version during build so that Kubernetes is able to update
-    # the deployment even if the images' tags did not change
-    # $CI_PIPELINE_ID is guaranteed to be unique
-    - export KUBERNETES_VERSION_TAG="$CI_PIPELINE_ID"
-    # Those values are embedded in the annotations and that's how the change is
-    # noticed
-    - |-
-      sed -i "s/appVersion:.*/appVersion: $KUBERNETES_VERSION_TAG/" helm/Chart.yaml
-    # https://docs.gitlab.com/ee/ci/examples/authenticating-with-hashicorp-vault/#example
-    - export VAULT_TOKEN="$(vault write -field=token auth/$VAULT_AUTH_PATH/login role=$VAULT_AUTH_ROLE jwt=$VAULT_ID_TOKEN)"
-    - helm dependency update helm/
-    - helm secrets --version
-    - helm secrets upgrade
-      --install
-      --atomic
-      --timeout 600s
-      --namespace ${CI_PROJECT_NAME}
-      --values helm/values.yaml
-      --values helm/values-$ENVIRONMENT.yaml
-      --set common.image.repository="$IMAGE_NAME"
-      --set common.image.tag="$DOCKER_TAG"
-      --set common.persistence.mountPath="$DATA_PATH"
-      --set env.DATA_PATH="$DATA_PATH"
-      --set env.IS_DEPLOYMENT="true"
-      --set env.TMPDIR="$DATA_PATH/tmp"
-      --set env.TASK_DB_VERSION="$TASK_DB_VERSION"
-      --set env.PING_PORT="$PING_PORT"
-      --set env.LOG_FORMAT=json
-      --set env.MIN_LOG_LEVEL=debug
-      $CI_PROJECT_NAME helm/
+    - argocd app list
+    - argocd app set $APP --helm-set common.image.tag="$DOCKER_TAG"
+    - argocd app sync $APP
+    - argocd app wait $APP --timeout 180
+  tags:
+    - kubernetes-parity-build
 
 deploy-stg:
   stage:                           staging
-  <<:                              *deploy-k8s
+  extends:                         .deploy-k8s
   <<:                              *publish-refs
   variables:
     ENVIRONMENT:                   parity-stg
-  tags:
-    - cmd-bot-stg
 
 deploy-production:
   stage:                           production
-  <<:                              *deploy-k8s
+  extends:                         .deploy-k8s
   <<:                              *production-refs
   variables:
     ENVIRONMENT:                   parity-prod
-  tags:
-    - cmd-bot-prod
