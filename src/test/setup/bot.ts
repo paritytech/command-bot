@@ -89,7 +89,7 @@ function getBotEnv(
     DATA_PATH: path.join(process.cwd(), "data"),
 
     PIPELINE_SCRIPTS_REPOSITORY: "https://github.com/paritytech/command-bot-scripts",
-    PIPELINE_SCRIPTS_REF: "monorepo",
+    PIPELINE_SCRIPTS_REF: "main",
 
     PRIVATE_KEY_BASE64: readFileSync(path.join(process.cwd(), "src", "test", "testing-app.txt"), "base64"),
 
