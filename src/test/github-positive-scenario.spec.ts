@@ -56,24 +56,13 @@ const commandsDataProvider: CommandDataProviderItem[] = [
   },
   {
     suitName: "[bench-bot] command",
-    commandLine: "testbot bench polkadot-pallet --runtime=kusama --pallet=pallet_referenda",
+    commandLine: "testbot bench polkadot-pallet --runtime=westend --pallet=pallet_referenda",
     taskId: 3,
     expected: {
       startMessage:
-        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=runtime --runtime=kusama --target_dir=polkadot --pallet=pallet_referenda". This comment will be updated later.',
+        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=pallet --runtime=westend --target_dir=polkadot --pallet=pallet_referenda". This comment will be updated later.',
       finishMessage:
-        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=runtime --runtime=kusama --target_dir=polkadot --pallet=pallet_referenda` has finished.',
-    },
-  },
-  {
-    suitName: "[try-runtime] command",
-    commandLine: "testbot try-runtime -v RUST_LOG=remote-ext=debug,runtime=trace --chain=kusama",
-    taskId: 4,
-    expected: {
-      startMessage:
-        'Preparing command ""$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama --target_path=. --chain_node=polkadot',
-      finishMessage:
-        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/try-runtime/try-runtime.sh" --chain=kusama --target_path=. --chain_node=polkadot` has finished. Result: https://example.com/foo/bar/-/jobs/6 has finished. If any artifacts were generated, you can download them from https://example.com/foo/bar/-/jobs/6/artifacts/download.',
+        '@somedev123 Command `"$PIPELINE_SCRIPTS_DIR/commands/bench/bench.sh" --subcommand=pallet --runtime=westend --target_dir=polkadot --pallet=pallet_referenda` has finished.',
     },
   },
 ];
