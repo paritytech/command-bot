@@ -1,0 +1,61 @@
+gcloud-sqlproxy:
+  serviceAccount:
+    annotations:
+      iam.gke.io/gcp-service-account: "command-bot@parity-stg.iam.gserviceaccount.com"
+  cloudsql:
+    instances:
+      - instance: "command-bot-pgsql"
+        project: "parity-stg"
+        region: "europe-west3"
+        port: 5432
+
+common:
+  env:
+    GITLAB_PUSH_NAMESPACE: parity/mirrors
+    GITLAB_JOB_IMAGE: paritytech/ci-unified:bullseye-1.77.0-2024-04-10-v20240408
+    GITLAB_DOMAIN: gitlab-stg.parity.io
+    DATA_PATH: /data
+    IS_DEPLOYMENT: true
+    TMPDIR: /data/tmp
+    TASK_DB_VERSION: v3
+    PING_PORT: 3001
+    LOG_FORMAT: json
+    MIN_LOG_LEVEL: debug
+    DB_CLIENT: postgres
+    DB_PORT: 5432
+    CMD_BOT_URL: https://command-bot.parity-stg.parity.io/
+    PIPELINE_SCRIPTS_REF: main
+    BOT_PR_COMMENT_MENTION: bot
+    PROCESSBOT_SUPPORTED_REPOS: "substrate,polkadot,cumulus"
+  secrets:
+    ALLOWED_ORGANIZATIONS: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#ALLOWED_ORGANIZATIONS
+    APP_ID: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#APP_ID
+    CLIENT_ID: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#CLIENT_ID
+    CLIENT_SECRET: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#CLIENT_SECRET
+    GITLAB_ACCESS_TOKEN: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#GITLAB_ACCESS_TOKEN
+    GITLAB_ACCESS_TOKEN_USERNAME: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#GITLAB_ACCESS_TOKEN_USERNAME
+    MASTER_TOKEN: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#MASTER_TOKEN
+    PRIVATE_KEY_BASE64: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#PRIVATE_KEY_BASE64
+    WEBHOOK_SECRET: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#WEBHOOK_SECRET
+    DB_USER: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#DB_USER
+    DB_PASSWORD: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#DB_PASSWORD
+    DB_HOST: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#DB_HOST
+    DB_NAME: ref+vault://kv/argo-cd/command-bot/devops-parity-stg#DB_NAME
+  ingress:
+    annotations:
+      external-dns.alpha.kubernetes.io/target: traefik-external.parity-stg.parity.io.
+    rules:
+      - host: command-bot.parity-stg.parity.io
+        http:
+          paths:
+            - path: /
+              pathType: ImplementationSpecific
+              backend:
+                service:
+                  name: command-bot
+                  port:
+                    name: http
+    tls:
+      - hosts:
+          - command-bot.parity-stg.parity.io
+        secretName: command-bot.parity-stg.parity.io
