@@ -1,0 +1,78 @@
+# gcloud-sqlproxy:
+#   serviceAccountName: "command-bot"
+#   serviceAccount:
+#     create: true
+#     name: command-bot
+#   networkPolicy:
+#     enabled: false
+
+common:
+  fullnameOverride: "command-bot"
+  extraLabels:
+    team: "opstooling"
+  serviceAccount:
+    create: false
+  image:
+    # tag is set in ci https://github.com/paritytech/command-bot/blob/master/.gitlab-ci.yml
+    repository: docker.io/paritytech/command-bot
+  envFrom:
+    - secretRef:
+        name: command-bot
+  service:
+    ports:
+      - name: http
+        protocol: TCP
+        port: 80
+        targetPort: 3000
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-dns01
+      kubernetes.io/ingress.class: traefik-external
+      traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+      traefik.ingress.kubernetes.io/router.tls: "true"
+  persistence:
+    enabled: true
+    mountPath: ""
+    subPath: ""
+    annotations: {}
+    storageClass: hdd-csi
+    size: 100G
+    accessModes:
+      - ReadWriteOnce
+  env:
+    GITLAB_PUSH_NAMESPACE: parity/mirrors
+    GITLAB_JOB_IMAGE: paritytech/ci-unified:bullseye-1.77.0-2024-04-10-v20240408
+    GITLAB_DOMAIN: gitlab.parity.io
+    PIPELINE_SCRIPTS_REPOSITORY: https://github.com/paritytech/command-bot-scripts/
+    PIPELINE_SCRIPTS_REF: main
+  # We only want one instance at all times so that the execution queue can be
+  # sanely tracked across multiple MRs.
+  autoscaling:
+    enabled: false
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 60
+    periodSeconds: 5
+
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 60
+    periodSeconds: 5
+
+  serviceMonitor:
+    enabled: true
+    endpoints:
+      - port: http
+        path: /metrics
+        interval: 1m
+        scheme: http
+        scrapeTimeout: 30s
+        honorLabels: true
+    targetLabels:
+      - team
