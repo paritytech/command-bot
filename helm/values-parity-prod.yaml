@@ -14,7 +14,7 @@ common:
     tag: v0.38.0-3bbce12d
   env:
     GITLAB_PUSH_NAMESPACE: parity/mirrors
-    GITLAB_JOB_IMAGE: paritytech/ci-unified:bullseye-1.81.0-2024-09-11-v202409111034
+    GITLAB_JOB_IMAGE: paritytech/ci-unified:bullseye-1.81.0-2024-11-19-v202411281558
     GITLAB_DOMAIN: gitlab.parity.io
     DATA_PATH: /data
     IS_DEPLOYMENT: true
