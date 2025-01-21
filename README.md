@@ -1,3 +1,8 @@
+# WARNING: ⚠️
+The project is deprecated, and not maintained anymore
+New command bot resides [here](https://github.com/paritytech/polkadot-sdk/blob/12ed0f4ffe4dcf3a8fe8928e3791141a110fad8b/.github/scripts/cmd/cmd.py) + [here](https://github.com/paritytech/polkadot-sdk/blob/12ed0f4ffe4dcf3a8fe8928e3791141a110fad8b/.github/workflows/cmd.yml)
+More info: [Contribution guide](https://github.com/paritytech/polkadot-sdk/blob/12ed0f4ffe4dcf3a8fe8928e3791141a110fad8b/docs/contributor/commands-readme.md) and [forum post](https://forum.parity.io/t/streamlining-weight-generation-and-more-the-new-cmd-bot/2411)
+
 # Introduction
 
 command-bot provides interfaces for executing pre-defined commands on GitLab CI.
